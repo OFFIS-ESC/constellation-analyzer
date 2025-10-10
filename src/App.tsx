@@ -40,15 +40,18 @@ import type { ExportOptions } from "./utils/graphExport";
 function AppContent() {
   const { undo, redo } = useDocumentHistory();
   const { activeDocumentId } = useWorkspaceStore();
-  const { toggleLeftPanel, toggleRightPanel, leftPanelVisible, rightPanelVisible } = usePanelStore();
+  const { leftPanelVisible, rightPanelVisible } = usePanelStore();
   const [showDocumentManager, setShowDocumentManager] = useState(false);
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
   const [selectedNode, setSelectedNode] = useState<Actor | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<Relation | null>(null);
-  const [addNodeCallback, setAddNodeCallback] = useState<((nodeTypeId: string, position?: { x: number; y: number }) => void) | null>(null);
-  const [exportCallback, setExportCallback] = useState<((format: 'png' | 'svg', options?: ExportOptions) => Promise<void>) | null>(null);
+  const [addNodeCallback, setAddNodeCallback] = useState<
+    ((nodeTypeId: string, position?: { x: number; y: number }) => void) | null
+  >(null);
+  const [exportCallback, setExportCallback] = useState<
+    ((format: "png" | "svg", options?: ExportOptions) => Promise<void>) | null
+  >(null);
   const { fitView } = useReactFlow();
-
 
   // Listen for document manager open event from EmptyState
   useEffect(() => {
@@ -87,7 +90,7 @@ function AppContent() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Escape: Close property panels
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         if (selectedNode || selectedEdge) {
           e.preventDefault();
           setSelectedNode(null);
@@ -96,8 +99,8 @@ function AppContent() {
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedNode, selectedEdge]);
 
   return (
@@ -167,8 +170,18 @@ function AppContent() {
                 setSelectedNode(null);
               }
             }}
-            onAddNodeRequest={(callback: (nodeTypeId: string, position?: { x: number; y: number }) => void) => setAddNodeCallback(() => callback)}
-            onExportRequest={(callback: (format: 'png' | 'svg', options?: ExportOptions) => Promise<void>) => setExportCallback(() => callback)}
+            onAddNodeRequest={(
+              callback: (
+                nodeTypeId: string,
+                position?: { x: number; y: number },
+              ) => void,
+            ) => setAddNodeCallback(() => callback)}
+            onExportRequest={(
+              callback: (
+                format: "png" | "svg",
+                options?: ExportOptions,
+              ) => Promise<void>,
+            ) => setExportCallback(() => callback)}
           />
         </div>
 

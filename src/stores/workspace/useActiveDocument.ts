@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useWorkspaceStore } from '../workspaceStore';
 import { useGraphStore } from '../graphStore';
+import type { Actor, Relation, NodeTypeConfig, EdgeTypeConfig } from '../../types';
 
 /**
  * useActiveDocument Hook
@@ -38,6 +39,21 @@ export function useActiveDocument() {
   const isLoadingRef = useRef(false);
   const lastLoadedDocIdRef = useRef<string | null>(null);
 
+  // Track the last synced graph state per document to prevent stale comparisons
+  const lastSyncedStateRef = useRef<{
+    documentId: string | null;
+    nodes: Actor[];
+    edges: Relation[];
+    nodeTypes: NodeTypeConfig[];
+    edgeTypes: EdgeTypeConfig[];
+  }>({
+    documentId: null,
+    nodes: [],
+    edges: [],
+    nodeTypes: [],
+    edgeTypes: [],
+  });
+
   // Load active document into graphStore when it changes
   useEffect(() => {
     if (activeDocument && activeDocumentId) {
@@ -51,6 +67,15 @@ export function useActiveDocument() {
       setEdges(activeDocument.graph.edges as never[]);
       setNodeTypes(activeDocument.graph.nodeTypes as never[]);
       setEdgeTypes(activeDocument.graph.edgeTypes as never[]);
+
+      // Update the last synced state to match what we just loaded
+      lastSyncedStateRef.current = {
+        documentId: activeDocumentId,
+        nodes: activeDocument.graph.nodes as Actor[],
+        edges: activeDocument.graph.edges as Relation[],
+        nodeTypes: activeDocument.graph.nodeTypes as NodeTypeConfig[],
+        edgeTypes: activeDocument.graph.edgeTypes as EdgeTypeConfig[],
+      };
 
       // Clear loading flag after a brief delay to allow state to settle
       setTimeout(() => {
@@ -69,22 +94,41 @@ export function useActiveDocument() {
       return;
     }
 
+    // CRITICAL: Prevent cross-document contamination
+    // Only process changes if the graph state belongs to the current active document
+    if (lastSyncedStateRef.current.documentId !== activeDocumentId) {
+      console.log(`Skipping dirty check - graph state is from different document (${lastSyncedStateRef.current.documentId} vs ${activeDocumentId})`);
+      return;
+    }
+
     // Mark document as dirty when graph changes
     const hasChanges =
-      JSON.stringify(graphNodes) !== JSON.stringify(activeDocument.graph.nodes) ||
-      JSON.stringify(graphEdges) !== JSON.stringify(activeDocument.graph.edges) ||
-      JSON.stringify(graphNodeTypes) !== JSON.stringify(activeDocument.graph.nodeTypes) ||
-      JSON.stringify(graphEdgeTypes) !== JSON.stringify(activeDocument.graph.edgeTypes);
+      JSON.stringify(graphNodes) !== JSON.stringify(lastSyncedStateRef.current.nodes) ||
+      JSON.stringify(graphEdges) !== JSON.stringify(lastSyncedStateRef.current.edges) ||
+      JSON.stringify(graphNodeTypes) !== JSON.stringify(lastSyncedStateRef.current.nodeTypes) ||
+      JSON.stringify(graphEdgeTypes) !== JSON.stringify(lastSyncedStateRef.current.edgeTypes);
 
     if (hasChanges) {
       console.log(`Document ${activeDocumentId} has changes, marking as dirty`);
       markDocumentDirty(activeDocumentId);
 
-      // Update the document in workspace
-      activeDocument.graph.nodes = graphNodes as never[];
-      activeDocument.graph.edges = graphEdges as never[];
-      activeDocument.graph.nodeTypes = graphNodeTypes as never[];
-      activeDocument.graph.edgeTypes = graphEdgeTypes as never[];
+      // Update the last synced state
+      lastSyncedStateRef.current = {
+        documentId: activeDocumentId,
+        nodes: graphNodes as Actor[],
+        edges: graphEdges as Relation[],
+        nodeTypes: graphNodeTypes as NodeTypeConfig[],
+        edgeTypes: graphEdgeTypes as EdgeTypeConfig[],
+      };
+
+      // Update the document in the workspace store
+      const updatedDoc = documents.get(activeDocumentId);
+      if (updatedDoc) {
+        updatedDoc.graph.nodes = graphNodes as never[];
+        updatedDoc.graph.edges = graphEdges as never[];
+        updatedDoc.graph.nodeTypes = graphNodeTypes as never[];
+        updatedDoc.graph.edgeTypes = graphEdgeTypes as never[];
+      }
 
       // Debounced save
       const timeoutId = setTimeout(() => {
@@ -93,7 +137,7 @@ export function useActiveDocument() {
 
       return () => clearTimeout(timeoutId);
     }
-  }, [graphNodes, graphEdges, graphNodeTypes, graphEdgeTypes, activeDocumentId, activeDocument, markDocumentDirty, saveDocument]);
+  }, [graphNodes, graphEdges, graphNodeTypes, graphEdgeTypes, activeDocumentId, activeDocument, documents, markDocumentDirty, saveDocument]);
 
   // Memory management: Unload inactive documents after timeout
   useEffect(() => {

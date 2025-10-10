@@ -167,6 +167,8 @@ export function useGlobalShortcuts(options: UseGlobalShortcutsOptions = {}) {
         id: "fit-view",
         description: "Fit View to Content",
         key: "f",
+        ctrl: true,
+        shift: true,
         handler: () => options.onFitView?.(),
         category: "View",
         enabled: !!options.onFitView,

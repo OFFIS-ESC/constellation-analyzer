@@ -6,6 +6,7 @@ import DocumentManager from '../Workspace/DocumentManager';
 import NodeTypeConfigModal from '../Config/NodeTypeConfig';
 import EdgeTypeConfigModal from '../Config/EdgeTypeConfig';
 import { useConfirm } from '../../hooks/useConfirm';
+import { useShortcutLabels } from '../../hooks/useShortcutLabels';
 
 /**
  * MenuBar Component
@@ -30,6 +31,7 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onSelectAll })
   const [showEdgeConfig, setShowEdgeConfig] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { confirm, ConfirmDialogComponent } = useConfirm();
+  const { getShortcutLabel } = useShortcutLabels();
 
   const {
     createDocument,
@@ -168,7 +170,9 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onSelectAll })
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between"
                 >
                   <span>New Document</span>
-                  <span className="text-xs text-gray-400">Ctrl+N</span>
+                  {getShortcutLabel('new-document') && (
+                    <span className="text-xs text-gray-400">{getShortcutLabel('new-document')}</span>
+                  )}
                 </button>
                 <button
                   onClick={handleNewDocumentFromTemplate}
@@ -182,7 +186,9 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onSelectAll })
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between"
                 >
                   <span>Document Manager</span>
-                  <span className="text-xs text-gray-400">Ctrl+O</span>
+                  {getShortcutLabel('open-document-manager') && (
+                    <span className="text-xs text-gray-400">{getShortcutLabel('open-document-manager')}</span>
+                  )}
                 </button>
 
                 <hr className="my-1 border-gray-200" />
@@ -198,7 +204,9 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onSelectAll })
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between"
                 >
                   <span>Export Document</span>
-                  <span className="text-xs text-gray-400">Ctrl+S</span>
+                  {getShortcutLabel('save-document') && (
+                    <span className="text-xs text-gray-400">{getShortcutLabel('save-document')}</span>
+                  )}
                 </button>
                 <button
                   onClick={handleExportAll}
@@ -290,7 +298,9 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onSelectAll })
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between"
                 >
                   <span>Fit View to Content</span>
-                  <span className="text-xs text-gray-400">F</span>
+                  {getShortcutLabel('fit-view') && (
+                    <span className="text-xs text-gray-400">{getShortcutLabel('fit-view')}</span>
+                  )}
                 </button>
                 <button
                   onClick={() => {
@@ -300,7 +310,9 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onSelectAll })
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between"
                 >
                   <span>Select All</span>
-                  <span className="text-xs text-gray-400">Ctrl+A</span>
+                  {getShortcutLabel('select-all') && (
+                    <span className="text-xs text-gray-400">{getShortcutLabel('select-all')}</span>
+                  )}
                 </button>
               </div>
             )}
@@ -330,7 +342,9 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onSelectAll })
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between"
                 >
                   <span>Keyboard Shortcuts</span>
-                  <span className="text-xs text-gray-400">?</span>
+                  {getShortcutLabel('show-help') && (
+                    <span className="text-xs text-gray-400">{getShortcutLabel('show-help')}</span>
+                  )}
                 </button>
               </div>
             )}

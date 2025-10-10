@@ -125,8 +125,8 @@ const LeftPanel = ({ onDeselectAll, onAddNode }: LeftPanelProps) => {
                     title={nodeType.description}
                   >
                     {IconComponent ? (
-                      <div className="w-5 h-5 flex items-center justify-center" style={{ color: textColor }}>
-                        <IconComponent style={{ fontSize: '1.25rem' }} />
+                      <div className="w-5 h-5 flex items-center justify-center" style={{ color: textColor, fontSize: '1.25rem' }}>
+                        <IconComponent />
                       </div>
                     ) : (
                       <div

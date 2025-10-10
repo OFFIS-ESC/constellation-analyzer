@@ -173,7 +173,7 @@ function AppContent() {
                 setSelectedNode(null);
               }
             }}
-            onAddNodeRequest={(callback: any) => setAddNodeCallback(() => callback)}
+            onAddNodeRequest={(callback: (nodeTypeId: string, position?: { x: number; y: number }) => void) => setAddNodeCallback(() => callback)}
           />
         </div>
 

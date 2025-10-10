@@ -503,7 +503,7 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest }: GraphEdit
   // Call the onAddNodeRequest callback if provided
   useEffect(() => {
     if (onAddNodeRequest) {
-      onAddNodeRequest(handleAddNode as any);
+      onAddNodeRequest(handleAddNode);
     }
   }, [onAddNodeRequest, handleAddNode]);
 

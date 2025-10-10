@@ -1,8 +1,8 @@
 import React from 'react';
 import CloseIcon from '@mui/icons-material/Close';
 import KeyboardIcon from '@mui/icons-material/Keyboard';
-import { useKeyboardShortcuts } from '../../contexts/KeyboardShortcutContext';
-import type { ShortcutCategory } from '../../hooks/useKeyboardShortcutManager';
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
+import type { ShortcutCategory, KeyboardShortcut } from '../../hooks/useKeyboardShortcutManager';
 
 /**
  * KeyboardShortcutsHelp Component
@@ -55,7 +55,7 @@ const KeyboardShortcutsHelp: React.FC<KeyboardShortcutsHelpProps> = ({
           {categories.map(category => {
             const categoryShortcuts = shortcuts
               .getShortcutsByCategory(category)
-              .filter(s => s.enabled !== false);
+              .filter((s: KeyboardShortcut) => s.enabled !== false);
 
             if (categoryShortcuts.length === 0) return null;
 
@@ -65,7 +65,7 @@ const KeyboardShortcutsHelp: React.FC<KeyboardShortcutsHelpProps> = ({
                   {category}
                 </h3>
                 <div className="space-y-2">
-                  {categoryShortcuts.map(shortcut => (
+                  {categoryShortcuts.map((shortcut: KeyboardShortcut) => (
                     <div
                       key={shortcut.id}
                       className="flex items-center justify-between py-2 hover:bg-gray-50 px-2 rounded"

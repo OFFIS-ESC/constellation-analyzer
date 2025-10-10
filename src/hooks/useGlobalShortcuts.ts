@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useKeyboardShortcuts } from "../contexts/KeyboardShortcutContext";
+import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { useWorkspaceStore } from "../stores/workspaceStore";
 import type { KeyboardShortcut } from "./useKeyboardShortcutManager";
 

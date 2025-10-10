@@ -189,13 +189,13 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
       edges: Edge[];
     }) => {
       // If a node is selected, notify parent
-      if (selectedNodes.length > 0) {
+      if (selectedNodes.length == 1) {
         const selectedNode = selectedNodes[0] as Actor;
         onNodeSelect(selectedNode);
         // Don't call onEdgeSelect - parent will handle clearing edge selection
       }
       // If an edge is selected, notify parent
-      else if (selectedEdges.length > 0) {
+      else if (selectedEdges.length == 1) {
         const selectedEdge = selectedEdges[0] as Relation;
         onEdgeSelect(selectedEdge);
         // Don't call onNodeSelect - parent will handle clearing node selection

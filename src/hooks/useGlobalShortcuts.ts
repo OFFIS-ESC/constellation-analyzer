@@ -177,6 +177,7 @@ export function useGlobalShortcuts(options: UseGlobalShortcutsOptions = {}) {
         id: "show-help",
         description: "Show Keyboard Shortcuts",
         key: "?",
+        ctrl: true,
         handler: () => options.onOpenHelp?.(),
         category: "Navigation",
         enabled: !!options.onOpenHelp,

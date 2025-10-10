@@ -81,6 +81,31 @@ export function useActiveDocument() {
       setTimeout(() => {
         isLoadingRef.current = false;
       }, 100);
+    } else if (!activeDocumentId) {
+      // Clear graph store when no document is active
+      console.log('No active document, clearing graph editor');
+
+      // Set loading flag to prevent dirty marking during clear
+      isLoadingRef.current = true;
+      lastLoadedDocIdRef.current = null;
+
+      setNodes([]);
+      setEdges([]);
+      // Note: We keep nodeTypes and edgeTypes so they're available for new documents
+
+      // Clear the last synced state
+      lastSyncedStateRef.current = {
+        documentId: null,
+        nodes: [],
+        edges: [],
+        nodeTypes: [],
+        edgeTypes: [],
+      };
+
+      // Clear loading flag after a brief delay
+      setTimeout(() => {
+        isLoadingRef.current = false;
+      }, 100);
     }
   }, [activeDocumentId, activeDocument, documents, setNodes, setEdges, setNodeTypes, setEdgeTypes]);
 
@@ -98,6 +123,13 @@ export function useActiveDocument() {
     // Only process changes if the graph state belongs to the current active document
     if (lastSyncedStateRef.current.documentId !== activeDocumentId) {
       console.log(`Skipping dirty check - graph state is from different document (${lastSyncedStateRef.current.documentId} vs ${activeDocumentId})`);
+      return;
+    }
+
+    // CRITICAL: Prevent saving stale data to new documents
+    // If the last loaded document doesn't match the active document, skip this check
+    if (lastLoadedDocIdRef.current !== activeDocumentId) {
+      console.log(`Skipping dirty check - document hasn't been loaded yet (last loaded: ${lastLoadedDocIdRef.current}, active: ${activeDocumentId})`);
       return;
     }
 

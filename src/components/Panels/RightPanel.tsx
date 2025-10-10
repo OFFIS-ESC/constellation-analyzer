@@ -27,6 +27,35 @@ interface Props {
   onClose: () => void;
 }
 
+/**
+ * PanelHeader - Reusable header component for right panel views
+ */
+interface PanelHeaderProps {
+  title: string;
+  onClose?: () => void;
+  onCollapse: () => void;
+}
+
+const PanelHeader = ({ title, onClose, onCollapse }: PanelHeaderProps) => (
+  <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 bg-gray-50">
+    <h2 className="text-sm font-semibold text-gray-700">{title}</h2>
+    <div className="flex items-center space-x-1">
+      {onClose && (
+        <Tooltip title="Close (Esc)">
+          <IconButton size="small" onClick={onClose}>
+            ✕
+          </IconButton>
+        </Tooltip>
+      )}
+      <Tooltip title="Collapse Panel (Ctrl+I)">
+        <IconButton size="small" onClick={onCollapse}>
+          <ChevronRightIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+    </div>
+  </div>
+);
+
 const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
 
   const {
@@ -181,7 +210,8 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
         className="h-full bg-white border-l border-gray-200 flex flex-col"
         style={{ width: `${rightPanelWidth}px` }}
       >
-        <GraphMetrics nodes={nodes} edges={edges} onCollapse={collapseRightPanel} />
+        <PanelHeader title="Graph Analysis" onCollapse={collapseRightPanel} />
+        <GraphMetrics nodes={nodes} edges={edges} />
         {ConfirmDialogComponent}
       </div>
     );
@@ -196,22 +226,7 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
         className="h-full bg-white border-l border-gray-200 flex flex-col"
         style={{ width: `${rightPanelWidth}px` }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 bg-gray-50">
-          <h2 className="text-sm font-semibold text-gray-700">Actor Properties</h2>
-          <div className="flex items-center space-x-1">
-            <Tooltip title="Close (Esc)">
-              <IconButton size="small" onClick={onClose}>
-                ✕
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Collapse Panel (Ctrl+I)">
-              <IconButton size="small" onClick={collapseRightPanel}>
-                <ChevronRightIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          </div>
-        </div>
+        <PanelHeader title="Actor Properties" onClose={onClose} onCollapse={collapseRightPanel} />
 
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-3 space-y-4">
@@ -377,22 +392,7 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
         className="h-full bg-white border-l border-gray-200 flex flex-col"
         style={{ width: `${rightPanelWidth}px` }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 bg-gray-50">
-          <h2 className="text-sm font-semibold text-gray-700">Relation Properties</h2>
-          <div className="flex items-center space-x-1">
-            <Tooltip title="Close (Esc)">
-              <IconButton size="small" onClick={onClose}>
-                ✕
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Collapse Panel (Ctrl+I)">
-              <IconButton size="small" onClick={collapseRightPanel}>
-                <ChevronRightIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          </div>
-        </div>
+        <PanelHeader title="Relation Properties" onClose={onClose} onCollapse={collapseRightPanel} />
 
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-3 space-y-4">

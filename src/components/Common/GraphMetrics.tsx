@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
-import { IconButton, Tooltip } from '@mui/material';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import { Tooltip } from '@mui/material';
 import WarningIcon from '@mui/icons-material/Warning';
 import InfoIcon from '@mui/icons-material/Info';
 import BarChartIcon from '@mui/icons-material/BarChart';
@@ -11,7 +10,6 @@ interface GraphMetricsProps {
   nodes: Actor[];
   edges: Relation[];
   onActorClick?: (actorId: string) => void;
-  onCollapse?: () => void;
 }
 
 /**
@@ -20,7 +18,7 @@ interface GraphMetricsProps {
  * Shows when no node or edge is selected in the right panel.
  * Provides insights into graph structure, connectivity, and key actors.
  */
-const GraphMetrics = ({ nodes, edges, onActorClick, onCollapse }: GraphMetricsProps) => {
+const GraphMetrics = ({ nodes, edges, onActorClick }: GraphMetricsProps) => {
   // Calculate all metrics (memoized for performance - auto-updates when nodes/edges change)
   const metrics = useMemo(() => {
     return calculateGraphMetrics(nodes, edges);
@@ -36,21 +34,6 @@ const GraphMetrics = ({ nodes, edges, onActorClick, onCollapse }: GraphMetricsPr
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 bg-gray-50">
-        <div className="flex items-center space-x-2">
-          <BarChartIcon className="text-blue-600" fontSize="small" />
-          <h2 className="text-sm font-semibold text-gray-700">Graph Analysis</h2>
-        </div>
-        {onCollapse && (
-          <Tooltip title="Collapse Panel (Ctrl+I)">
-            <IconButton size="small" onClick={onCollapse}>
-              <ChevronRightIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        )}
-      </div>
-
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-3 space-y-4">
         {/* Overview Section */}

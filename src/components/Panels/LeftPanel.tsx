@@ -71,7 +71,7 @@ const LeftPanel = ({ onDeselectAll, onAddNode }: LeftPanelProps) => {
   if (leftPanelCollapsed) {
     return (
       <div className="h-full bg-gray-50 border-r border-gray-200 flex flex-col items-center py-2 space-y-2" style={{ width: '40px' }}>
-        <Tooltip title="Expand Tools Panel (Ctrl+B)" placement="right">
+        <Tooltip title="Expand Tools Panel" placement="right">
           <IconButton size="small" onClick={expandLeftPanel}>
             <ChevronRightIcon fontSize="small" />
           </IconButton>
@@ -89,7 +89,7 @@ const LeftPanel = ({ onDeselectAll, onAddNode }: LeftPanelProps) => {
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 bg-gray-50">
         <h2 className="text-sm font-semibold text-gray-700">Tools</h2>
-        <Tooltip title="Collapse Panel (Ctrl+B)">
+        <Tooltip title="Collapse Panel">
           <IconButton size="small" onClick={collapseLeftPanel}>
             <ChevronLeftIcon fontSize="small" />
           </IconButton>

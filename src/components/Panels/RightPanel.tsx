@@ -47,7 +47,7 @@ const PanelHeader = ({ title, onClose, onCollapse }: PanelHeaderProps) => (
           </IconButton>
         </Tooltip>
       )}
-      <Tooltip title="Collapse Panel (Ctrl+I)">
+      <Tooltip title="Collapse Panel">
         <IconButton size="small" onClick={onCollapse}>
           <ChevronRightIcon fontSize="small" />
         </IconButton>
@@ -193,7 +193,7 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
   if (rightPanelCollapsed) {
     return (
       <div className="h-full bg-gray-50 border-l border-gray-200 flex flex-col items-center py-2" style={{ width: '40px' }}>
-        <Tooltip title="Expand Properties Panel (Ctrl+I)" placement="left">
+        <Tooltip title="Expand Properties Panel" placement="left">
           <IconButton size="small" onClick={expandRightPanel}>
             <ChevronLeftIcon fontSize="small" />
           </IconButton>

@@ -83,19 +83,9 @@ function AppContent() {
     onSelectAll: handleSelectAll,
   });
 
-  // Panel toggle keyboard shortcuts
+  // Escape key to close property panels
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl+B: Toggle left panel
-      if (e.ctrlKey && e.key === 'b') {
-        e.preventDefault();
-        toggleLeftPanel();
-      }
-      // Ctrl+I: Toggle right panel
-      if (e.ctrlKey && e.key === 'i') {
-        e.preventDefault();
-        toggleRightPanel();
-      }
       // Escape: Close property panels
       if (e.key === 'Escape') {
         if (selectedNode || selectedEdge) {
@@ -108,7 +98,7 @@ function AppContent() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleLeftPanel, toggleRightPanel, selectedNode, selectedEdge]);
+  }, [selectedNode, selectedEdge]);
 
   return (
     <div className="flex flex-col h-screen bg-gray-100">

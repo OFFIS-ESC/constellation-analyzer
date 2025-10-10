@@ -51,14 +51,39 @@ export function useDocumentHistory() {
         return;
       }
 
-      const currentDoc = getActiveDocument();
-      if (!currentDoc) {
-        console.warn('Active document not loaded');
-        return;
-      }
-
       // Read current state directly from store (not from React hooks which might be stale)
       const currentState = useGraphStore.getState();
+
+      const currentDoc = getActiveDocument();
+      if (!currentDoc) {
+        console.warn('Active document not loaded, attempting to use current graph state');
+        // If document isn't loaded yet, create a minimal snapshot from current state
+        const snapshot: ConstellationDocument = createDocument(
+          currentState.nodes as never[],
+          currentState.edges as never[],
+          currentState.nodeTypes,
+          currentState.edgeTypes
+        );
+
+        // Use minimal metadata
+        snapshot.metadata = {
+          documentId: activeDocumentId,
+          title: 'Untitled',
+          version: '1.0.0',
+          appName: 'Constellation Analyzer',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          lastSavedBy: 'user',
+        };
+
+        // Push to history
+        historyStore.pushAction(activeDocumentId, {
+          description,
+          timestamp: Date.now(),
+          documentState: snapshot,
+        });
+        return;
+      }
 
       // Create a snapshot of the current state
       const snapshot: ConstellationDocument = createDocument(

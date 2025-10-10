@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect } from "react";
 import { ReactFlowProvider, useReactFlow } from "reactflow";
 import GraphEditor from "./components/Editor/GraphEditor";
-import Toolbar from "./components/Toolbar/Toolbar";
+import LeftPanel from "./components/Panels/LeftPanel";
+import RightPanel from "./components/Panels/RightPanel";
 import DocumentTabs from "./components/Workspace/DocumentTabs";
 import MenuBar from "./components/Menu/MenuBar";
 import DocumentManager from "./components/Workspace/DocumentManager";
@@ -10,6 +11,8 @@ import { KeyboardShortcutProvider } from "./contexts/KeyboardShortcutContext";
 import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
 import { useDocumentHistory } from "./hooks/useDocumentHistory";
 import { useWorkspaceStore } from "./stores/workspaceStore";
+import { usePanelStore } from "./stores/panelStore";
+import type { Actor, Relation } from "./types";
 
 /**
  * App - Root application component
@@ -34,9 +37,13 @@ import { useWorkspaceStore } from "./stores/workspaceStore";
 function AppContent() {
   const { undo, redo } = useDocumentHistory();
   const { activeDocumentId } = useWorkspaceStore();
+  const { toggleLeftPanel, toggleRightPanel, leftPanelVisible, rightPanelVisible } = usePanelStore();
   const [showDocumentManager, setShowDocumentManager] = useState(false);
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
+  const [selectedNode, setSelectedNode] = useState<Actor | null>(null);
+  const [selectedEdge, setSelectedEdge] = useState<Relation | null>(null);
   const { fitView } = useReactFlow();
+
 
   // Listen for document manager open event from EmptyState
   useEffect(() => {
@@ -71,6 +78,33 @@ function AppContent() {
     onSelectAll: handleSelectAll,
   });
 
+  // Panel toggle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+B: Toggle left panel
+      if (e.ctrlKey && e.key === 'b') {
+        e.preventDefault();
+        toggleLeftPanel();
+      }
+      // Ctrl+I: Toggle right panel
+      if (e.ctrlKey && e.key === 'i') {
+        e.preventDefault();
+        toggleRightPanel();
+      }
+      // Escape: Close property panels
+      if (e.key === 'Escape') {
+        if (selectedNode || selectedEdge) {
+          e.preventDefault();
+          setSelectedNode(null);
+          setSelectedEdge(null);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [toggleLeftPanel, toggleRightPanel, selectedNode, selectedEdge]);
+
   return (
     <div className="flex flex-col h-screen bg-gray-100">
       {/* Header */}
@@ -102,12 +136,51 @@ function AppContent() {
       {/* Document Tabs */}
       <DocumentTabs />
 
-      {/* Toolbar - only show when a document is active */}
-      {activeDocumentId && <Toolbar />}
+      {/* Main content area with side panels */}
+      <main className="flex-1 overflow-hidden flex">
+        {/* Left Panel */}
+        {leftPanelVisible && activeDocumentId && (
+          <LeftPanel
+            onDeselectAll={() => {
+              setSelectedNode(null);
+              setSelectedEdge(null);
+            }}
+          />
+        )}
 
-      {/* Main graph editor */}
-      <main className="flex-1 overflow-hidden">
-        <GraphEditor />
+        {/* Center: Graph Editor */}
+        <div className="flex-1 overflow-hidden">
+          <GraphEditor
+            selectedNode={selectedNode}
+            selectedEdge={selectedEdge}
+            onNodeSelect={(node) => {
+              setSelectedNode(node);
+              // Only clear edge if we're setting a node (not clearing)
+              if (node) {
+                setSelectedEdge(null);
+              }
+            }}
+            onEdgeSelect={(edge) => {
+              setSelectedEdge(edge);
+              // Only clear node if we're setting an edge (not clearing)
+              if (edge) {
+                setSelectedNode(null);
+              }
+            }}
+          />
+        </div>
+
+        {/* Right Panel */}
+        {rightPanelVisible && activeDocumentId && (
+          <RightPanel
+            selectedNode={selectedNode}
+            selectedEdge={selectedEdge}
+            onClose={() => {
+              setSelectedNode(null);
+              setSelectedEdge(null);
+            }}
+          />
+        )}
       </main>
 
       {/* Document Manager Modal */}

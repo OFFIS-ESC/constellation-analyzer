@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useEffect, useState, useRef } from 'react';
+import { useCallback, useMemo, useEffect, useState, useRef } from "react";
 import ReactFlow, {
   Background,
   Controls,
@@ -18,24 +18,24 @@ import ReactFlow, {
   useReactFlow,
   Viewport,
   useOnSelectionChange,
-} from 'reactflow';
-import 'reactflow/dist/style.css';
+} from "reactflow";
+import "reactflow/dist/style.css";
 
-import { useGraphWithHistory } from '../../hooks/useGraphWithHistory';
-import { useDocumentHistory } from '../../hooks/useDocumentHistory';
-import { useEditorStore } from '../../stores/editorStore';
-import { useActiveDocument } from '../../stores/workspace/useActiveDocument';
-import { useWorkspaceStore } from '../../stores/workspaceStore';
-import CustomNode from '../Nodes/CustomNode';
-import CustomEdge from '../Edges/CustomEdge';
-import ContextMenu from './ContextMenu';
-import EmptyState from '../Common/EmptyState';
-import { createNode } from '../../utils/nodeUtils';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import { useConfirm } from '../../hooks/useConfirm';
+import { useGraphWithHistory } from "../../hooks/useGraphWithHistory";
+import { useDocumentHistory } from "../../hooks/useDocumentHistory";
+import { useEditorStore } from "../../stores/editorStore";
+import { useActiveDocument } from "../../stores/workspace/useActiveDocument";
+import { useWorkspaceStore } from "../../stores/workspaceStore";
+import CustomNode from "../Nodes/CustomNode";
+import CustomEdge from "../Edges/CustomEdge";
+import ContextMenu from "./ContextMenu";
+import EmptyState from "../Common/EmptyState";
+import { createNode } from "../../utils/nodeUtils";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+import { useConfirm } from "../../hooks/useConfirm";
 
-import type { Actor, Relation } from '../../types';
+import type { Actor, Relation } from "../../types";
 
 interface GraphEditorProps {
   selectedNode: Actor | null;
@@ -77,11 +77,21 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
 
   const { pushToHistory } = useDocumentHistory();
 
-  const { showGrid, snapToGrid, gridSize, panOnDrag, zoomOnScroll, selectedRelationType } =
-    useEditorStore();
+  const {
+    showGrid,
+    snapToGrid,
+    gridSize,
+    panOnDrag,
+    zoomOnScroll,
+    selectedRelationType,
+  } = useEditorStore();
 
   // React Flow instance for screen-to-flow coordinates and viewport control
-  const { screenToFlowPosition, setViewport, getViewport: getCurrentViewport } = useReactFlow();
+  const {
+    screenToFlowPosition,
+    setViewport,
+    getViewport: getCurrentViewport,
+  } = useReactFlow();
 
   // Track previous document ID to save viewport before switching
   const prevDocumentIdRef = useRef<string | null>(null);
@@ -90,8 +100,12 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
   const { confirm, ConfirmDialogComponent } = useConfirm();
 
   // React Flow state (synchronized with store)
-  const [nodes, setNodesState, onNodesChange] = useNodesState(storeNodes as Node[]);
-  const [edges, setEdgesState, onEdgesChange] = useEdgesState(storeEdges as Edge[]);
+  const [nodes, setNodesState, onNodesChange] = useNodesState(
+    storeNodes as Node[],
+  );
+  const [edges, setEdgesState, onEdgesChange] = useEdgesState(
+    storeEdges as Edge[],
+  );
 
   // Track if a drag is in progress to capture state before drag
   const dragInProgressRef = useRef(false);
@@ -100,7 +114,7 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
-    type: 'pane' | 'node' | 'edge';
+    type: "pane" | "node" | "edge";
     target?: Node | Edge;
   } | null>(null);
 
@@ -118,22 +132,37 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
     if (!activeDocumentId) return;
 
     // Save viewport for the previous document
-    if (prevDocumentIdRef.current && prevDocumentIdRef.current !== activeDocumentId) {
+    if (
+      prevDocumentIdRef.current &&
+      prevDocumentIdRef.current !== activeDocumentId
+    ) {
       const currentViewport = getCurrentViewport();
       saveViewport(prevDocumentIdRef.current, currentViewport);
-      console.log(`Saved viewport for document: ${prevDocumentIdRef.current}`, currentViewport);
+      console.log(
+        `Saved viewport for document: ${prevDocumentIdRef.current}`,
+        currentViewport,
+      );
     }
 
     // Restore viewport for the new document
     const savedViewport = getViewport(activeDocumentId);
     if (savedViewport) {
-      console.log(`Restoring viewport for document: ${activeDocumentId}`, savedViewport);
+      console.log(
+        `Restoring viewport for document: ${activeDocumentId}`,
+        savedViewport,
+      );
       setViewport(savedViewport, { duration: 0 });
     }
 
     // Update the ref to current document
     prevDocumentIdRef.current = activeDocumentId;
-  }, [activeDocumentId, saveViewport, getViewport, setViewport, getCurrentViewport]);
+  }, [
+    activeDocumentId,
+    saveViewport,
+    getViewport,
+    setViewport,
+    getCurrentViewport,
+  ]);
 
   // Save viewport periodically (debounced)
   const handleViewportChange = useCallback(
@@ -147,12 +176,18 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
 
       return () => clearTimeout(timeoutId);
     },
-    [activeDocumentId, saveViewport]
+    [activeDocumentId, saveViewport],
   );
 
   // Handle selection changes using ReactFlow's dedicated hook
   const handleSelectionChange = useCallback(
-    ({ nodes: selectedNodes, edges: selectedEdges }: { nodes: Node[]; edges: Edge[] }) => {
+    ({
+      nodes: selectedNodes,
+      edges: selectedEdges,
+    }: {
+      nodes: Node[];
+      edges: Edge[];
+    }) => {
       // If a node is selected, notify parent
       if (selectedNodes.length > 0) {
         const selectedNode = selectedNodes[0] as Actor;
@@ -171,7 +206,7 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
         onEdgeSelect(null);
       }
     },
-    [onNodeSelect, onEdgeSelect]
+    [onNodeSelect, onEdgeSelect],
   );
 
   // Register the selection change handler with ReactFlow
@@ -186,9 +221,9 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
       // Check if a drag operation just started (dragging: true)
       const dragStartChanges = changes.filter(
         (change) =>
-          change.type === 'position' &&
-          'dragging' in change &&
-          change.dragging === true
+          change.type === "position" &&
+          "dragging" in change &&
+          change.dragging === true,
       );
 
       // Capture state BEFORE the drag operation begins (for undo/redo)
@@ -196,7 +231,7 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
       if (dragStartChanges.length > 0 && !dragInProgressRef.current) {
         dragInProgressRef.current = true;
         // Capture the state before any changes are applied
-        pushToHistory('Move Actor');
+        pushToHistory("Move Actor");
       }
 
       // Apply the changes
@@ -205,9 +240,9 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
       // Check if any drag operation just completed (dragging: false)
       const dragEndChanges = changes.filter(
         (change) =>
-          change.type === 'position' &&
-          'dragging' in change &&
-          change.dragging === false
+          change.type === "position" &&
+          "dragging" in change &&
+          change.dragging === false,
       );
 
       // If a drag just ended, sync to store
@@ -224,7 +259,10 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
       } else {
         // For non-drag changes (dimension, etc), just sync to store
         const hasNonSelectionChanges = changes.some(
-          (change) => change.type !== 'select' && change.type !== 'remove' && change.type !== 'position'
+          (change) =>
+            change.type !== "select" &&
+            change.type !== "remove" &&
+            change.type !== "position",
         );
         if (hasNonSelectionChanges) {
           setTimeout(() => {
@@ -236,7 +274,7 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
         }
       }
     },
-    [onNodesChange, setNodesState, setNodes, pushToHistory]
+    [onNodesChange, setNodesState, setNodes, pushToHistory],
   );
 
   const handleEdgesChange = useCallback(
@@ -245,7 +283,7 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
 
       // Only sync to store for non-selection changes
       const hasNonSelectionChanges = changes.some(
-        (change) => change.type !== 'select' && change.type !== 'remove'
+        (change) => change.type !== "select" && change.type !== "remove",
       );
       if (hasNonSelectionChanges) {
         // Debounce store updates to avoid loops
@@ -257,7 +295,7 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
         }, 0);
       }
     },
-    [onEdgesChange, setEdgesState, setEdges]
+    [onEdgesChange, setEdgesState, setEdges],
   );
 
   // Handle new edge connections
@@ -266,12 +304,13 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
       if (!connection.source || !connection.target) return;
 
       // Use selected relation type or fall back to first available
-      const edgeType = selectedRelationType || edgeTypeConfigs[0]?.id || 'default';
+      const edgeType =
+        selectedRelationType || edgeTypeConfigs[0]?.id || "default";
 
       // Create edge with custom data (no label - will use type default)
       const edgeWithData = {
         ...connection,
-        type: 'custom',
+        type: "custom",
         data: {
           type: edgeType,
           // Don't set label - will use type's label as default
@@ -292,7 +331,14 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
       // Use the history-tracked addEdge function
       addEdgeWithHistory(newEdge);
     },
-    [storeEdges, edgeTypeConfigs, addEdgeWithHistory, selectedRelationType, nodes, setNodesState]
+    [
+      storeEdges,
+      edgeTypeConfigs,
+      addEdgeWithHistory,
+      selectedRelationType,
+      nodes,
+      setNodesState,
+    ],
   );
 
   // Handle node deletion
@@ -302,7 +348,7 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
         deleteNode(node.id);
       });
     },
-    [deleteNode]
+    [deleteNode],
   );
 
   // Handle edge deletion
@@ -312,7 +358,7 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
         deleteEdge(edge.id);
       });
     },
-    [deleteEdge]
+    [deleteEdge],
   );
 
   // Register custom node types
@@ -320,7 +366,7 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
     () => ({
       custom: CustomNode,
     }),
-    []
+    [],
   );
 
   // Register custom edge types
@@ -328,37 +374,28 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
     () => ({
       custom: CustomEdge,
     }),
-    []
+    [],
   );
 
   // Handle node click - ReactFlow handles selection automatically
-  const handleNodeClick = useCallback(
-    (_event: React.MouseEvent, _node: Node) => {
-      setContextMenu(null); // Close context menu if open
-    },
-    []
-  );
+  const handleNodeClick = useCallback(() => {
+    setContextMenu(null); // Close context menu if open
+  }, []);
 
   // Handle edge click - ReactFlow handles selection automatically
-  const handleEdgeClick = useCallback(
-    (_event: React.MouseEvent, _edge: Edge) => {
-      setContextMenu(null); // Close context menu if open
-    },
-    []
-  );
+  const handleEdgeClick = useCallback(() => {
+    setContextMenu(null); // Close context menu if open
+  }, []);
 
   // Handle right-click on pane (empty space)
-  const handlePaneContextMenu = useCallback(
-    (event: React.MouseEvent) => {
-      event.preventDefault();
-      setContextMenu({
-        x: event.clientX,
-        y: event.clientY,
-        type: 'pane',
-      });
-    },
-    []
-  );
+  const handlePaneContextMenu = useCallback((event: React.MouseEvent) => {
+    event.preventDefault();
+    setContextMenu({
+      x: event.clientX,
+      y: event.clientY,
+      type: "pane",
+    });
+  }, []);
 
   // Handle right-click on node
   const handleNodeContextMenu = useCallback(
@@ -367,11 +404,11 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
       setContextMenu({
         x: event.clientX,
         y: event.clientY,
-        type: 'node',
+        type: "node",
         target: node,
       });
     },
-    []
+    [],
   );
 
   // Handle right-click on edge
@@ -381,11 +418,11 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
       setContextMenu({
         x: event.clientX,
         y: event.clientY,
-        type: 'edge',
+        type: "edge",
         target: edge,
       });
     },
-    []
+    [],
   );
 
   // Handle left-click on pane to close context menu
@@ -419,7 +456,16 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
       addNodeWithHistory(newNode);
       setContextMenu(null);
     },
-    [contextMenu, screenToFlowPosition, nodeTypeConfigs, addNodeWithHistory, nodes, edges, setNodesState, setEdgesState]
+    [
+      contextMenu,
+      screenToFlowPosition,
+      nodeTypeConfigs,
+      addNodeWithHistory,
+      nodes,
+      edges,
+      setNodesState,
+      setEdgesState,
+    ],
   );
 
   // Show empty state when no document is active
@@ -430,7 +476,7 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
         onOpenDocumentManager={() => {
           // This will be handled by the parent component
           // We'll trigger it via a custom event
-          window.dispatchEvent(new CustomEvent('openDocumentManager'));
+          window.dispatchEvent(new CustomEvent("openDocumentManager"));
         }}
       />
     );
@@ -483,9 +529,9 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
           nodeColor={(node) => {
             const actor = node as Actor;
             const nodeType = nodeTypeConfigs.find(
-              (nt) => nt.id === actor.data?.type
+              (nt) => nt.id === actor.data?.type,
             );
-            return nodeType?.color || '#6b7280';
+            return nodeType?.color || "#6b7280";
           }}
           pannable
           zoomable
@@ -493,13 +539,13 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
       </ReactFlow>
 
       {/* Context Menu - Pane */}
-      {contextMenu && contextMenu.type === 'pane' && (
+      {contextMenu && contextMenu.type === "pane" && (
         <ContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
           sections={[
             {
-              title: 'Add Actor',
+              title: "Add Actor",
               actions: nodeTypeConfigs.map((nodeType) => ({
                 label: nodeType.label,
                 color: nodeType.color,
@@ -512,7 +558,7 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
       )}
 
       {/* Context Menu - Node */}
-      {contextMenu && contextMenu.type === 'node' && contextMenu.target && (
+      {contextMenu && contextMenu.type === "node" && contextMenu.target && (
         <ContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
@@ -520,7 +566,7 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
             {
               actions: [
                 {
-                  label: 'Edit Properties',
+                  label: "Edit Properties",
                   icon: <EditIcon fontSize="small" />,
                   onClick: () => {
                     // Select the node in ReactFlow (which will trigger the right panel)
@@ -529,21 +575,25 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
                       ...n,
                       selected: n.id === nodeId,
                     }));
-                    const updatedEdges = edges.map((e) => ({ ...e, selected: false }));
+                    const updatedEdges = edges.map((e) => ({
+                      ...e,
+                      selected: false,
+                    }));
                     setNodesState(updatedNodes as Node[]);
                     setEdgesState(updatedEdges as Edge[]);
                     setContextMenu(null);
                   },
                 },
                 {
-                  label: 'Delete',
+                  label: "Delete",
                   icon: <DeleteIcon fontSize="small" />,
                   onClick: async () => {
                     const confirmed = await confirm({
-                      title: 'Delete Actor',
-                      message: 'Are you sure you want to delete this actor? All connected relations will also be deleted.',
-                      confirmLabel: 'Delete',
-                      severity: 'danger',
+                      title: "Delete Actor",
+                      message:
+                        "Are you sure you want to delete this actor? All connected relations will also be deleted.",
+                      confirmLabel: "Delete",
+                      severity: "danger",
                     });
                     if (confirmed) {
                       deleteNode(contextMenu.target!.id);
@@ -559,7 +609,7 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
       )}
 
       {/* Context Menu - Edge */}
-      {contextMenu && contextMenu.type === 'edge' && contextMenu.target && (
+      {contextMenu && contextMenu.type === "edge" && contextMenu.target && (
         <ContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
@@ -567,7 +617,7 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
             {
               actions: [
                 {
-                  label: 'Edit Properties',
+                  label: "Edit Properties",
                   icon: <EditIcon fontSize="small" />,
                   onClick: () => {
                     // Select the edge in ReactFlow (which will trigger the right panel)
@@ -576,21 +626,24 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
                       ...e,
                       selected: e.id === edgeId,
                     }));
-                    const updatedNodes = nodes.map((n) => ({ ...n, selected: false }));
+                    const updatedNodes = nodes.map((n) => ({
+                      ...n,
+                      selected: false,
+                    }));
                     setEdgesState(updatedEdges as Edge[]);
                     setNodesState(updatedNodes as Node[]);
                     setContextMenu(null);
                   },
                 },
                 {
-                  label: 'Delete',
+                  label: "Delete",
                   icon: <DeleteIcon fontSize="small" />,
                   onClick: async () => {
                     const confirmed = await confirm({
-                      title: 'Delete Relation',
-                      message: 'Are you sure you want to delete this relation?',
-                      confirmLabel: 'Delete',
-                      severity: 'danger',
+                      title: "Delete Relation",
+                      message: "Are you sure you want to delete this relation?",
+                      confirmLabel: "Delete",
+                      severity: "danger",
                     });
                     if (confirmed) {
                       deleteEdge(contextMenu.target!.id);

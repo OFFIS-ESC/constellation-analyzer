@@ -8,6 +8,7 @@ import Toolbar from "./components/Toolbar/Toolbar";
 import MenuBar from "./components/Menu/MenuBar";
 import DocumentManager from "./components/Workspace/DocumentManager";
 import KeyboardShortcutsHelp from "./components/Common/KeyboardShortcutsHelp";
+import ToastContainer from "./components/Common/ToastContainer";
 import { KeyboardShortcutProvider } from "./contexts/KeyboardShortcutContext";
 import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
 import { useDocumentHistory } from "./hooks/useDocumentHistory";
@@ -205,6 +206,9 @@ function AppContent() {
         isOpen={showKeyboardHelp}
         onClose={() => setShowKeyboardHelp(false)}
       />
+
+      {/* Toast Notifications */}
+      <ToastContainer />
     </div>
   );
 }

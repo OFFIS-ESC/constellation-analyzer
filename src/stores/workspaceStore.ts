@@ -22,6 +22,7 @@ import {
   exportWorkspace as exportWorkspaceToZip,
   selectWorkspaceZipForImport,
 } from './workspace/workspaceIO';
+import { useToastStore } from './toastStore';
 
 /**
  * Workspace Store
@@ -172,6 +173,8 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
 
       return newState;
     });
+
+    useToastStore.getState().showToast(`Document "${title}" created`, 'success');
 
     return documentId;
   },
@@ -342,6 +345,8 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
     );
     if (!confirmed) return false;
 
+    const docTitle = metadata?.title || 'Untitled';
+
     // Delete from storage
     deleteDocumentFromStorage(documentId);
 
@@ -374,6 +379,8 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
       };
     });
 
+    useToastStore.getState().showToast(`Document "${docTitle}" deleted`, 'info');
+
     return true;
   },
 
@@ -400,6 +407,8 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
 
       return {};
     });
+
+    useToastStore.getState().showToast(`Document renamed to "${newTitle}"`, 'success');
   },
 
   // Duplicate document
@@ -408,6 +417,7 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
     const sourceDoc = state.documents.get(documentId);
     if (!sourceDoc) {
       console.error(`Document ${documentId} not found`);
+      useToastStore.getState().showToast('Failed to duplicate: Document not found', 'error');
       return '';
     }
 
@@ -461,6 +471,8 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
         documentOrder: newOrder,
       };
     });
+
+    useToastStore.getState().showToast(`Document duplicated as "${newTitle}"`, 'success');
 
     return newDocumentId;
   },
@@ -557,10 +569,14 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
             };
           });
 
+          // Show success toast
+          useToastStore.getState().showToast('Document imported successfully', 'success');
+
           resolve(documentId);
         },
         (error) => {
-          alert(`Failed to import file: ${error}`);
+          // Show error toast
+          useToastStore.getState().showToast(`Failed to import file: ${error}`, 'error', 5000);
           resolve(null);
         }
       );
@@ -572,15 +588,22 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
     const doc = get().documents.get(documentId);
     if (!doc) {
       console.error(`Document ${documentId} not found`);
+      useToastStore.getState().showToast('Failed to export: Document not found', 'error');
       return;
     }
 
-    exportGraphToFile(
-      doc.graph.nodes,
-      doc.graph.edges,
-      doc.graph.nodeTypes,
-      doc.graph.edgeTypes
-    );
+    try {
+      exportGraphToFile(
+        doc.graph.nodes,
+        doc.graph.edges,
+        doc.graph.nodeTypes,
+        doc.graph.edgeTypes
+      );
+      useToastStore.getState().showToast('Document exported successfully', 'success');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      useToastStore.getState().showToast(`Failed to export document: ${message}`, 'error', 5000);
+    }
   },
 
   // Save workspace
@@ -671,44 +694,56 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
   exportAllDocumentsAsZip: async () => {
     const state = get();
 
-    // Ensure all documents are loaded
-    const allDocs = new Map<string, ConstellationDocument>();
-    for (const docId of state.documentOrder) {
-      let doc = state.documents.get(docId);
-      if (!doc) {
-        const loadedDoc = loadDocumentFromStorage(docId);
-        if (loadedDoc) {
-          doc = loadedDoc;
+    try {
+      // Ensure all documents are loaded
+      const allDocs = new Map<string, ConstellationDocument>();
+      for (const docId of state.documentOrder) {
+        let doc = state.documents.get(docId);
+        if (!doc) {
+          const loadedDoc = loadDocumentFromStorage(docId);
+          if (loadedDoc) {
+            doc = loadedDoc;
+          }
+        }
+        if (doc) {
+          allDocs.set(docId, doc);
         }
       }
-      if (doc) {
-        allDocs.set(docId, doc);
-      }
-    }
 
-    await exportAllDocumentsAsZip(allDocs, state.workspaceName);
+      await exportAllDocumentsAsZip(allDocs, state.workspaceName);
+      useToastStore.getState().showToast('All documents exported successfully', 'success');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      useToastStore.getState().showToast(`Failed to export documents: ${message}`, 'error', 5000);
+    }
   },
 
   // Export workspace
   exportWorkspace: async () => {
     const state = get();
 
-    const loadDoc = async (id: string): Promise<ConstellationDocument | null> => {
-      return loadDocumentFromStorage(id);
-    };
+    try {
+      const loadDoc = async (id: string): Promise<ConstellationDocument | null> => {
+        return loadDocumentFromStorage(id);
+      };
 
-    await exportWorkspaceToZip(
-      {
-        workspaceId: state.workspaceId,
-        workspaceName: state.workspaceName,
-        documentOrder: state.documentOrder,
-        activeDocumentId: state.activeDocumentId,
-        settings: state.settings,
-      },
-      state.documents,
-      state.documentOrder,
-      loadDoc
-    );
+      await exportWorkspaceToZip(
+        {
+          workspaceId: state.workspaceId,
+          workspaceName: state.workspaceName,
+          documentOrder: state.documentOrder,
+          activeDocumentId: state.activeDocumentId,
+          settings: state.settings,
+        },
+        state.documents,
+        state.documentOrder,
+        loadDoc
+      );
+      useToastStore.getState().showToast('Workspace exported successfully', 'success');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      useToastStore.getState().showToast(`Failed to export workspace: ${message}`, 'error', 5000);
+    }
   },
 
   // Import workspace
@@ -750,11 +785,11 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
             documentMetadata: allMetadata,
           });
 
-          alert('Workspace imported successfully!');
+          useToastStore.getState().showToast('Workspace imported successfully', 'success');
           resolve();
         },
         (error) => {
-          alert(`Failed to import workspace: ${error}`);
+          useToastStore.getState().showToast(`Failed to import workspace: ${error}`, 'error', 5000);
           resolve();
         }
       );

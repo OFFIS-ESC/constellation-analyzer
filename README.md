@@ -2,6 +2,10 @@
 
 A React-based visual editor for creating and analyzing Constellation Analyses. Build interactive graphs to examine actors (nodes) and their relationships (edges) with a powerful drag-and-drop interface.
 
+## Vibe-Warning
+
+This is a testing ground for Agent Based LLM Coding. It presently does not contain hand-written code. Hence, please take the whole code-base with a grain of salt.
+
 ## Features
 
 - **Interactive Graph Visualization**: Built on React Flow for smooth, performant graph editing

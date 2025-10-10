@@ -1,0 +1,13 @@
+node_modules
+dist
+.git
+.vscode
+.eslintrc.cjs
+CLAUDE.md
+PERSISTENCE_PLAN.md
+PROJECT_SUMMARY.md
+QUICKSTART.md
+README.md
+Dockerfile
+.dockerignore
+*.local

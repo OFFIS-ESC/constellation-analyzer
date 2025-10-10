@@ -41,7 +41,7 @@ interface GraphEditorProps {
   selectedEdge: Relation | null;
   onNodeSelect: (node: Actor | null) => void;
   onEdgeSelect: (edge: Relation | null) => void;
-  onAddNodeRequest?: (nodeTypeId: string, position?: { x: number; y: number }) => void;
+  onAddNodeRequest?: (callback: (nodeTypeId: string, position?: { x: number; y: number }) => void) => void;
 }
 
 /**

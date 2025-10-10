@@ -14,6 +14,7 @@ import { useDocumentHistory } from "./hooks/useDocumentHistory";
 import { useWorkspaceStore } from "./stores/workspaceStore";
 import { usePanelStore } from "./stores/panelStore";
 import type { Actor, Relation } from "./types";
+import type { ExportOptions } from "./utils/graphExport";
 
 /**
  * App - Root application component
@@ -44,6 +45,7 @@ function AppContent() {
   const [selectedNode, setSelectedNode] = useState<Actor | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<Relation | null>(null);
   const [addNodeCallback, setAddNodeCallback] = useState<((nodeTypeId: string, position?: { x: number; y: number }) => void) | null>(null);
+  const [exportCallback, setExportCallback] = useState<((format: 'png' | 'svg', options?: ExportOptions) => Promise<void>) | null>(null);
   const { fitView } = useReactFlow();
 
 
@@ -133,6 +135,7 @@ function AppContent() {
         onOpenHelp={() => setShowKeyboardHelp(true)}
         onFitView={handleFitView}
         onSelectAll={handleSelectAll}
+        onExport={exportCallback || undefined}
       />
 
       {/* Document Tabs */}
@@ -174,6 +177,7 @@ function AppContent() {
               }
             }}
             onAddNodeRequest={(callback: (nodeTypeId: string, position?: { x: number; y: number }) => void) => setAddNodeCallback(() => callback)}
+            onExportRequest={(callback: (format: 'png' | 'svg', options?: ExportOptions) => Promise<void>) => setExportCallback(() => callback)}
           />
         </div>
 

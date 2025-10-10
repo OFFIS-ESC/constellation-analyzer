@@ -33,6 +33,8 @@ import EmptyState from "../Common/EmptyState";
 import { createNode } from "../../utils/nodeUtils";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { useConfirm } from "../../hooks/useConfirm";
+import { useGraphExport } from "../../hooks/useGraphExport";
+import type { ExportOptions } from "../../utils/graphExport";
 
 import type { Actor, Relation } from "../../types";
 
@@ -42,6 +44,7 @@ interface GraphEditorProps {
   onNodeSelect: (node: Actor | null) => void;
   onEdgeSelect: (edge: Relation | null) => void;
   onAddNodeRequest?: (callback: (nodeTypeId: string, position?: { x: number; y: number }) => void) => void;
+  onExportRequest?: (callback: (format: 'png' | 'svg', options?: ExportOptions) => Promise<void>) => void;
 }
 
 /**
@@ -57,10 +60,13 @@ interface GraphEditorProps {
  *
  * Usage: Core component that wraps React Flow with custom nodes and edges
  */
-const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest }: GraphEditorProps) => {
+const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest, onExportRequest }: GraphEditorProps) => {
   // Sync with workspace active document
   const { activeDocumentId } = useActiveDocument();
   const { saveViewport, getViewport, createDocument } = useWorkspaceStore();
+
+  // Graph export functionality
+  const { exportPNG, exportSVG } = useGraphExport();
 
   const {
     nodes: storeNodes,
@@ -506,6 +512,24 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest }: GraphEdit
       onAddNodeRequest(handleAddNode);
     }
   }, [onAddNodeRequest, handleAddNode]);
+
+  // Provide export callback to parent
+  const handleExport = useCallback(
+    async (format: 'png' | 'svg', options?: ExportOptions) => {
+      if (format === 'png') {
+        await exportPNG(options);
+      } else {
+        await exportSVG(options);
+      }
+    },
+    [exportPNG, exportSVG]
+  );
+
+  useEffect(() => {
+    if (onExportRequest) {
+      onExportRequest(handleExport);
+    }
+  }, [onExportRequest, handleExport]);
 
   // Add new actor at context menu position
   const handleAddActorFromContextMenu = useCallback(

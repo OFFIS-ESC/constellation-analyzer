@@ -7,6 +7,7 @@ import NodeTypeConfigModal from '../Config/NodeTypeConfig';
 import EdgeTypeConfigModal from '../Config/EdgeTypeConfig';
 import { useConfirm } from '../../hooks/useConfirm';
 import { useShortcutLabels } from '../../hooks/useShortcutLabels';
+import type { ExportOptions } from '../../utils/graphExport';
 
 /**
  * MenuBar Component
@@ -22,9 +23,10 @@ interface MenuBarProps {
   onOpenHelp?: () => void;
   onFitView?: () => void;
   onSelectAll?: () => void;
+  onExport?: (format: 'png' | 'svg', options?: ExportOptions) => Promise<void>;
 }
 
-const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onSelectAll }) => {
+const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onSelectAll, onExport }) => {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [showDocumentManager, setShowDocumentManager] = useState(false);
   const [showNodeConfig, setShowNodeConfig] = useState(false);
@@ -145,6 +147,28 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onSelectAll })
     closeMenu();
   }, [clearGraph, closeMenu, confirm]);
 
+  const handleExportPNG = useCallback(async () => {
+    if (!onExport) return;
+    try {
+      await onExport('png');
+      closeMenu();
+    } catch (error) {
+      console.error('PNG export failed:', error);
+      alert('Failed to export graph as PNG');
+    }
+  }, [onExport, closeMenu]);
+
+  const handleExportSVG = useCallback(async () => {
+    if (!onExport) return;
+    try {
+      await onExport('svg');
+      closeMenu();
+    } catch (error) {
+      console.error('SVG export failed:', error);
+      alert('Failed to export graph as SVG');
+    }
+  }, [onExport, closeMenu]);
+
   return (
     <>
       <div ref={menuRef} className="bg-white border-b border-gray-200 shadow-sm">
@@ -203,10 +227,24 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onSelectAll })
                   onClick={handleExport}
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between"
                 >
-                  <span>Export Document</span>
+                  <span>Export Document (JSON)</span>
                   {getShortcutLabel('save-document') && (
                     <span className="text-xs text-gray-400">{getShortcutLabel('save-document')}</span>
                   )}
+                </button>
+                <button
+                  onClick={handleExportPNG}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  disabled={!onExport || !activeDocumentId}
+                >
+                  Export as PNG Image
+                </button>
+                <button
+                  onClick={handleExportSVG}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  disabled={!onExport || !activeDocumentId}
+                >
+                  Export as SVG Vector
                 </button>
                 <button
                   onClick={handleExportAll}

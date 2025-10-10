@@ -31,7 +31,6 @@ import CustomEdge from "../Edges/CustomEdge";
 import ContextMenu from "./ContextMenu";
 import EmptyState from "../Common/EmptyState";
 import { createNode } from "../../utils/nodeUtils";
-import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { useConfirm } from "../../hooks/useConfirm";
 
@@ -622,25 +621,6 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest }: GraphEdit
             {
               actions: [
                 {
-                  label: "Edit Properties",
-                  icon: <EditIcon fontSize="small" />,
-                  onClick: () => {
-                    // Select the node in ReactFlow (which will trigger the right panel)
-                    const nodeId = contextMenu.target!.id;
-                    const updatedNodes = nodes.map((n) => ({
-                      ...n,
-                      selected: n.id === nodeId,
-                    }));
-                    const updatedEdges = edges.map((e) => ({
-                      ...e,
-                      selected: false,
-                    }));
-                    setNodesState(updatedNodes as Node[]);
-                    setEdgesState(updatedEdges as Edge[]);
-                    setContextMenu(null);
-                  },
-                },
-                {
                   label: "Delete",
                   icon: <DeleteIcon fontSize="small" />,
                   onClick: async () => {
@@ -672,25 +652,6 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest }: GraphEdit
           sections={[
             {
               actions: [
-                {
-                  label: "Edit Properties",
-                  icon: <EditIcon fontSize="small" />,
-                  onClick: () => {
-                    // Select the edge in ReactFlow (which will trigger the right panel)
-                    const edgeId = contextMenu.target!.id;
-                    const updatedEdges = edges.map((e) => ({
-                      ...e,
-                      selected: e.id === edgeId,
-                    }));
-                    const updatedNodes = nodes.map((n) => ({
-                      ...n,
-                      selected: false,
-                    }));
-                    setEdgesState(updatedEdges as Edge[]);
-                    setNodesState(updatedNodes as Node[]);
-                    setContextMenu(null);
-                  },
-                },
                 {
                   label: "Delete",
                   icon: <DeleteIcon fontSize="small" />,

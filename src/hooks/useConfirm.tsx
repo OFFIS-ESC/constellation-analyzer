@@ -1,5 +1,7 @@
-import { useState, useCallback } from 'react';
-import ConfirmDialog, { ConfirmDialogSeverity } from '../components/Common/ConfirmDialog';
+import { useState, useCallback } from "react";
+import ConfirmDialog, {
+  ConfirmDialogSeverity,
+} from "../components/Common/ConfirmDialog";
 
 /**
  * useConfirm Hook
@@ -47,11 +49,11 @@ interface ConfirmState extends ConfirmOptions {
 export const useConfirm = () => {
   const [state, setState] = useState<ConfirmState>({
     isOpen: false,
-    title: '',
-    message: '',
-    confirmLabel: 'Confirm',
-    cancelLabel: 'Cancel',
-    severity: 'warning',
+    title: "",
+    message: "",
+    confirmLabel: "Confirm",
+    cancelLabel: "Cancel",
+    severity: "warning",
   });
 
   const confirm = useCallback((options: ConfirmOptions): Promise<boolean> => {
@@ -67,12 +69,12 @@ export const useConfirm = () => {
   const handleConfirm = useCallback(() => {
     state.resolve?.(true);
     setState((prev) => ({ ...prev, isOpen: false }));
-  }, [state.resolve]);
+  }, [state]);
 
   const handleCancel = useCallback(() => {
     state.resolve?.(false);
     setState((prev) => ({ ...prev, isOpen: false }));
-  }, [state.resolve]);
+  }, [state]);
 
   const ConfirmDialogComponent = (
     <ConfirmDialog

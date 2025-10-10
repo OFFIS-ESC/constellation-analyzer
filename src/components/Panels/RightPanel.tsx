@@ -6,6 +6,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { usePanelStore } from '../../stores/panelStore';
 import { useGraphWithHistory } from '../../hooks/useGraphWithHistory';
 import { useConfirm } from '../../hooks/useConfirm';
+import GraphMetrics from '../Common/GraphMetrics';
 import type { Actor, Relation } from '../../types';
 
 /**
@@ -35,7 +36,7 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
     expandRightPanel,
   } = usePanelStore();
 
-  const { nodeTypes, edgeTypes, updateNode, updateEdge, deleteNode, deleteEdge, edges } = useGraphWithHistory();
+  const { nodes, edges, nodeTypes, edgeTypes, updateNode, updateEdge, deleteNode, deleteEdge } = useGraphWithHistory();
   const { confirm, ConfirmDialogComponent } = useConfirm();
 
   // Node property states
@@ -173,32 +174,14 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
     );
   }
 
-  // No selection state
+  // No selection state - show graph metrics
   if (!selectedNode && !selectedEdge) {
     return (
       <div
         className="h-full bg-white border-l border-gray-200 flex flex-col"
         style={{ width: `${rightPanelWidth}px` }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 bg-gray-50">
-          <h2 className="text-sm font-semibold text-gray-700">Properties</h2>
-          <Tooltip title="Collapse Panel (Ctrl+I)">
-            <IconButton size="small" onClick={collapseRightPanel}>
-              <ChevronRightIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </div>
-
-        {/* Empty state */}
-        <div className="flex-1 flex items-center justify-center px-4">
-          <div className="text-center text-gray-400">
-            <p className="text-sm font-medium">No Selection</p>
-            <p className="text-xs mt-1">
-              Select an actor or relation to view properties
-            </p>
-          </div>
-        </div>
+        <GraphMetrics nodes={nodes} edges={edges} />
         {ConfirmDialogComponent}
       </div>
     );

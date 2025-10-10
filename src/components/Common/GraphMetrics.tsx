@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { IconButton, Tooltip } from '@mui/material';
-import RefreshIcon from '@mui/icons-material/Refresh';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import WarningIcon from '@mui/icons-material/Warning';
 import InfoIcon from '@mui/icons-material/Info';
 import BarChartIcon from '@mui/icons-material/BarChart';
@@ -11,6 +11,7 @@ interface GraphMetricsProps {
   nodes: Actor[];
   edges: Relation[];
   onActorClick?: (actorId: string) => void;
+  onCollapse?: () => void;
 }
 
 /**
@@ -19,17 +20,11 @@ interface GraphMetricsProps {
  * Shows when no node or edge is selected in the right panel.
  * Provides insights into graph structure, connectivity, and key actors.
  */
-const GraphMetrics = ({ nodes, edges, onActorClick }: GraphMetricsProps) => {
-  // Calculate all metrics (memoized for performance)
+const GraphMetrics = ({ nodes, edges, onActorClick, onCollapse }: GraphMetricsProps) => {
+  // Calculate all metrics (memoized for performance - auto-updates when nodes/edges change)
   const metrics = useMemo(() => {
     return calculateGraphMetrics(nodes, edges);
   }, [nodes, edges]);
-
-  const handleRefresh = () => {
-    // Metrics are automatically recalculated via useMemo
-    // This is just for visual feedback
-    console.log('Metrics refreshed');
-  };
 
   const formatNumber = (num: number, decimals: number = 2): string => {
     return num.toFixed(decimals);
@@ -47,11 +42,13 @@ const GraphMetrics = ({ nodes, edges, onActorClick }: GraphMetricsProps) => {
           <BarChartIcon className="text-blue-600" fontSize="small" />
           <h2 className="text-sm font-semibold text-gray-700">Graph Analysis</h2>
         </div>
-        <Tooltip title="Refresh Metrics">
-          <IconButton size="small" onClick={handleRefresh}>
-            <RefreshIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+        {onCollapse && (
+          <Tooltip title="Collapse Panel (Ctrl+I)">
+            <IconButton size="small" onClick={onCollapse}>
+              <ChevronRightIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
       </div>
 
       {/* Scrollable Content */}

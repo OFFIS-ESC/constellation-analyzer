@@ -181,7 +181,7 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
         className="h-full bg-white border-l border-gray-200 flex flex-col"
         style={{ width: `${rightPanelWidth}px` }}
       >
-        <GraphMetrics nodes={nodes} edges={edges} />
+        <GraphMetrics nodes={nodes} edges={edges} onCollapse={collapseRightPanel} />
         {ConfirmDialogComponent}
       </div>
     );

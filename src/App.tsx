@@ -4,6 +4,7 @@ import GraphEditor from "./components/Editor/GraphEditor";
 import LeftPanel from "./components/Panels/LeftPanel";
 import RightPanel from "./components/Panels/RightPanel";
 import DocumentTabs from "./components/Workspace/DocumentTabs";
+import Toolbar from "./components/Toolbar/Toolbar";
 import MenuBar from "./components/Menu/MenuBar";
 import DocumentManager from "./components/Workspace/DocumentManager";
 import KeyboardShortcutsHelp from "./components/Common/KeyboardShortcutsHelp";
@@ -136,6 +137,9 @@ function AppContent() {
 
       {/* Document Tabs */}
       <DocumentTabs />
+
+      {/* Toolbar */}
+      {activeDocumentId && <Toolbar />}
 
       {/* Main content area with side panels */}
       <main className="flex-1 overflow-hidden flex">

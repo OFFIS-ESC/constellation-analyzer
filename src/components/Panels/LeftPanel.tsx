@@ -2,14 +2,11 @@ import { useCallback } from 'react';
 import { IconButton, Tooltip } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import UndoIcon from '@mui/icons-material/Undo';
-import RedoIcon from '@mui/icons-material/Redo';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { usePanelStore } from '../../stores/panelStore';
 import { useGraphWithHistory } from '../../hooks/useGraphWithHistory';
 import { useEditorStore } from '../../stores/editorStore';
-import { useDocumentHistory } from '../../hooks/useDocumentHistory';
 import { createNode } from '../../utils/nodeUtils';
 
 /**
@@ -41,7 +38,6 @@ const LeftPanel = ({ onDeselectAll, onAddNode }: LeftPanelProps) => {
 
   const { nodeTypes, edgeTypes, addNode } = useGraphWithHistory();
   const { selectedRelationType, setSelectedRelationType } = useEditorStore();
-  const { undo, redo, canUndo, canRedo, undoDescription, redoDescription } = useDocumentHistory();
 
   const handleAddNode = useCallback(
     (nodeTypeId: string) => {
@@ -78,17 +74,6 @@ const LeftPanel = ({ onDeselectAll, onAddNode }: LeftPanelProps) => {
             <ChevronRightIcon fontSize="small" />
           </IconButton>
         </Tooltip>
-
-        {/* Icon indicators for quick reference */}
-        <div className="flex-1 flex flex-col items-center space-y-4 pt-4">
-          <Tooltip title={`Undo: ${undoDescription || 'Nothing to undo'}`} placement="right">
-            <span>
-              <IconButton size="small" onClick={undo} disabled={!canUndo}>
-                <UndoIcon fontSize="small" />
-              </IconButton>
-            </span>
-          </Tooltip>
-        </div>
       </div>
     );
   }
@@ -111,58 +96,6 @@ const LeftPanel = ({ onDeselectAll, onAddNode }: LeftPanelProps) => {
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
-        {/* History Section */}
-        <div className="border-b border-gray-200">
-          <button
-            onClick={() => toggleLeftPanelSection('history')}
-            className="w-full px-3 py-2 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors"
-          >
-            <span className="text-xs font-semibold text-gray-700">History</span>
-            {leftPanelSections.history ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
-          </button>
-          {leftPanelSections.history && (
-            <div className="px-3 py-3 space-y-2">
-              <div className="flex items-center space-x-1">
-                <Tooltip
-                  title={undoDescription ? `Undo: ${undoDescription}` : 'Undo (Ctrl+Z)'}
-                  arrow
-                >
-                  <span className="flex-1">
-                    <button
-                      onClick={undo}
-                      disabled={!canUndo}
-                      className="w-full flex items-center space-x-2 px-2 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <UndoIcon fontSize="small" />
-                      <span>Undo</span>
-                    </button>
-                  </span>
-                </Tooltip>
-                <Tooltip
-                  title={redoDescription ? `Redo: ${redoDescription}` : 'Redo (Ctrl+Y)'}
-                  arrow
-                >
-                  <span className="flex-1">
-                    <button
-                      onClick={redo}
-                      disabled={!canRedo}
-                      className="w-full flex items-center space-x-2 px-2 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <RedoIcon fontSize="small" />
-                      <span>Redo</span>
-                    </button>
-                  </span>
-                </Tooltip>
-              </div>
-              {undoDescription && (
-                <p className="text-xs text-gray-500 italic">
-                  Next: {undoDescription}
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-
         {/* Add Actors Section */}
         <div className="border-b border-gray-200">
           <button

@@ -1,15 +1,15 @@
-import { useState, useCallback, useEffect } from 'react';
-import { ReactFlowProvider, useReactFlow } from 'reactflow';
-import GraphEditor from './components/Editor/GraphEditor';
-import Toolbar from './components/Toolbar/Toolbar';
-import DocumentTabs from './components/Workspace/DocumentTabs';
-import MenuBar from './components/Menu/MenuBar';
-import DocumentManager from './components/Workspace/DocumentManager';
-import KeyboardShortcutsHelp from './components/Common/KeyboardShortcutsHelp';
-import { KeyboardShortcutProvider } from './contexts/KeyboardShortcutContext';
-import { useGlobalShortcuts } from './hooks/useGlobalShortcuts';
-import { useDocumentHistory } from './hooks/useDocumentHistory';
-import { useWorkspaceStore } from './stores/workspaceStore';
+import { useState, useCallback, useEffect } from "react";
+import { ReactFlowProvider, useReactFlow } from "reactflow";
+import GraphEditor from "./components/Editor/GraphEditor";
+import Toolbar from "./components/Toolbar/Toolbar";
+import DocumentTabs from "./components/Workspace/DocumentTabs";
+import MenuBar from "./components/Menu/MenuBar";
+import DocumentManager from "./components/Workspace/DocumentManager";
+import KeyboardShortcutsHelp from "./components/Common/KeyboardShortcutsHelp";
+import { KeyboardShortcutProvider } from "./contexts/KeyboardShortcutContext";
+import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
+import { useDocumentHistory } from "./hooks/useDocumentHistory";
+import { useWorkspaceStore } from "./stores/workspaceStore";
 
 /**
  * App - Root application component
@@ -43,8 +43,12 @@ function AppContent() {
     const handleOpenDocumentManager = () => {
       setShowDocumentManager(true);
     };
-    window.addEventListener('openDocumentManager', handleOpenDocumentManager);
-    return () => window.removeEventListener('openDocumentManager', handleOpenDocumentManager);
+    window.addEventListener("openDocumentManager", handleOpenDocumentManager);
+    return () =>
+      window.removeEventListener(
+        "openDocumentManager",
+        handleOpenDocumentManager,
+      );
   }, []);
 
   const handleFitView = useCallback(() => {
@@ -54,7 +58,7 @@ function AppContent() {
   const handleSelectAll = useCallback(() => {
     // This will be implemented in GraphEditor
     // For now, we'll just document it
-    console.log('Select All - to be implemented');
+    console.log("Select All - to be implemented");
   }, []);
 
   // Setup global keyboard shortcuts
@@ -73,7 +77,11 @@ function AppContent() {
       <header className="bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg">
         <div className="px-6 py-4">
           <div className="flex items-center gap-3">
-            <img src="/favicon.svg" alt="Constellation Analyzer Logo" className="w-10 h-10" />
+            <img
+              src="favicon.svg"
+              alt="Constellation Analyzer Logo"
+              className="w-10 h-10"
+            />
             <div>
               <h1 className="text-2xl font-bold">Constellation Analyzer</h1>
               <p className="text-sm text-blue-100 mt-1">

@@ -42,6 +42,7 @@ interface GraphEditorProps {
   selectedEdge: Relation | null;
   onNodeSelect: (node: Actor | null) => void;
   onEdgeSelect: (edge: Relation | null) => void;
+  onAddNodeRequest?: (nodeTypeId: string, position?: { x: number; y: number }) => void;
 }
 
 /**
@@ -57,7 +58,7 @@ interface GraphEditorProps {
  *
  * Usage: Core component that wraps React Flow with custom nodes and edges
  */
-const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
+const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest }: GraphEditorProps) => {
   // Sync with workspace active document
   const { activeDocumentId } = useActiveDocument();
   const { saveViewport, getViewport, createDocument } = useWorkspaceStore();
@@ -110,6 +111,9 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
   // Track if a drag is in progress to capture state before drag
   const dragInProgressRef = useRef(false);
 
+  // Track pending selection (ID of item to select after next sync)
+  const pendingSelectionRef = useRef<{ type: 'node' | 'edge', id: string } | null>(null);
+
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -119,13 +123,61 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
   } | null>(null);
 
   // Sync store changes to React Flow state
+  // IMPORTANT: Preserve selection state, unless we have a pending selection (new item added)
   useEffect(() => {
-    setNodesState(storeNodes as Node[]);
-  }, [storeNodes, setNodesState]);
+    const hasPendingSelection = pendingSelectionRef.current !== null;
+    const pendingType = pendingSelectionRef.current?.type;
+    const pendingId = pendingSelectionRef.current?.id;
 
-  useEffect(() => {
-    setEdgesState(storeEdges as Edge[]);
-  }, [storeEdges, setEdgesState]);
+    setNodesState((currentNodes) => {
+      // If we have a pending selection, deselect all nodes (or select the new node)
+      if (hasPendingSelection) {
+        const pendingNodeId = pendingType === 'node' ? pendingId : null;
+
+        return (storeNodes as Node[]).map((node) => ({
+          ...node,
+          selected: node.id === pendingNodeId,
+        }));
+      }
+
+      // Otherwise, preserve existing selection state
+      const selectionMap = new Map(
+        currentNodes.map((node) => [node.id, node.selected])
+      );
+
+      return (storeNodes as Node[]).map((node) => ({
+        ...node,
+        selected: selectionMap.get(node.id) || false,
+      }));
+    });
+
+    setEdgesState((currentEdges) => {
+      // If we have a pending selection, deselect all edges (or select the new edge)
+      if (hasPendingSelection) {
+        const pendingEdgeId = pendingType === 'edge' ? pendingId : null;
+
+        const newEdges = (storeEdges as Edge[]).map((edge) => ({
+          ...edge,
+          selected: edge.id === pendingEdgeId,
+        }));
+
+        // Clear pending selection after applying it to both nodes and edges
+        pendingSelectionRef.current = null;
+
+        return newEdges;
+      }
+
+      // Otherwise, preserve existing selection state
+      const selectionMap = new Map(
+        currentEdges.map((edge) => [edge.id, edge.selected])
+      );
+
+      return (storeEdges as Edge[]).map((edge) => ({
+        ...edge,
+        selected: selectionMap.get(edge.id) || false,
+      }));
+    });
+  }, [storeNodes, storeEdges, setNodesState, setEdgesState]);
 
   // Save viewport when switching documents and restore viewport for new document
   useEffect(() => {
@@ -315,20 +367,18 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
           type: edgeType,
           // Don't set label - will use type's label as default
         },
-        selected: true, // Auto-select the new edge in ReactFlow
       };
 
       // Use React Flow's addEdge helper to properly format the edge
       const updatedEdges = addEdge(edgeWithData, storeEdges as Edge[]);
 
-      // Deselect all nodes
-      const updatedNodes = nodes.map((node) => ({ ...node, selected: false }));
-      setNodesState(updatedNodes as Node[]);
-
       // Find the newly added edge (it will be the last one)
       const newEdge = updatedEdges[updatedEdges.length - 1] as Relation;
 
-      // Use the history-tracked addEdge function
+      // Set pending selection - will be applied after Zustand sync
+      pendingSelectionRef.current = { type: 'edge', id: newEdge.id };
+
+      // Use the history-tracked addEdge function (triggers sync which will apply selection)
       addEdgeWithHistory(newEdge);
     },
     [
@@ -336,8 +386,6 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
       edgeTypeConfigs,
       addEdgeWithHistory,
       selectedRelationType,
-      nodes,
-      setNodesState,
     ],
   );
 
@@ -432,6 +480,34 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
     }
   }, [contextMenu]);
 
+  // Shared node creation logic (used by context menu and left panel)
+  const handleAddNode = useCallback(
+    (nodeTypeId: string, position?: { x: number; y: number }) => {
+      // Use provided position or random position for toolbar/panel
+      const nodePosition = position || {
+        x: Math.random() * 400 + 100,
+        y: Math.random() * 300 + 100,
+      };
+
+      const nodeTypeConfig = nodeTypeConfigs.find((nt) => nt.id === nodeTypeId);
+      const newNode = createNode(nodeTypeId, nodePosition, nodeTypeConfig);
+
+      // Set pending selection - will be applied after Zustand sync
+      pendingSelectionRef.current = { type: 'node', id: newNode.id };
+
+      // Use history-tracked addNode (triggers sync which will apply selection)
+      addNodeWithHistory(newNode);
+    },
+    [nodeTypeConfigs, addNodeWithHistory],
+  );
+
+  // Call the onAddNodeRequest callback if provided
+  useEffect(() => {
+    if (onAddNodeRequest) {
+      onAddNodeRequest(handleAddNode as any);
+    }
+  }, [onAddNodeRequest, handleAddNode]);
+
   // Add new actor at context menu position
   const handleAddActorFromContextMenu = useCallback(
     (nodeTypeId: string) => {
@@ -442,30 +518,10 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect }: GraphEditorProps) => {
         y: contextMenu.y,
       });
 
-      const nodeTypeConfig = nodeTypeConfigs.find((nt) => nt.id === nodeTypeId);
-      const newNode = createNode(nodeTypeId, position, nodeTypeConfig);
-      newNode.selected = true; // Auto-select the new node in ReactFlow
-
-      // Deselect all existing nodes and edges BEFORE adding the new one
-      const updatedNodes = nodes.map((node) => ({ ...node, selected: false }));
-      const updatedEdges = edges.map((edge) => ({ ...edge, selected: false }));
-      setNodesState(updatedNodes as Node[]);
-      setEdgesState(updatedEdges as Edge[]);
-
-      // Use history-tracked addNode instead of setNodes
-      addNodeWithHistory(newNode);
+      handleAddNode(nodeTypeId, position);
       setContextMenu(null);
     },
-    [
-      contextMenu,
-      screenToFlowPosition,
-      nodeTypeConfigs,
-      addNodeWithHistory,
-      nodes,
-      edges,
-      setNodesState,
-      setEdgesState,
-    ],
+    [contextMenu, screenToFlowPosition, handleAddNode],
   );
 
   // Show empty state when no document is active

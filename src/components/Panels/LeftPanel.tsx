@@ -26,9 +26,10 @@ import { createNode } from '../../utils/nodeUtils';
 
 interface LeftPanelProps {
   onDeselectAll: () => void;
+  onAddNode?: (nodeTypeId: string, position?: { x: number; y: number }) => void;
 }
 
-const LeftPanel = ({ onDeselectAll }: LeftPanelProps) => {
+const LeftPanel = ({ onDeselectAll, onAddNode }: LeftPanelProps) => {
   const {
     leftPanelCollapsed,
     leftPanelWidth,
@@ -44,22 +45,26 @@ const LeftPanel = ({ onDeselectAll }: LeftPanelProps) => {
 
   const handleAddNode = useCallback(
     (nodeTypeId: string) => {
-      // Deselect all other nodes/edges first
-      onDeselectAll();
+      // Use the shared callback from GraphEditor if available
+      if (onAddNode) {
+        onAddNode(nodeTypeId);
+      } else {
+        // Fallback to old behavior (for backwards compatibility)
+        onDeselectAll();
 
-      // Create node at center of viewport (approximate)
-      const position = {
-        x: Math.random() * 400 + 100,
-        y: Math.random() * 300 + 100,
-      };
+        const position = {
+          x: Math.random() * 400 + 100,
+          y: Math.random() * 300 + 100,
+        };
 
-      const nodeTypeConfig = nodeTypes.find((nt) => nt.id === nodeTypeId);
-      const newNode = createNode(nodeTypeId, position, nodeTypeConfig);
-      newNode.selected = true; // Auto-select in ReactFlow
+        const nodeTypeConfig = nodeTypes.find((nt) => nt.id === nodeTypeId);
+        const newNode = createNode(nodeTypeId, position, nodeTypeConfig);
+        newNode.selected = true;
 
-      addNode(newNode);
+        addNode(newNode);
+      }
     },
-    [addNode, nodeTypes, onDeselectAll]
+    [onAddNode, onDeselectAll, addNode, nodeTypes]
   );
 
   const selectedEdgeTypeConfig = edgeTypes.find(et => et.id === selectedRelationType);

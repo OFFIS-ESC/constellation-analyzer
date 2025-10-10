@@ -42,6 +42,7 @@ function AppContent() {
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
   const [selectedNode, setSelectedNode] = useState<Actor | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<Relation | null>(null);
+  const [addNodeCallback, setAddNodeCallback] = useState<((nodeTypeId: string, position?: { x: number; y: number }) => void) | null>(null);
   const { fitView } = useReactFlow();
 
 
@@ -145,6 +146,7 @@ function AppContent() {
               setSelectedNode(null);
               setSelectedEdge(null);
             }}
+            onAddNode={addNodeCallback || undefined}
           />
         )}
 
@@ -167,6 +169,7 @@ function AppContent() {
                 setSelectedNode(null);
               }
             }}
+            onAddNodeRequest={(callback: any) => setAddNodeCallback(() => callback)}
           />
         </div>
 

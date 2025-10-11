@@ -1,15 +1,18 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { IconButton, Tooltip } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import SettingsIcon from '@mui/icons-material/Settings';
 import { usePanelStore } from '../../stores/panelStore';
 import { useGraphWithHistory } from '../../hooks/useGraphWithHistory';
 import { useEditorStore } from '../../stores/editorStore';
 import { createNode } from '../../utils/nodeUtils';
 import { getIconComponent } from '../../utils/iconUtils';
 import { getContrastColor } from '../../utils/colorUtils';
+import NodeTypeConfigModal from '../Config/NodeTypeConfig';
+import EdgeTypeConfigModal from '../Config/EdgeTypeConfig';
 
 /**
  * LeftPanel - Collapsible tools panel on the left side
@@ -40,6 +43,8 @@ const LeftPanel = ({ onDeselectAll, onAddNode }: LeftPanelProps) => {
 
   const { nodeTypes, edgeTypes, addNode } = useGraphWithHistory();
   const { selectedRelationType, setSelectedRelationType } = useEditorStore();
+  const [showNodeConfig, setShowNodeConfig] = useState(false);
+  const [showEdgeConfig, setShowEdgeConfig] = useState(false);
 
   const handleAddNode = useCallback(
     (nodeTypeId: string) => {
@@ -100,13 +105,28 @@ const LeftPanel = ({ onDeselectAll, onAddNode }: LeftPanelProps) => {
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
         {/* Add Actors Section */}
         <div className="border-b border-gray-200">
-          <button
-            onClick={() => toggleLeftPanelSection('addActors')}
-            className="w-full px-3 py-2 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors"
-          >
-            <span className="text-xs font-semibold text-gray-700">Add Actors</span>
-            {leftPanelSections.addActors ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
-          </button>
+          <div className="w-full px-3 py-2 flex items-center justify-between bg-gray-50">
+            <button
+              onClick={() => toggleLeftPanelSection('addActors')}
+              className="flex-1 flex items-center hover:bg-gray-100 transition-colors -mx-3 px-3 py-2"
+            >
+              <span className="text-xs font-semibold text-gray-700">Add Actors</span>
+            </button>
+            <Tooltip title="Configure Actor Types">
+              <IconButton
+                size="small"
+                onClick={() => setShowNodeConfig(true)}
+              >
+                <SettingsIcon sx={{ fontSize: 16 }} />
+              </IconButton>
+            </Tooltip>
+            <IconButton
+              size="small"
+              onClick={() => toggleLeftPanelSection('addActors')}
+            >
+              {leftPanelSections.addActors ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+            </IconButton>
+          </div>
           {leftPanelSections.addActors && (
             <div className="px-3 py-3 space-y-2">
               {nodeTypes.map((nodeType) => {
@@ -150,13 +170,28 @@ const LeftPanel = ({ onDeselectAll, onAddNode }: LeftPanelProps) => {
 
         {/* Relations Section */}
         <div className="border-b border-gray-200">
-          <button
-            onClick={() => toggleLeftPanelSection('relations')}
-            className="w-full px-3 py-2 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors"
-          >
-            <span className="text-xs font-semibold text-gray-700">Relations</span>
-            {leftPanelSections.relations ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
-          </button>
+          <div className="w-full px-3 py-2 flex items-center justify-between bg-gray-50">
+            <button
+              onClick={() => toggleLeftPanelSection('relations')}
+              className="flex-1 flex items-center hover:bg-gray-100 transition-colors -mx-3 px-3 py-2"
+            >
+              <span className="text-xs font-semibold text-gray-700">Relations</span>
+            </button>
+            <Tooltip title="Configure Relation Types">
+              <IconButton
+                size="small"
+                onClick={() => setShowEdgeConfig(true)}
+              >
+                <SettingsIcon sx={{ fontSize: 16 }} />
+              </IconButton>
+            </Tooltip>
+            <IconButton
+              size="small"
+              onClick={() => toggleLeftPanelSection('relations')}
+            >
+              {leftPanelSections.relations ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+            </IconButton>
+          </div>
           {leftPanelSections.relations && (
             <div className="px-3 py-3 space-y-2">
               <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -238,6 +273,16 @@ const LeftPanel = ({ onDeselectAll, onAddNode }: LeftPanelProps) => {
           )}
         </div>
       </div>
+
+      {/* Configuration Modals */}
+      <NodeTypeConfigModal
+        isOpen={showNodeConfig}
+        onClose={() => setShowNodeConfig(false)}
+      />
+      <EdgeTypeConfigModal
+        isOpen={showEdgeConfig}
+        onClose={() => setShowEdgeConfig(false)}
+      />
     </div>
   );
 };

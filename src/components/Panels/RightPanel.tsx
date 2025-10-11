@@ -38,27 +38,17 @@ interface Props {
  */
 interface PanelHeaderProps {
   title: string;
-  onClose?: () => void;
   onCollapse: () => void;
 }
 
-const PanelHeader = ({ title, onClose, onCollapse }: PanelHeaderProps) => (
+const PanelHeader = ({ title, onCollapse }: PanelHeaderProps) => (
   <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 bg-gray-50">
     <h2 className="text-sm font-semibold text-gray-700">{title}</h2>
-    <div className="flex items-center space-x-1">
-      {onClose && (
-        <Tooltip title="Close (Esc)">
-          <IconButton size="small" onClick={onClose}>
-            ✕
-          </IconButton>
-        </Tooltip>
-      )}
-      <Tooltip title="Collapse Panel">
-        <IconButton size="small" onClick={onCollapse}>
-          <ChevronRightIcon fontSize="small" />
-        </IconButton>
-      </Tooltip>
-    </div>
+    <Tooltip title="Collapse Panel">
+      <IconButton size="small" onClick={onCollapse}>
+        <ChevronRightIcon fontSize="small" />
+      </IconButton>
+    </Tooltip>
   </div>
 );
 
@@ -262,7 +252,7 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
         className="h-full bg-white border-l border-gray-200 flex flex-col"
         style={{ width: `${rightPanelWidth}px` }}
       >
-        <PanelHeader title="Actor Properties" onClose={onClose} onCollapse={collapseRightPanel} />
+        <PanelHeader title="Actor Properties" onCollapse={collapseRightPanel} />
 
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-3 space-y-4">
@@ -431,7 +421,7 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
         className="h-full bg-white border-l border-gray-200 flex flex-col"
         style={{ width: `${rightPanelWidth}px` }}
       >
-        <PanelHeader title="Relation Properties" onClose={onClose} onCollapse={collapseRightPanel} />
+        <PanelHeader title="Relation Properties" onCollapse={collapseRightPanel} />
 
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-3 space-y-4">

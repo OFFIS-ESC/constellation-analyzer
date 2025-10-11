@@ -60,7 +60,7 @@ const MAX_RIGHT_WIDTH = 500;
 const MIN_BOTTOM_HEIGHT = 150;
 const MAX_BOTTOM_HEIGHT = 500;
 const COLLAPSED_LEFT_WIDTH = 40;
-const COLLAPSED_BOTTOM_HEIGHT = 40;
+const COLLAPSED_BOTTOM_HEIGHT = 48;
 
 export const usePanelStore = create<PanelState>()(
   persist(

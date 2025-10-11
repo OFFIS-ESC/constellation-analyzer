@@ -95,7 +95,7 @@ const BottomPanel: React.FC = () => {
           <h3 className="font-semibold text-sm">Timeline</h3>
 
           {/* Current State Indicator */}
-          {currentState && !bottomPanelCollapsed && (
+          {currentState && (
             <>
               <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
               <div className="flex items-center gap-2 px-2 py-0.5 bg-blue-50 rounded border border-blue-200">

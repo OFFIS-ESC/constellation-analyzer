@@ -111,19 +111,17 @@ function AppContent() {
     <div className="flex flex-col h-screen bg-gray-100">
       {/* Header */}
       <header className="bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg">
-        <div className="px-6 py-4">
+        <div className="px-6 py-3">
           <div className="flex items-center gap-3">
             <img
               src="favicon.svg"
               alt="Constellation Analyzer Logo"
-              className="w-10 h-10"
+              className="w-8 h-8"
             />
-            <div>
-              <h1 className="text-2xl font-bold">Constellation Analyzer</h1>
-              <p className="text-sm text-blue-100 mt-1">
-                Visual editor for analyzing actors and their relationships
-              </p>
-            </div>
+            <h1 className="text-xl font-bold">Constellation Analyzer</h1>
+            <span className="text-blue-100 text-sm border-l border-blue-400 pl-3">
+              Visual editor for analyzing actors and their relationships
+            </span>
           </div>
         </div>
       </header>

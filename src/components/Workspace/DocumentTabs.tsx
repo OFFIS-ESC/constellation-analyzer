@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useCreateDocument } from '../../hooks/useCreateDocument';
+import { useConfirm } from '../../hooks/useConfirm';
 import Tab from './Tab';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -37,6 +38,7 @@ const DocumentTabs = () => {
   } = useWorkspaceStore();
 
   const { handleNewDocument, NewDocumentDialog } = useCreateDocument();
+  const { confirm, ConfirmDialogComponent } = useConfirm();
 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [contextMenu, setContextMenu] = useState<{
@@ -124,11 +126,30 @@ const DocumentTabs = () => {
     setContextMenu(null);
   }, [contextMenu, closeDocument]);
 
-  const handleDeleteFromMenu = useCallback(() => {
+  const handleDeleteFromMenu = useCallback(async () => {
     if (!contextMenu) return;
-    deleteDocument(contextMenu.documentId);
+
+    const meta = documentMetadata.get(contextMenu.documentId);
+    if (!meta) return;
+
+    const confirmTitle = 'Delete Document';
+    const confirmMessage = meta.isDirty
+      ? `"${meta.title}" has unsaved changes. Delete anyway?`
+      : `Are you sure you want to delete "${meta.title}"?`;
+
+    const confirmed = await confirm({
+      title: confirmTitle,
+      message: confirmMessage,
+      confirmLabel: 'Delete',
+      severity: 'danger',
+    });
+
+    if (confirmed) {
+      deleteDocument(contextMenu.documentId);
+    }
+
     setContextMenu(null);
-  }, [contextMenu, deleteDocument]);
+  }, [contextMenu, documentMetadata, deleteDocument, confirm]);
 
   return (
     <div className="flex items-center bg-gray-100 border-b border-gray-300 overflow-x-auto">
@@ -218,6 +239,9 @@ const DocumentTabs = () => {
           onClose={() => setContextMenu(null)}
         />
       )}
+
+      {/* Confirmation Dialog */}
+      {ConfirmDialogComponent}
 
       {/* New Document Dialog */}
       {NewDocumentDialog}

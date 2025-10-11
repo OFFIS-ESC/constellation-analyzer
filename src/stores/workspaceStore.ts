@@ -367,11 +367,6 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
     const state = get();
 
     const metadata = state.documentMetadata.get(documentId);
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${metadata?.title}"? This cannot be undone.`
-    );
-    if (!confirmed) return false;
-
     const docTitle = metadata?.title || 'Untitled';
 
     // Delete from storage

@@ -1,13 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { IconButton, Tooltip } from '@mui/material';
+import { IconButton, Tooltip, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import DeleteIcon from '@mui/icons-material/Delete';
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import SyncAltIcon from '@mui/icons-material/SyncAlt';
+import RemoveIcon from '@mui/icons-material/Remove';
 import { usePanelStore } from '../../stores/panelStore';
 import { useGraphWithHistory } from '../../hooks/useGraphWithHistory';
+import { useDocumentHistory } from '../../hooks/useDocumentHistory';
 import { useConfirm } from '../../hooks/useConfirm';
 import GraphMetrics from '../Common/GraphMetrics';
-import type { Actor, Relation } from '../../types';
+import type { Actor, Relation, EdgeDirectionality } from '../../types';
 
 /**
  * RightPanel - Context-aware properties panel on the right side
@@ -65,7 +70,8 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
     expandRightPanel,
   } = usePanelStore();
 
-  const { nodes, edges, nodeTypes, edgeTypes, updateNode, updateEdge, deleteNode, deleteEdge } = useGraphWithHistory();
+  const { nodes, edges, nodeTypes, edgeTypes, updateNode, updateEdge, deleteNode, deleteEdge, setEdges } = useGraphWithHistory();
+  const { pushToHistory } = useDocumentHistory();
   const { confirm, ConfirmDialogComponent } = useConfirm();
 
   // Node property states
@@ -77,6 +83,7 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
   // Edge property states
   const [relationType, setRelationType] = useState('');
   const [relationLabel, setRelationLabel] = useState('');
+  const [relationDirectionality, setRelationDirectionality] = useState<EdgeDirectionality>('directed');
 
   // Track if user has made changes
   const [hasNodeChanges, setHasNodeChanges] = useState(false);
@@ -107,6 +114,8 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
       const typeLabel = edgeTypes.find((et) => et.id === selectedEdge.data?.type)?.label;
       const hasCustomLabel = selectedEdge.data.label && selectedEdge.data.label !== typeLabel;
       setRelationLabel((hasCustomLabel && selectedEdge.data.label) || '');
+      const edgeTypeConfig = edgeTypes.find((et) => et.id === selectedEdge.data?.type);
+      setRelationDirectionality(selectedEdge.data.directionality || edgeTypeConfig?.defaultDirectionality || 'directed');
       setHasEdgeChanges(false);
     }
   }, [selectedEdge, edgeTypes]);
@@ -130,9 +139,10 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
     updateEdge(selectedEdge.id, {
       type: relationType,
       label: relationLabel.trim() || undefined,
+      directionality: relationDirectionality,
     });
     setHasEdgeChanges(false);
-  }, [selectedEdge, relationType, relationLabel, hasEdgeChanges, updateEdge]);
+  }, [selectedEdge, relationType, relationLabel, relationDirectionality, hasEdgeChanges, updateEdge]);
 
   // Debounce live updates
   useEffect(() => {
@@ -176,6 +186,31 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
       deleteEdge(selectedEdge.id);
       onClose();
     }
+  };
+
+  // Handle reverse direction
+  const handleReverseDirection = () => {
+    if (!selectedEdge) return;
+
+    // Push to history BEFORE mutation
+    pushToHistory('Reverse Relation Direction');
+
+    // Update the edges array with the reversed edge
+    const updatedEdges = edges.map(edge => {
+      if (edge.id === selectedEdge.id) {
+        return {
+          ...edge,
+          source: edge.target,
+          target: edge.source,
+          sourceHandle: edge.targetHandle,
+          targetHandle: edge.sourceHandle,
+        };
+      }
+      return edge;
+    });
+
+    // Apply the update (setEdges is a pass-through without history tracking)
+    setEdges(updatedEdges);
   };
 
   // Get connections for selected node
@@ -438,14 +473,74 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
             </p>
           </div>
 
-          {/* Connection Info */}
+          {/* Directionality */}
           <div className="pt-3 border-t border-gray-200">
-            <p className="text-xs text-gray-500">
-              <span className="font-medium">From:</span> {selectedEdge.source}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              <span className="font-medium">To:</span> {selectedEdge.target}
-            </p>
+            <label className="block text-xs font-medium text-gray-700 mb-2">
+              Directionality
+            </label>
+            <ToggleButtonGroup
+              value={relationDirectionality}
+              exclusive
+              onChange={(_, newValue) => {
+                if (newValue !== null) {
+                  setRelationDirectionality(newValue);
+                  setHasEdgeChanges(true);
+                }
+              }}
+              size="small"
+              fullWidth
+              aria-label="relationship directionality"
+            >
+              <ToggleButton value="directed" aria-label="directed relationship">
+                <Tooltip title="Directed (one-way)">
+                  <div className="flex items-center space-x-1">
+                    <ArrowForwardIcon fontSize="small" />
+                    <span className="text-xs">Directed</span>
+                  </div>
+                </Tooltip>
+              </ToggleButton>
+              <ToggleButton value="bidirectional" aria-label="bidirectional relationship">
+                <Tooltip title="Bidirectional (two-way)">
+                  <div className="flex items-center space-x-1">
+                    <SyncAltIcon fontSize="small" />
+                    <span className="text-xs">Both</span>
+                  </div>
+                </Tooltip>
+              </ToggleButton>
+              <ToggleButton value="undirected" aria-label="undirected relationship">
+                <Tooltip title="Undirected (no direction)">
+                  <div className="flex items-center space-x-1">
+                    <RemoveIcon fontSize="small" />
+                    <span className="text-xs">None</span>
+                  </div>
+                </Tooltip>
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </div>
+
+          {/* Connection Info with Reverse Direction */}
+          <div className="pt-3 border-t border-gray-200">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-medium text-gray-700">
+                Connection
+              </label>
+              {relationDirectionality === 'directed' && (
+                <Tooltip title="Reverse Direction">
+                  <IconButton size="small" onClick={handleReverseDirection}>
+                    <SwapHorizIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              )}
+            </div>
+            <div className="flex items-center justify-center text-xs text-gray-600 py-2 bg-gray-50 rounded">
+              <span className="font-medium">{selectedEdge.source}</span>
+              <span className="mx-2">
+                {relationDirectionality === 'directed' && '→'}
+                {relationDirectionality === 'bidirectional' && '↔'}
+                {relationDirectionality === 'undirected' && '—'}
+              </span>
+              <span className="font-medium">{selectedEdge.target}</span>
+            </div>
           </div>
         </div>
 

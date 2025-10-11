@@ -364,12 +364,17 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest, onExportReq
       const edgeType =
         selectedRelationType || edgeTypeConfigs[0]?.id || "default";
 
+      // Get the edge type config to determine default directionality
+      const edgeTypeConfig = edgeTypeConfigs.find((et) => et.id === edgeType);
+      const defaultDirectionality = edgeTypeConfig?.defaultDirectionality || 'directed';
+
       // Create edge with custom data (no label - will use type default)
       const edgeWithData = {
         ...connection,
         type: "custom",
         data: {
           type: edgeType,
+          directionality: defaultDirectionality,
           // Don't set label - will use type's label as default
         },
       };

@@ -16,6 +16,7 @@ import type { RelationData } from '../../types';
  * - Type-based coloring and styling
  * - Optional label display
  * - Edge type badge
+ * - Directional arrow markers (directed, bidirectional, undirected)
  *
  * Usage: Automatically rendered by React Flow for edges with type='custom'
  */
@@ -57,8 +58,55 @@ const CustomEdge = ({
     dotted: '1,5',
   }[edgeStyle];
 
+  // Get directionality (default to 'directed' for backwards compatibility)
+  const directionality = data?.directionality || edgeTypeConfig?.defaultDirectionality || 'directed';
+
+  // Create unique marker IDs based on color (for reusability)
+  const safeColor = edgeColor.replace('#', '');
+  const markerEndId = `arrow-end-${safeColor}`;
+  const markerStartId = `arrow-start-${safeColor}`;
+
+  // Determine marker start/end based on directionality
+  const markerEnd = (directionality === 'directed' || directionality === 'bidirectional')
+    ? `url(#${markerEndId})`
+    : undefined;
+  const markerStart = directionality === 'bidirectional'
+    ? `url(#${markerStartId})`
+    : undefined;
+
   return (
     <>
+      {/* Arrow marker definitions */}
+      <defs>
+        {/* Arrow pointing right (for marker-end) */}
+        <marker
+          id={markerEndId}
+          viewBox="0 0 10 10"
+          refX="8"
+          refY="5"
+          markerWidth="8"
+          markerHeight="8"
+          orient="auto"
+          fill={edgeColor}
+        >
+          <path d="M 0 0 L 10 5 L 0 10 z" />
+        </marker>
+
+        {/* Arrow pointing left (for marker-start) */}
+        <marker
+          id={markerStartId}
+          viewBox="0 0 10 10"
+          refX="2"
+          refY="5"
+          markerWidth="8"
+          markerHeight="8"
+          orient="auto"
+          fill={edgeColor}
+        >
+          <path d="M 10 0 L 0 5 L 10 10 z" />
+        </marker>
+      </defs>
+
       <BaseEdge
         id={id}
         path={edgePath}
@@ -67,6 +115,8 @@ const CustomEdge = ({
           strokeWidth: selected ? 3 : 2,
           strokeDasharray,
         }}
+        markerEnd={markerEnd}
+        markerStart={markerStart}
       />
 
       {/* Edge label - show custom or type default */}

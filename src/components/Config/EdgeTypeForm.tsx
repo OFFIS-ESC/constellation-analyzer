@@ -1,3 +1,5 @@
+import type { EdgeDirectionality } from '../../types';
+
 /**
  * EdgeTypeForm - Reusable form fields for creating/editing edge types
  *
@@ -5,6 +7,7 @@
  * - Name input
  * - Color picker (visual + text input)
  * - Line style selector (solid/dashed/dotted)
+ * - Default directionality selector
  * - Visual style preview
  */
 
@@ -12,18 +15,22 @@ interface Props {
   name: string;
   color: string;
   style: 'solid' | 'dashed' | 'dotted';
+  defaultDirectionality?: EdgeDirectionality;
   onNameChange: (value: string) => void;
   onColorChange: (value: string) => void;
   onStyleChange: (value: 'solid' | 'dashed' | 'dotted') => void;
+  onDefaultDirectionalityChange?: (value: EdgeDirectionality) => void;
 }
 
 const EdgeTypeForm = ({
   name,
   color,
   style,
+  defaultDirectionality = 'directed',
   onNameChange,
   onColorChange,
   onStyleChange,
+  onDefaultDirectionalityChange,
 }: Props) => {
   const renderStylePreview = (lineStyle: 'solid' | 'dashed' | 'dotted', lineColor: string) => {
     const strokeDasharray = {
@@ -97,6 +104,24 @@ const EdgeTypeForm = ({
           <option value="dotted">Dotted</option>
         </select>
         {renderStylePreview(style, color)}
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-gray-700 mb-1">
+          Default Directionality *
+        </label>
+        <select
+          value={defaultDirectionality}
+          onChange={(e) => onDefaultDirectionalityChange?.(e.target.value as EdgeDirectionality)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="directed">Directed (→) - One-way</option>
+          <option value="bidirectional">Bidirectional (↔) - Two-way</option>
+          <option value="undirected">Undirected (—) - No direction</option>
+        </select>
+        <p className="text-xs text-gray-500 mt-1">
+          New relations of this type will use this directionality by default
+        </p>
       </div>
     </div>
   );

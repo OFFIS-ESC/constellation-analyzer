@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useGraphWithHistory } from '../../hooks/useGraphWithHistory';
 import EdgeTypeForm from './EdgeTypeForm';
 import { useConfirm } from '../../hooks/useConfirm';
-import type { EdgeTypeConfig } from '../../types';
+import type { EdgeTypeConfig, EdgeDirectionality } from '../../types';
 
 /**
  * EdgeTypeConfig - Modal for managing relation/edge types
@@ -26,12 +26,14 @@ const EdgeTypeConfigModal = ({ isOpen, onClose }: Props) => {
   const [newTypeName, setNewTypeName] = useState('');
   const [newTypeColor, setNewTypeColor] = useState('#6366f1');
   const [newTypeStyle, setNewTypeStyle] = useState<'solid' | 'dashed' | 'dotted'>('solid');
+  const [newTypeDirectionality, setNewTypeDirectionality] = useState<EdgeDirectionality>('directed');
 
   // Editing state
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState('');
   const [editColor, setEditColor] = useState('');
   const [editStyle, setEditStyle] = useState<'solid' | 'dashed' | 'dotted'>('solid');
+  const [editDirectionality, setEditDirectionality] = useState<EdgeDirectionality>('directed');
 
   const handleAddType = () => {
     if (!newTypeName.trim()) {
@@ -52,6 +54,7 @@ const EdgeTypeConfigModal = ({ isOpen, onClose }: Props) => {
       label: newTypeName.trim(),
       color: newTypeColor,
       style: newTypeStyle,
+      defaultDirectionality: newTypeDirectionality,
     };
 
     addEdgeType(newType);
@@ -60,6 +63,7 @@ const EdgeTypeConfigModal = ({ isOpen, onClose }: Props) => {
     setNewTypeName('');
     setNewTypeColor('#6366f1');
     setNewTypeStyle('solid');
+    setNewTypeDirectionality('directed');
   };
 
   const handleDeleteType = async (id: string) => {
@@ -79,6 +83,7 @@ const EdgeTypeConfigModal = ({ isOpen, onClose }: Props) => {
     setEditLabel(type.label);
     setEditColor(type.color);
     setEditStyle(type.style || 'solid');
+    setEditDirectionality(type.defaultDirectionality || 'directed');
   };
 
   const handleSaveEdit = () => {
@@ -88,6 +93,7 @@ const EdgeTypeConfigModal = ({ isOpen, onClose }: Props) => {
       label: editLabel.trim(),
       color: editColor,
       style: editStyle,
+      defaultDirectionality: editDirectionality,
     });
 
     setEditingId(null);
@@ -141,9 +147,11 @@ const EdgeTypeConfigModal = ({ isOpen, onClose }: Props) => {
               name={newTypeName}
               color={newTypeColor}
               style={newTypeStyle}
+              defaultDirectionality={newTypeDirectionality}
               onNameChange={setNewTypeName}
               onColorChange={setNewTypeColor}
               onStyleChange={setNewTypeStyle}
+              onDefaultDirectionalityChange={setNewTypeDirectionality}
             />
             <button
               onClick={handleAddType}
@@ -169,9 +177,11 @@ const EdgeTypeConfigModal = ({ isOpen, onClose }: Props) => {
                         name={editLabel}
                         color={editColor}
                         style={editStyle}
+                        defaultDirectionality={editDirectionality}
                         onNameChange={setEditLabel}
                         onColorChange={setEditColor}
                         onStyleChange={setEditStyle}
+                        onDefaultDirectionalityChange={setEditDirectionality}
                       />
                       <div className="flex space-x-2 mt-3">
                         <button

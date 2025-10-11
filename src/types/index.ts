@@ -11,9 +11,12 @@ export interface ActorData {
 export type Actor = Node<ActorData>;
 
 // Edge/Relation Types
+export type EdgeDirectionality = 'directed' | 'bidirectional' | 'undirected';
+
 export interface RelationData {
   label?: string;
   type: string;
+  directionality?: EdgeDirectionality;
   strength?: number;
   metadata?: Record<string, unknown>;
 }
@@ -36,6 +39,7 @@ export interface EdgeTypeConfig {
   color: string;
   style?: 'solid' | 'dashed' | 'dotted';
   description?: string;
+  defaultDirectionality?: EdgeDirectionality;
 }
 
 // Graph State

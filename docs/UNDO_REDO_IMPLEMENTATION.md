@@ -2,14 +2,17 @@
 
 ## Overview
 
-The Constellation Analyzer now features a comprehensive per-document undo/redo system that allows users to safely experiment with their graphs without fear of permanent mistakes.
+The Constellation Analyzer features a comprehensive **document-level** undo/redo system that allows users to safely experiment with their graphs and timeline states without fear of permanent mistakes.
 
 **Key Features:**
-- ✅ **Per-Document History**: Each document maintains its own independent undo/redo stack (max 50 actions)
+- ✅ **Document-Level History**: Each document maintains a single unified undo/redo stack (max 50 actions)
+- ✅ **Complete State Tracking**: Captures entire document state (timeline + all states + types)
+- ✅ **Timeline Operations**: Undo/redo create state, delete state, switch state, rename state
+- ✅ **Graph Operations**: Undo/redo node/edge add/delete/move operations
+- ✅ **Type Configuration**: Undo/redo changes to node/edge types
 - ✅ **Keyboard Shortcuts**: Ctrl+Z (undo), Ctrl+Y or Ctrl+Shift+Z (redo)
 - ✅ **Visual UI**: Undo/Redo buttons in toolbar with disabled states and tooltips
 - ✅ **Action Descriptions**: Hover tooltips show what action will be undone/redone
-- ✅ **Automatic Tracking**: All graph operations are automatically tracked
 - ✅ **Debounced Moves**: Node dragging is debounced to avoid cluttering history
 - ✅ **Document Switching**: History is preserved when switching between documents
 
@@ -17,7 +20,7 @@ The Constellation Analyzer now features a comprehensive per-document undo/redo s
 
 ### 1. History Store (`src/stores/historyStore.ts`)
 
-The central store manages history for all documents:
+The central store manages history for all documents with **complete document snapshots**:
 
 ```typescript
 {
@@ -27,16 +30,28 @@ The central store manages history for all documents:
 ```
 
 Each `DocumentHistory` contains:
-- `undoStack`: Array of past actions (most recent at end)
-- `redoStack`: Array of undone actions that can be redone
-- `currentState`: The current document state snapshot
+- `undoStack`: Array of past document states (most recent at end)
+- `redoStack`: Array of undone document states that can be redone
+
+Each `DocumentSnapshot` contains:
+```typescript
+{
+  timeline: {
+    states: Map<StateId, ConstellationState>  // ALL timeline states
+    currentStateId: StateId                   // Which state is active
+    rootStateId: StateId                      // Root state ID
+  }
+  nodeTypes: NodeTypeConfig[]                 // Global node types
+  edgeTypes: EdgeTypeConfig[]                 // Global edge types
+}
+```
 
 **Key Methods:**
-- `pushAction(documentId, action)`: Records a new action
-- `undo(documentId)`: Reverts to previous state
-- `redo(documentId)`: Restores undone state
+- `pushAction(documentId, action)`: Records complete document snapshot
+- `undo(documentId)`: Reverts to previous document state
+- `redo(documentId)`: Restores undone document state
 - `canUndo/canRedo(documentId)`: Check if actions available
-- `initializeHistory(documentId, initialState)`: Setup history for new document
+- `initializeHistory(documentId)`: Setup history for new document
 - `removeHistory(documentId)`: Clean up when document deleted
 
 ### 2. Document History Hook (`src/hooks/useDocumentHistory.ts`)
@@ -49,10 +64,14 @@ const { undo, redo, canUndo, canRedo, undoDescription, redoDescription, pushToHi
 
 **Responsibilities:**
 - Initializes history when document is first loaded
-- Provides `pushToHistory(description)` to record actions
-- Handles undo/redo by restoring document state
-- Updates both graphStore and workspaceStore on undo/redo
+- Provides `pushToHistory(description)` to record complete document snapshots
+- Handles undo/redo by restoring:
+  - Complete timeline structure (all states)
+  - Current timeline state
+  - Global node/edge types
+  - Current state's graph (nodes and edges)
 - Marks documents as dirty after undo/redo
+- Triggers auto-save after changes
 
 ### 3. Graph Operations with History (`src/hooks/useGraphWithHistory.ts`)
 
@@ -151,45 +170,100 @@ The current codebase uses **Option A** (manual tracking). Components like `Graph
 
 To enable automatic tracking, update components to use `useGraphWithHistory()` instead of `useGraphStore()`.
 
+### 4. Timeline Operations with History (`src/stores/timelineStore.ts`)
+
+**All timeline operations automatically record history:**
+
+Tracked operations:
+- `createState(label)`: Creates new timeline state → "Create State: Feature A"
+- `switchToState(stateId)`: Switches to different state → "Switch to State: Initial State"
+- `deleteState(stateId)`: Deletes timeline state → "Delete State: Old Design"
+- `updateState(stateId, updates)`: Renames or updates state → "Rename State: Draft → Final"
+- `duplicateState(stateId)`: Duplicates state → "Duplicate State: Copy"
+- `duplicateStateAsChild(stateId)`: Duplicates as child → "Duplicate State as Child: Version 2"
+
+Each operation calls `pushDocumentHistory()` helper before making changes.
+
 ## How It Works: Undo/Redo Flow
 
 ### Recording an Action
 
-1. User performs action (e.g., adds a node)
-2. `pushToHistory('Add Person Actor')` is called
-3. Current document state is snapshotted
+1. User performs action (e.g., "adds a node" or "creates a timeline state")
+2. `pushToHistory('Add Person Actor')` or `pushDocumentHistory('Create State: Feature A')` is called
+3. **Complete document state** is snapshotted:
+   - Entire timeline (all states)
+   - Current state ID
+   - Global node/edge types
 4. Snapshot is pushed to `undoStack`
 5. `redoStack` is cleared (since new action invalidates redo)
 
 ### Performing Undo
 
 1. User presses Ctrl+Z or clicks Undo button
-2. Last action is popped from `undoStack`
-3. Current state is pushed to `redoStack`
-4. Previous state from action is restored
-5. GraphStore and WorkspaceStore are updated
-6. Document marked as dirty
+2. Last document snapshot is popped from `undoStack`
+3. Current document state is pushed to `redoStack`
+4. Previous document state is restored:
+   - Timeline structure loaded into timelineStore
+   - Types loaded into graphStore
+   - Current state's graph loaded into graphStore
+5. Document marked as dirty and auto-saved
 
 ### Performing Redo
 
 1. User presses Ctrl+Y or clicks Redo button
-2. Last undone action is popped from `redoStack`
-3. Current state is pushed to `undoStack`
-4. Future state from undone action is restored
-5. GraphStore and WorkspaceStore are updated
-6. Document marked as dirty
+2. Last undone snapshot is popped from `redoStack`
+3. Current document state is pushed to `undoStack`
+4. Future document state is restored (same process as undo)
+5. Document marked as dirty and auto-saved
 
 ## Per-Document Independence
 
 **Critical Feature:** Each document has completely separate history.
 
 Example workflow:
-1. Document A: Add 3 nodes
-2. Switch to Document B: Add 2 edges
-3. Switch back to Document A: Can still undo those 3 node additions
-4. Switch back to Document B: Can still undo those 2 edge additions
+1. Document A: Add 3 nodes, create timeline state "Feature X"
+2. Switch to Document B: Add 2 edges, switch to "Design 2" state
+3. Switch back to Document A: Can undo timeline state creation AND node additions
+4. Switch back to Document B: Can undo state switch AND edge additions
 
 History stacks are **preserved** across document switches and **remain independent**.
+
+## What Can Be Undone?
+
+### Graph Operations (within current state)
+- Add/delete/move nodes
+- Add/delete/update edges
+- Add/delete/update node types
+- Add/delete/update edge types
+- Clear graph
+
+### Timeline Operations (NEW!)
+- Create new timeline state
+- Delete timeline state
+- Switch between timeline states
+- Rename timeline state
+- Duplicate timeline state
+
+### Examples
+
+**Example 1: Undoing Timeline Creation**
+1. Create state "Feature A" → switches to it
+2. Add some nodes in "Feature A"
+3. Press Ctrl+Z → nodes are undone
+4. Press Ctrl+Z again → "Feature A" state is deleted, returns to previous state
+
+**Example 2: Undoing State Switch**
+1. Currently in "Initial State"
+2. Switch to "Design 2" state
+3. Press Ctrl+Z → switches back to "Initial State"
+
+**Example 3: Mixed Operations**
+1. Add node "Person 1"
+2. Create state "Scenario A"
+3. Add node "Person 2" in "Scenario A"
+4. Press Ctrl+Z → "Person 2" is undone
+5. Press Ctrl+Z → "Scenario A" state is deleted
+6. Press Ctrl+Z → "Person 1" is undone
 
 ## Performance Considerations
 

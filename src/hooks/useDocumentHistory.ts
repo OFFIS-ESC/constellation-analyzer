@@ -3,15 +3,16 @@ import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useHistoryStore } from '../stores/historyStore';
 import { useGraphStore } from '../stores/graphStore';
 import { useTimelineStore } from '../stores/timelineStore';
-import type { GraphSnapshot } from '../stores/historyStore';
+import type { DocumentSnapshot } from '../stores/historyStore';
 
 /**
  * useDocumentHistory Hook
  *
- * Provides undo/redo functionality for the active timeline state.
- * Each timeline state has its own independent history stack (max 50 actions).
+ * Provides undo/redo functionality for the active document.
+ * Each document has its own independent history stack (max 50 actions).
  *
- * IMPORTANT: History is per-timeline-state. Each state in a document's timeline has completely separate undo/redo stacks.
+ * IMPORTANT: History is per-document. All operations (graph changes, timeline operations)
+ * are tracked in a single unified history stack for the entire document.
  *
  * Usage:
  *   const { undo, redo, canUndo, canRedo, pushToHistory } = useDocumentHistory();
@@ -20,83 +21,109 @@ export function useDocumentHistory() {
   const activeDocumentId = useWorkspaceStore((state) => state.activeDocumentId);
   const markDocumentDirty = useWorkspaceStore((state) => state.markDocumentDirty);
 
-  const setNodes = useGraphStore((state) => state.setNodes);
-  const setEdges = useGraphStore((state) => state.setEdges);
   const setNodeTypes = useGraphStore((state) => state.setNodeTypes);
   const setEdgeTypes = useGraphStore((state) => state.setEdgeTypes);
 
   const historyStore = useHistoryStore();
 
-  // Get current timeline state ID
-  const currentStateId = useTimelineStore((state) => {
-    if (!activeDocumentId) return null;
-    const timeline = state.timelines.get(activeDocumentId);
-    return timeline?.currentStateId || null;
-  });
-
-  // Initialize history for active timeline state
+  // Initialize history for active document
   useEffect(() => {
-    if (!currentStateId) return;
+    if (!activeDocumentId) return;
 
-    const history = historyStore.histories.get(currentStateId);
+    const history = historyStore.histories.get(activeDocumentId);
     if (!history) {
-      historyStore.initializeHistory(currentStateId);
+      historyStore.initializeHistory(activeDocumentId);
     }
-  }, [currentStateId, historyStore]);
+  }, [activeDocumentId, historyStore]);
 
   /**
-   * Push current graph state to history
+   * Push current document state to history (timeline + types)
    */
   const pushToHistory = useCallback(
     (description: string) => {
-      if (!currentStateId) {
-        console.warn('No active timeline state to record action');
+      if (!activeDocumentId) {
+        console.warn('No active document to record action');
         return;
       }
 
-      // Read current state directly from store (not from React hooks which might be stale)
-      const currentState = useGraphStore.getState();
+      // Get current state from stores
+      const graphStore = useGraphStore.getState();
+      const timelineStore = useTimelineStore.getState();
+      const timeline = timelineStore.timelines.get(activeDocumentId);
 
-      // Create a snapshot of the current graph state
-      const snapshot: GraphSnapshot = {
-        nodes: currentState.nodes,
-        edges: currentState.edges,
-        nodeTypes: currentState.nodeTypes,
-        edgeTypes: currentState.edgeTypes,
+      if (!timeline) {
+        console.warn('No timeline found for active document');
+        return;
+      }
+
+      // Create a snapshot of the complete document state
+      const snapshot: DocumentSnapshot = {
+        timeline: {
+          states: new Map(timeline.states), // Clone the Map
+          currentStateId: timeline.currentStateId,
+          rootStateId: timeline.rootStateId,
+        },
+        nodeTypes: graphStore.nodeTypes,
+        edgeTypes: graphStore.edgeTypes,
       };
 
       // Push to history
-      historyStore.pushAction(currentStateId, {
+      historyStore.pushAction(activeDocumentId, {
         description,
         timestamp: Date.now(),
-        graphState: snapshot,
+        documentState: snapshot,
       });
     },
-    [currentStateId, historyStore]
+    [activeDocumentId, historyStore]
   );
 
   /**
-   * Undo the last action for the active timeline state
+   * Undo the last action for the active document
    */
   const undo = useCallback(() => {
-    if (!currentStateId || !activeDocumentId) {
-      console.warn('No active timeline state to undo');
+    if (!activeDocumentId) {
+      console.warn('No active document to undo');
       return;
     }
 
-    const restoredState = historyStore.undo(currentStateId);
-    if (restoredState) {
-      // Update graph store with restored state
-      setNodes(restoredState.nodes as never[]);
-      setEdges(restoredState.edges as never[]);
-      setNodeTypes(restoredState.nodeTypes as never[]);
-      setEdgeTypes(restoredState.edgeTypes as never[]);
+    // Capture current state BEFORE undoing
+    const graphStore = useGraphStore.getState();
+    const timelineStore = useTimelineStore.getState();
+    const timeline = timelineStore.timelines.get(activeDocumentId);
 
-      // Update the timeline's current state with the restored graph (nodes and edges only)
-      useTimelineStore.getState().saveCurrentGraph({
-        nodes: restoredState.nodes as never[],
-        edges: restoredState.edges as never[],
-      });
+    if (!timeline) {
+      console.warn('No timeline found for active document');
+      return;
+    }
+
+    const currentSnapshot: DocumentSnapshot = {
+      timeline: {
+        states: new Map(timeline.states),
+        currentStateId: timeline.currentStateId,
+        rootStateId: timeline.rootStateId,
+      },
+      nodeTypes: graphStore.nodeTypes,
+      edgeTypes: graphStore.edgeTypes,
+    };
+
+    const restoredState = historyStore.undo(activeDocumentId, currentSnapshot);
+    if (restoredState) {
+
+      // Restore complete document state (timeline + types)
+      timelineStore.loadTimeline(activeDocumentId, restoredState.timeline);
+
+      // Update graph store types
+      setNodeTypes(restoredState.nodeTypes);
+      setEdgeTypes(restoredState.edgeTypes);
+
+      // Load the current state's graph from the restored timeline
+      const currentState = restoredState.timeline.states.get(restoredState.timeline.currentStateId);
+      if (currentState) {
+        useGraphStore.setState({
+          nodes: currentState.graph.nodes,
+          edges: currentState.graph.edges,
+        });
+      }
 
       // Mark document as dirty and trigger auto-save
       markDocumentDirty(activeDocumentId);
@@ -107,30 +134,55 @@ export function useDocumentHistory() {
         saveDocument(activeDocumentId);
       }, 1000);
     }
-  }, [currentStateId, activeDocumentId, historyStore, setNodes, setEdges, setNodeTypes, setEdgeTypes, markDocumentDirty]);
+  }, [activeDocumentId, historyStore, setNodeTypes, setEdgeTypes, markDocumentDirty]);
 
   /**
-   * Redo the last undone action for the active timeline state
+   * Redo the last undone action for the active document
    */
   const redo = useCallback(() => {
-    if (!currentStateId || !activeDocumentId) {
-      console.warn('No active timeline state to redo');
+    if (!activeDocumentId) {
+      console.warn('No active document to redo');
       return;
     }
 
-    const restoredState = historyStore.redo(currentStateId);
-    if (restoredState) {
-      // Update graph store with restored state
-      setNodes(restoredState.nodes as never[]);
-      setEdges(restoredState.edges as never[]);
-      setNodeTypes(restoredState.nodeTypes as never[]);
-      setEdgeTypes(restoredState.edgeTypes as never[]);
+    // Capture current state BEFORE redoing
+    const graphStore = useGraphStore.getState();
+    const timelineStore = useTimelineStore.getState();
+    const timeline = timelineStore.timelines.get(activeDocumentId);
 
-      // Update the timeline's current state with the restored graph (nodes and edges only)
-      useTimelineStore.getState().saveCurrentGraph({
-        nodes: restoredState.nodes as never[],
-        edges: restoredState.edges as never[],
-      });
+    if (!timeline) {
+      console.warn('No timeline found for active document');
+      return;
+    }
+
+    const currentSnapshot: DocumentSnapshot = {
+      timeline: {
+        states: new Map(timeline.states),
+        currentStateId: timeline.currentStateId,
+        rootStateId: timeline.rootStateId,
+      },
+      nodeTypes: graphStore.nodeTypes,
+      edgeTypes: graphStore.edgeTypes,
+    };
+
+    const restoredState = historyStore.redo(activeDocumentId, currentSnapshot);
+    if (restoredState) {
+
+      // Restore complete document state (timeline + types)
+      timelineStore.loadTimeline(activeDocumentId, restoredState.timeline);
+
+      // Update graph store types
+      setNodeTypes(restoredState.nodeTypes);
+      setEdgeTypes(restoredState.edgeTypes);
+
+      // Load the current state's graph from the restored timeline
+      const currentState = restoredState.timeline.states.get(restoredState.timeline.currentStateId);
+      if (currentState) {
+        useGraphStore.setState({
+          nodes: currentState.graph.nodes,
+          edges: currentState.graph.edges,
+        });
+      }
 
       // Mark document as dirty and trigger auto-save
       markDocumentDirty(activeDocumentId);
@@ -141,30 +193,30 @@ export function useDocumentHistory() {
         saveDocument(activeDocumentId);
       }, 1000);
     }
-  }, [currentStateId, activeDocumentId, historyStore, setNodes, setEdges, setNodeTypes, setEdgeTypes, markDocumentDirty]);
+  }, [activeDocumentId, historyStore, setNodeTypes, setEdgeTypes, markDocumentDirty]);
 
   /**
-   * Check if undo is available for the active timeline state
+   * Check if undo is available for the active document
    */
-  const canUndo = currentStateId ? historyStore.canUndo(currentStateId) : false;
+  const canUndo = activeDocumentId ? historyStore.canUndo(activeDocumentId) : false;
 
   /**
-   * Check if redo is available for the active timeline state
+   * Check if redo is available for the active document
    */
-  const canRedo = currentStateId ? historyStore.canRedo(currentStateId) : false;
+  const canRedo = activeDocumentId ? historyStore.canRedo(activeDocumentId) : false;
 
   /**
    * Get the description of the next undo action
    */
-  const undoDescription = currentStateId
-    ? historyStore.getUndoDescription(currentStateId)
+  const undoDescription = activeDocumentId
+    ? historyStore.getUndoDescription(activeDocumentId)
     : null;
 
   /**
    * Get the description of the next redo action
    */
-  const redoDescription = currentStateId
-    ? historyStore.getRedoDescription(currentStateId)
+  const redoDescription = activeDocumentId
+    ? historyStore.getRedoDescription(activeDocumentId)
     : null;
 
   return {

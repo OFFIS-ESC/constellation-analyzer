@@ -1,75 +1,84 @@
 import { create } from "zustand";
-import { useGraphStore } from "./graphStore";
-import type { Actor, Relation, NodeTypeConfig, EdgeTypeConfig } from "../types";
+import type { NodeTypeConfig, EdgeTypeConfig } from "../types";
+import type { ConstellationState, StateId } from "../types/timeline";
 
 /**
- * History Store - Per-Timeline-State Undo/Redo System
+ * History Store - Per-Document Undo/Redo System
  *
- * Each timeline state maintains its own independent history stack with a maximum of 50 actions.
- * Tracks all reversible operations: node add/delete/move, edge add/delete/edit, type changes.
+ * Each document maintains its own independent history stack with a maximum of 50 actions.
+ * Tracks ALL reversible operations at the document level:
+ * - Graph operations: node add/delete/move, edge add/delete/edit
+ * - Timeline operations: create state, delete state, switch state, rename state
+ * - Type configuration: add/delete/update node/edge types
  *
- * IMPORTANT: History is per-timeline-state. Each state in a document's timeline has completely separate undo/redo stacks.
+ * IMPORTANT: History is per-document. Each document has a single unified undo/redo stack
+ * that captures the complete document state (timeline + types) for each action.
  */
 
-export interface GraphSnapshot {
-  nodes: Actor[];
-  edges: Relation[];
+export interface DocumentSnapshot {
+  // Complete timeline structure (all states)
+  timeline: {
+    states: Map<StateId, ConstellationState>;
+    currentStateId: StateId;
+    rootStateId: StateId;
+  };
+  // Global types (shared across all timeline states)
   nodeTypes: NodeTypeConfig[];
   edgeTypes: EdgeTypeConfig[];
 }
 
 export interface HistoryAction {
-  description: string; // Human-readable description (e.g., "Add Person Actor", "Delete Collaborates Relation")
+  description: string; // Human-readable description (e.g., "Add Person Actor", "Create State: Feature A")
   timestamp: number; // When the action occurred
-  graphState: GraphSnapshot; // Graph state snapshot (not full document)
+  documentState: DocumentSnapshot; // Complete document state snapshot
 }
 
-export interface StateHistory {
+export interface DocumentHistory {
   undoStack: HistoryAction[]; // Past states to restore (most recent at end)
   redoStack: HistoryAction[]; // Future states to restore (most recent at end)
 }
 
 interface HistoryStore {
-  // Map of stateId -> history (each timeline state has its own independent history)
-  histories: Map<string, StateHistory>;
+  // Map of documentId -> history (each document has its own independent history)
+  histories: Map<string, DocumentHistory>;
 
-  // Max number of actions to keep in history per state
+  // Max number of actions to keep in history per document
   maxHistorySize: number;
 }
 
 interface HistoryActions {
-  // Initialize history for a timeline state
-  initializeHistory: (stateId: string) => void;
+  // Initialize history for a document
+  initializeHistory: (documentId: string) => void;
 
-  // Push a new action onto the state's history stack
-  pushAction: (stateId: string, action: HistoryAction) => void;
+  // Push a new action onto the document's history stack
+  pushAction: (documentId: string, action: HistoryAction) => void;
 
-  // Undo the last action for a specific state
-  undo: (stateId: string) => GraphSnapshot | null;
+  // Undo the last action for a specific document
+  undo: (documentId: string, currentSnapshot: DocumentSnapshot) => DocumentSnapshot | null;
 
-  // Redo the last undone action for a specific state
-  redo: (stateId: string) => GraphSnapshot | null;
+  // Redo the last undone action for a specific document
+  redo: (documentId: string, currentSnapshot: DocumentSnapshot) => DocumentSnapshot | null;
 
-  // Check if undo is available for a state
-  canUndo: (stateId: string) => boolean;
+  // Check if undo is available for a document
+  canUndo: (documentId: string) => boolean;
 
-  // Check if redo is available for a state
-  canRedo: (stateId: string) => boolean;
+  // Check if redo is available for a document
+  canRedo: (documentId: string) => boolean;
 
-  // Get the description of the next undo action for a state
-  getUndoDescription: (stateId: string) => string | null;
+  // Get the description of the next undo action for a document
+  getUndoDescription: (documentId: string) => string | null;
 
-  // Get the description of the next redo action for a state
-  getRedoDescription: (stateId: string) => string | null;
+  // Get the description of the next redo action for a document
+  getRedoDescription: (documentId: string) => string | null;
 
-  // Clear history for a specific state
-  clearHistory: (stateId: string) => void;
+  // Clear history for a specific document
+  clearHistory: (documentId: string) => void;
 
-  // Remove history for a state (when state is deleted)
-  removeHistory: (stateId: string) => void;
+  // Remove history for a document (when document is deleted)
+  removeHistory: (documentId: string) => void;
 
   // Get history stats for debugging
-  getHistoryStats: (stateId: string) => {
+  getHistoryStats: (documentId: string) => {
     undoCount: number;
     redoCount: number;
   } | null;
@@ -82,13 +91,13 @@ export const useHistoryStore = create<HistoryStore & HistoryActions>(
     histories: new Map(),
     maxHistorySize: MAX_HISTORY_SIZE,
 
-    initializeHistory: (stateId: string) => {
+    initializeHistory: (documentId: string) => {
       set((state) => {
         const newHistories = new Map(state.histories);
 
         // Only initialize if not already present
-        if (!newHistories.has(stateId)) {
-          newHistories.set(stateId, {
+        if (!newHistories.has(documentId)) {
+          newHistories.set(documentId, {
             undoStack: [],
             redoStack: [],
           });
@@ -98,30 +107,36 @@ export const useHistoryStore = create<HistoryStore & HistoryActions>(
       });
     },
 
-    pushAction: (stateId: string, action: HistoryAction) => {
+    pushAction: (documentId: string, action: HistoryAction) => {
       set((state) => {
         const newHistories = new Map(state.histories);
-        const history = newHistories.get(stateId);
+        const history = newHistories.get(documentId);
 
         if (!history) {
-          console.warn(`History not initialized for state ${stateId}`);
+          console.warn(`History not initialized for document ${documentId}`);
           return {};
         }
 
         console.log("📝 pushAction:", {
           description: action.description,
-          actionStateNodes: action.graphState.nodes.length,
-          actionStateEdges: action.graphState.edges.length,
+          currentStateId: action.documentState.timeline.currentStateId,
+          stateCount: action.documentState.timeline.states.size,
           currentUndoStackSize: history.undoStack.length,
         });
 
-        // The action.graphState contains the state BEFORE the action was performed
+        // The action.documentState contains the state BEFORE the action was performed
         // We push this to the undo stack so we can restore it if the user clicks undo
         const newUndoStack = [...history.undoStack];
         newUndoStack.push({
           description: action.description,
           timestamp: action.timestamp,
-          graphState: JSON.parse(JSON.stringify(action.graphState)), // Deep copy
+          documentState: JSON.parse(JSON.stringify(action.documentState, (_key, value) => {
+            // Convert Map to object for serialization
+            if (value instanceof Map) {
+              return Object.fromEntries(value);
+            }
+            return value;
+          })), // Deep copy with Map conversion
         });
 
         // Trim undo stack if it exceeds max size
@@ -132,7 +147,7 @@ export const useHistoryStore = create<HistoryStore & HistoryActions>(
         // Clear redo stack when a new action is performed (can't redo after new action)
         const newRedoStack: HistoryAction[] = [];
 
-        newHistories.set(stateId, {
+        newHistories.set(documentId, {
           undoStack: newUndoStack,
           redoStack: newRedoStack,
         });
@@ -140,19 +155,15 @@ export const useHistoryStore = create<HistoryStore & HistoryActions>(
         console.log("📝 after push:", {
           description: action.description,
           newUndoStackSize: newUndoStack.length,
-          topOfStackNodes:
-            newUndoStack[newUndoStack.length - 1]?.graphState.nodes.length,
-          topOfStackEdges:
-            newUndoStack[newUndoStack.length - 1]?.graphState.edges.length,
         });
 
         return { histories: newHistories };
       });
     },
 
-    undo: (stateId: string) => {
+    undo: (documentId: string, currentSnapshot: DocumentSnapshot) => {
       const state = get();
-      const history = state.histories.get(stateId);
+      const history = state.histories.get(documentId);
 
       if (!history || history.undoStack.length === 0) {
         return null;
@@ -170,47 +181,52 @@ export const useHistoryStore = create<HistoryStore & HistoryActions>(
       const lastAction = history.undoStack[history.undoStack.length - 1];
       const newUndoStack = history.undoStack.slice(0, -1);
 
-      // Get current state from graphStore and push it to redo stack
-      const currentGraphState = useGraphStore.getState();
-      const currentStateSnapshot: GraphSnapshot = {
-        nodes: currentGraphState.nodes,
-        edges: currentGraphState.edges,
-        nodeTypes: currentGraphState.nodeTypes,
-        edgeTypes: currentGraphState.edgeTypes,
-      };
-
+      // Push current state to redo stack
       const newRedoStack = [...history.redoStack];
       newRedoStack.push({
         description: lastAction.description,
         timestamp: Date.now(),
-        graphState: JSON.parse(JSON.stringify(currentStateSnapshot)), // Deep copy
+        documentState: JSON.parse(JSON.stringify(currentSnapshot, (_key, value) => {
+          if (value instanceof Map) {
+            return Object.fromEntries(value);
+          }
+          return value;
+        })),
       });
 
-      // Restore the previous state (deep copy)
-      const restoredState: GraphSnapshot = JSON.parse(
-        JSON.stringify(lastAction.graphState),
+      // Restore the previous state (deep copy with Map reconstruction)
+      const restoredState: DocumentSnapshot = JSON.parse(
+        JSON.stringify(lastAction.documentState),
+        (key, value) => {
+          // Reconstruct Maps from objects
+          if (key === 'states' && value && typeof value === 'object' && !Array.isArray(value)) {
+            return new Map(Object.entries(value));
+          }
+          return value;
+        }
       );
 
       console.log("⏪ after undo:", {
-        restoredStateNodes: restoredState.nodes.length,
-        restoredStateEdges: restoredState.edges.length,
+        currentStateId: restoredState.timeline.currentStateId,
+        stateCount: restoredState.timeline.states.size,
         undoStackSize: newUndoStack.length,
         redoStackSize: newRedoStack.length,
       });
 
-      newHistories.set(stateId, {
+      newHistories.set(documentId, {
         undoStack: newUndoStack,
         redoStack: newRedoStack,
       });
 
       set({ histories: newHistories });
 
+      // Return the restored state
       return restoredState;
     },
 
-    redo: (stateId: string) => {
+    redo: (documentId: string, currentSnapshot: DocumentSnapshot) => {
       const state = get();
-      const history = state.histories.get(stateId);
+      const history = state.histories.get(documentId);
 
       if (!history || history.redoStack.length === 0) {
         return null;
@@ -222,57 +238,62 @@ export const useHistoryStore = create<HistoryStore & HistoryActions>(
       const lastAction = history.redoStack[history.redoStack.length - 1];
       const newRedoStack = history.redoStack.slice(0, -1);
 
-      // Get current state from graphStore and push it to undo stack
-      const currentGraphState = useGraphStore.getState();
-      const currentStateSnapshot: GraphSnapshot = {
-        nodes: currentGraphState.nodes,
-        edges: currentGraphState.edges,
-        nodeTypes: currentGraphState.nodeTypes,
-        edgeTypes: currentGraphState.edgeTypes,
-      };
-
+      // Push current state to undo stack
       const newUndoStack = [...history.undoStack];
       newUndoStack.push({
         description: lastAction.description,
         timestamp: Date.now(),
-        graphState: JSON.parse(JSON.stringify(currentStateSnapshot)), // Deep copy
+        documentState: JSON.parse(JSON.stringify(currentSnapshot, (_key, value) => {
+          if (value instanceof Map) {
+            return Object.fromEntries(value);
+          }
+          return value;
+        })),
       });
 
       // Trim if exceeds max size
       if (newUndoStack.length > state.maxHistorySize) {
-        newUndoStack.shift(); // Remove oldest
+        newUndoStack.shift();
       }
 
-      // Restore the future state (deep copy)
-      const restoredState: GraphSnapshot = JSON.parse(
-        JSON.stringify(lastAction.graphState),
+      // Restore the future state (deep copy with Map reconstruction)
+      const restoredState: DocumentSnapshot = JSON.parse(
+        JSON.stringify(lastAction.documentState),
+        (key, value) => {
+          // Reconstruct Maps from objects
+          if (key === 'states' && value && typeof value === 'object' && !Array.isArray(value)) {
+            return new Map(Object.entries(value));
+          }
+          return value;
+        }
       );
 
-      newHistories.set(stateId, {
+      newHistories.set(documentId, {
         undoStack: newUndoStack,
         redoStack: newRedoStack,
       });
 
       set({ histories: newHistories });
 
+      // Return the restored state
       return restoredState;
     },
 
-    canUndo: (stateId: string) => {
+    canUndo: (documentId: string) => {
       const state = get();
-      const history = state.histories.get(stateId);
+      const history = state.histories.get(documentId);
       return history ? history.undoStack.length > 0 : false;
     },
 
-    canRedo: (stateId: string) => {
+    canRedo: (documentId: string) => {
       const state = get();
-      const history = state.histories.get(stateId);
+      const history = state.histories.get(documentId);
       return history ? history.redoStack.length > 0 : false;
     },
 
-    getUndoDescription: (stateId: string) => {
+    getUndoDescription: (documentId: string) => {
       const state = get();
-      const history = state.histories.get(stateId);
+      const history = state.histories.get(documentId);
 
       if (!history || history.undoStack.length === 0) {
         return null;
@@ -282,9 +303,9 @@ export const useHistoryStore = create<HistoryStore & HistoryActions>(
       return lastAction.description;
     },
 
-    getRedoDescription: (stateId: string) => {
+    getRedoDescription: (documentId: string) => {
       const state = get();
-      const history = state.histories.get(stateId);
+      const history = state.histories.get(documentId);
 
       if (!history || history.redoStack.length === 0) {
         return null;
@@ -294,13 +315,13 @@ export const useHistoryStore = create<HistoryStore & HistoryActions>(
       return lastAction.description;
     },
 
-    clearHistory: (stateId: string) => {
+    clearHistory: (documentId: string) => {
       set((state) => {
         const newHistories = new Map(state.histories);
-        const history = newHistories.get(stateId);
+        const history = newHistories.get(documentId);
 
         if (history) {
-          newHistories.set(stateId, {
+          newHistories.set(documentId, {
             undoStack: [],
             redoStack: [],
           });
@@ -310,17 +331,17 @@ export const useHistoryStore = create<HistoryStore & HistoryActions>(
       });
     },
 
-    removeHistory: (stateId: string) => {
+    removeHistory: (documentId: string) => {
       set((state) => {
         const newHistories = new Map(state.histories);
-        newHistories.delete(stateId);
+        newHistories.delete(documentId);
         return { histories: newHistories };
       });
     },
 
-    getHistoryStats: (stateId: string) => {
+    getHistoryStats: (documentId: string) => {
       const state = get();
-      const history = state.histories.get(stateId);
+      const history = state.histories.get(documentId);
 
       if (!history) {
         return null;

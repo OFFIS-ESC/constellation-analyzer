@@ -8,14 +8,14 @@ import type { Actor, Relation, NodeTypeConfig, EdgeTypeConfig, RelationData } fr
  *
  * ✅ USE THIS HOOK FOR ALL GRAPH MUTATIONS IN COMPONENTS ✅
  *
- * This hook wraps graph store operations with automatic history tracking.
- * Every operation that modifies the graph pushes a snapshot to the history stack,
- * enabling undo/redo functionality.
+ * This hook wraps graph store operations with automatic document-level history tracking.
+ * Every operation that modifies the graph pushes a complete document snapshot to the history stack,
+ * enabling undo/redo functionality for both graph changes and timeline operations.
  *
  * ⚠️ IMPORTANT: Always use this hook instead of `useGraphStore()` in components
  * that modify graph state.
  *
- * History-tracked operations:
+ * History-tracked operations (saved to document-level history):
  * - Node operations: addNode, updateNode, deleteNode
  * - Edge operations: addEdge, updateEdge, deleteEdge
  * - Type operations: addNodeType, updateNodeType, deleteNodeType, addEdgeType, updateEdgeType, deleteEdgeType

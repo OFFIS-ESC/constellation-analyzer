@@ -10,6 +10,8 @@ import type { SerializedActor, SerializedRelation } from "./persistence/types";
 import { useGraphStore } from "./graphStore";
 import { useWorkspaceStore } from "./workspaceStore";
 import { useToastStore } from "./toastStore";
+import { useHistoryStore } from "./historyStore";
+import type { DocumentSnapshot } from "./historyStore";
 
 /**
  * Timeline Store
@@ -29,6 +31,35 @@ interface TimelineStore {
 // Generate unique state ID
 function generateStateId(): StateId {
   return `state_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+// Helper to push document state to history
+function pushDocumentHistory(documentId: string, description: string) {
+  const historyStore = useHistoryStore.getState();
+  const timelineStore = useTimelineStore.getState();
+  const graphStore = useGraphStore.getState();
+
+  const timeline = timelineStore.timelines.get(documentId);
+  if (!timeline) {
+    console.warn('No timeline found for document');
+    return;
+  }
+
+  const snapshot: DocumentSnapshot = {
+    timeline: {
+      states: new Map(timeline.states), // Clone the Map
+      currentStateId: timeline.currentStateId,
+      rootStateId: timeline.rootStateId,
+    },
+    nodeTypes: graphStore.nodeTypes,
+    edgeTypes: graphStore.edgeTypes,
+  };
+
+  historyStore.pushAction(documentId, {
+    description,
+    timestamp: Date.now(),
+    documentState: snapshot,
+  });
 }
 
 export const useTimelineStore = create<TimelineStore & TimelineActions>(
@@ -126,6 +157,9 @@ export const useTimelineStore = create<TimelineStore & TimelineActions>(
         return "";
       }
 
+      // Push to history BEFORE making changes
+      pushDocumentHistory(activeDocumentId, `Create State: ${label}`);
+
       const newStateId = generateStateId();
       const now = new Date().toISOString();
 
@@ -210,6 +244,12 @@ export const useTimelineStore = create<TimelineStore & TimelineActions>(
         return;
       }
 
+      // Don't push history if already on this state
+      if (timeline.currentStateId !== stateId) {
+        // Push to history BEFORE making changes
+        pushDocumentHistory(activeDocumentId, `Switch to State: ${targetState.label}`);
+      }
+
       // Save current graph state to current state before switching (nodes and edges only)
       const currentState = timeline.states.get(timeline.currentStateId);
       if (currentState) {
@@ -260,6 +300,13 @@ export const useTimelineStore = create<TimelineStore & TimelineActions>(
       if (!stateToUpdate) {
         console.error(`State ${stateId} not found`);
         return;
+      }
+
+      // Push to history BEFORE making changes (only if label changed)
+      if (updates.label && updates.label !== stateToUpdate.label) {
+        pushDocumentHistory(activeDocumentId, `Rename State: ${stateToUpdate.label} → ${updates.label}`);
+      } else if (updates.description || updates.metadata) {
+        pushDocumentHistory(activeDocumentId, `Update State: ${stateToUpdate.label}`);
       }
 
       set((state) => {
@@ -328,6 +375,9 @@ export const useTimelineStore = create<TimelineStore & TimelineActions>(
       const stateToDelete = timeline.states.get(stateId);
       const stateName = stateToDelete?.label || "Unknown";
 
+      // Push to history BEFORE making changes
+      pushDocumentHistory(activeDocumentId, `Delete State: ${stateName}`);
+
       set((state) => {
         const newTimelines = new Map(state.timelines);
         const timeline = newTimelines.get(activeDocumentId)!;
@@ -378,6 +428,9 @@ export const useTimelineStore = create<TimelineStore & TimelineActions>(
       const newStateId = generateStateId();
       const now = new Date().toISOString();
       const label = newLabel || `${stateToDuplicate.label} (Copy)`;
+
+      // Push to history BEFORE making changes
+      pushDocumentHistory(activeDocumentId, `Duplicate State: ${label}`);
 
       const duplicatedState: ConstellationState = {
         ...stateToDuplicate,
@@ -439,6 +492,9 @@ export const useTimelineStore = create<TimelineStore & TimelineActions>(
       const newStateId = generateStateId();
       const now = new Date().toISOString();
       const label = newLabel || `${stateToDuplicate.label} (Copy)`;
+
+      // Push to history BEFORE making changes
+      pushDocumentHistory(activeDocumentId, `Duplicate State as Child: ${label}`);
 
       const duplicatedState: ConstellationState = {
         ...stateToDuplicate,

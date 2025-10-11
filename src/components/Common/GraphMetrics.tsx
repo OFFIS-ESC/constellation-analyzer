@@ -33,7 +33,7 @@ const GraphMetrics = ({ nodes, edges, onActorClick }: GraphMetricsProps) => {
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col overflow-hidden">
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-3 space-y-4">
         {/* Overview Section */}

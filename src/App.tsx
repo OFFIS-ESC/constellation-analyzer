@@ -3,6 +3,7 @@ import { ReactFlowProvider, useReactFlow } from "reactflow";
 import GraphEditor from "./components/Editor/GraphEditor";
 import LeftPanel from "./components/Panels/LeftPanel";
 import RightPanel from "./components/Panels/RightPanel";
+import BottomPanel from "./components/Timeline/BottomPanel";
 import DocumentTabs from "./components/Workspace/DocumentTabs";
 import Toolbar from "./components/Toolbar/Toolbar";
 import MenuBar from "./components/Menu/MenuBar";
@@ -41,7 +42,7 @@ import type { ExportOptions } from "./utils/graphExport";
 function AppContent() {
   const { undo, redo } = useDocumentHistory();
   const { activeDocumentId } = useWorkspaceStore();
-  const { leftPanelVisible, rightPanelVisible } = usePanelStore();
+  const { leftPanelVisible, rightPanelVisible, bottomPanelVisible } = usePanelStore();
   const { handleNewDocument, NewDocumentDialog } = useCreateDocument();
   const [showDocumentManager, setShowDocumentManager] = useState(false);
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
@@ -141,63 +142,71 @@ function AppContent() {
       {/* Toolbar */}
       {activeDocumentId && <Toolbar />}
 
-      {/* Main content area with side panels */}
-      <main className="flex-1 overflow-hidden flex">
-        {/* Left Panel */}
-        {leftPanelVisible && activeDocumentId && (
-          <LeftPanel
-            onDeselectAll={() => {
-              setSelectedNode(null);
-              setSelectedEdge(null);
-            }}
-            onAddNode={addNodeCallback || undefined}
-          />
-        )}
-
-        {/* Center: Graph Editor */}
-        <div className="flex-1 overflow-hidden">
-          <GraphEditor
-            selectedNode={selectedNode}
-            selectedEdge={selectedEdge}
-            onNodeSelect={(node) => {
-              setSelectedNode(node);
-              // Only clear edge if we're setting a node (not clearing)
-              if (node) {
-                setSelectedEdge(null);
-              }
-            }}
-            onEdgeSelect={(edge) => {
-              setSelectedEdge(edge);
-              // Only clear node if we're setting an edge (not clearing)
-              if (edge) {
+      {/* Main content area with side panels and bottom panel */}
+      <main className="flex-1 overflow-hidden flex flex-col">
+        {/* Top section: Left panel, graph editor, right panel */}
+        <div className="flex-1 overflow-hidden flex">
+          {/* Left Panel */}
+          {leftPanelVisible && activeDocumentId && (
+            <LeftPanel
+              onDeselectAll={() => {
                 setSelectedNode(null);
-              }
-            }}
-            onAddNodeRequest={(
-              callback: (
-                nodeTypeId: string,
-                position?: { x: number; y: number },
-              ) => void,
-            ) => setAddNodeCallback(() => callback)}
-            onExportRequest={(
-              callback: (
-                format: "png" | "svg",
-                options?: ExportOptions,
-              ) => Promise<void>,
-            ) => setExportCallback(() => callback)}
-          />
+                setSelectedEdge(null);
+              }}
+              onAddNode={addNodeCallback || undefined}
+            />
+          )}
+
+          {/* Center: Graph Editor */}
+          <div className="flex-1 overflow-hidden">
+            <GraphEditor
+              selectedNode={selectedNode}
+              selectedEdge={selectedEdge}
+              onNodeSelect={(node) => {
+                setSelectedNode(node);
+                // Only clear edge if we're setting a node (not clearing)
+                if (node) {
+                  setSelectedEdge(null);
+                }
+              }}
+              onEdgeSelect={(edge) => {
+                setSelectedEdge(edge);
+                // Only clear node if we're setting an edge (not clearing)
+                if (edge) {
+                  setSelectedNode(null);
+                }
+              }}
+              onAddNodeRequest={(
+                callback: (
+                  nodeTypeId: string,
+                  position?: { x: number; y: number },
+                ) => void,
+              ) => setAddNodeCallback(() => callback)}
+              onExportRequest={(
+                callback: (
+                  format: "png" | "svg",
+                  options?: ExportOptions,
+                ) => Promise<void>,
+              ) => setExportCallback(() => callback)}
+            />
+          </div>
+
+          {/* Right Panel */}
+          {rightPanelVisible && activeDocumentId && (
+            <RightPanel
+              selectedNode={selectedNode}
+              selectedEdge={selectedEdge}
+              onClose={() => {
+                setSelectedNode(null);
+                setSelectedEdge(null);
+              }}
+            />
+          )}
         </div>
 
-        {/* Right Panel */}
-        {rightPanelVisible && activeDocumentId && (
-          <RightPanel
-            selectedNode={selectedNode}
-            selectedEdge={selectedEdge}
-            onClose={() => {
-              setSelectedNode(null);
-              setSelectedEdge(null);
-            }}
-          />
+        {/* Bottom Panel (Timeline) - show when bottomPanelVisible and there's an active document */}
+        {bottomPanelVisible && activeDocumentId && (
+          <BottomPanel />
         )}
       </main>
 

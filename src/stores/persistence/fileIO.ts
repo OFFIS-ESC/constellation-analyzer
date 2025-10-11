@@ -1,6 +1,6 @@
 import type { Actor, Relation, NodeTypeConfig, EdgeTypeConfig } from '../../types';
 import type { ConstellationDocument } from './types';
-import { createDocument } from './saver';
+import { createDocument, serializeActors, serializeRelations } from './saver';
 import { validateDocument, deserializeGraphState } from './loader';
 
 /**
@@ -8,19 +8,12 @@ import { validateDocument, deserializeGraphState } from './loader';
  */
 
 /**
- * Export current graph state to a JSON file
+ * Export a complete ConstellationDocument to a JSON file
+ * Includes all timeline states and metadata
  */
-export function exportGraphToFile(
-  nodes: Actor[],
-  edges: Relation[],
-  nodeTypes: NodeTypeConfig[],
-  edgeTypes: EdgeTypeConfig[]
-): void {
-  // Create the document using the existing saver
-  const doc = createDocument(nodes, edges, nodeTypes, edgeTypes);
-
+export function exportDocumentToFile(document: ConstellationDocument): void {
   // Convert to JSON with pretty formatting
-  const jsonString = JSON.stringify(doc, null, 2);
+  const jsonString = JSON.stringify(document, null, 2);
   const blob = new Blob([jsonString], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
 
@@ -28,7 +21,9 @@ export function exportGraphToFile(
   const link = window.document.createElement('a');
   link.href = url;
   const dateStr = new Date().toISOString().slice(0, 10);
-  link.download = `constellation-analysis-${dateStr}.json`;
+  const title = document.metadata.title || 'constellation-analysis';
+  const sanitizedTitle = title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  link.download = `${sanitizedTitle}-${dateStr}.json`;
 
   // Trigger download
   window.document.body.appendChild(link);
@@ -37,6 +32,27 @@ export function exportGraphToFile(
   // Cleanup
   window.document.body.removeChild(link);
   URL.revokeObjectURL(url);
+}
+
+/**
+ * Export current graph state to a JSON file
+ * Creates a new document with a single "Initial State"
+ */
+export function exportGraphToFile(
+  nodes: Actor[],
+  edges: Relation[],
+  nodeTypes: NodeTypeConfig[],
+  edgeTypes: EdgeTypeConfig[]
+): void {
+  // Serialize actors and relations
+  const serializedNodes = serializeActors(nodes);
+  const serializedEdges = serializeRelations(edges);
+
+  // Create the document using the existing saver
+  const doc = createDocument(serializedNodes, serializedEdges, nodeTypes, edgeTypes);
+
+  // Use the main export function
+  exportDocumentToFile(doc);
 }
 
 /**

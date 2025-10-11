@@ -56,6 +56,44 @@ const ContextMenu = ({ x, y, sections, onClose }: Props) => {
     };
   }, [onClose]);
 
+  // Adjust position to prevent overflow
+  useEffect(() => {
+    if (menuRef.current) {
+      const rect = menuRef.current.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+
+      let adjustedX = x;
+      let adjustedY = y;
+
+      // Check right edge overflow
+      if (rect.right > viewportWidth) {
+        adjustedX = viewportWidth - rect.width - 10;
+      }
+
+      // Check bottom edge overflow
+      if (rect.bottom > viewportHeight) {
+        adjustedY = viewportHeight - rect.height - 10;
+      }
+
+      // Check left edge overflow
+      if (adjustedX < 10) {
+        adjustedX = 10;
+      }
+
+      // Check top edge overflow
+      if (adjustedY < 10) {
+        adjustedY = 10;
+      }
+
+      // Apply adjusted position
+      if (adjustedX !== x || adjustedY !== y) {
+        menuRef.current.style.left = `${adjustedX}px`;
+        menuRef.current.style.top = `${adjustedY}px`;
+      }
+    }
+  }, [x, y]);
+
   return (
     <div
       ref={menuRef}

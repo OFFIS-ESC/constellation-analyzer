@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import type { ConstellationDocument } from './persistence/types';
 import type { Workspace, WorkspaceActions, DocumentMetadata, WorkspaceSettings } from './workspace/types';
-import { createDocument as createDocumentHelper } from './persistence/saver';
-import { selectFileForImport, exportGraphToFile } from './persistence/fileIO';
+import { createDocument as createDocumentHelper, serializeActors, serializeRelations } from './persistence/saver';
+import { selectFileForImport, exportDocumentToFile } from './persistence/fileIO';
 import {
   generateWorkspaceId,
   generateDocumentId,
@@ -23,6 +23,10 @@ import {
   selectWorkspaceZipForImport,
 } from './workspace/workspaceIO';
 import { useToastStore } from './toastStore';
+import { useTimelineStore } from './timelineStore';
+import { useGraphStore } from './graphStore';
+import type { ConstellationState, Timeline } from '../types/timeline';
+import { getCurrentGraphFromDocument } from './persistence/loader';
 
 /**
  * Workspace Store
@@ -81,6 +85,11 @@ function initializeWorkspace(): Workspace {
       const doc = loadDocumentFromStorage(savedState.activeDocumentId);
       if (doc) {
         documents.set(savedState.activeDocumentId, doc);
+
+        // Load timeline if it exists
+        if (doc.timeline) {
+          useTimelineStore.getState().loadTimeline(savedState.activeDocumentId, doc.timeline as unknown as Timeline);
+        }
       }
     }
 
@@ -145,6 +154,9 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
     saveDocumentToStorage(documentId, newDoc);
     saveDocumentMetadata(documentId, metadata);
 
+    // Load the timeline from the newly created document into timelineStore
+    useTimelineStore.getState().loadTimeline(documentId, newDoc.timeline as unknown as Timeline);
+
     // Update workspace
     set((state) => {
       const newDocuments = new Map(state.documents);
@@ -192,12 +204,19 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
     const documentId = generateDocumentId();
     const now = new Date().toISOString();
 
+    // Get node and edge types from source document's current graph
+    const sourceGraph = getCurrentGraphFromDocument(sourceDoc);
+    if (!sourceGraph) {
+      console.error('Failed to get graph from source document');
+      return '';
+    }
+
     // Create new document with the same node and edge types, but no actors/relations
     const newDoc = createDocumentHelper(
       [],
       [],
-      sourceDoc.graph.nodeTypes,
-      sourceDoc.graph.edgeTypes
+      sourceGraph.nodeTypes,
+      sourceGraph.edgeTypes
     );
     newDoc.metadata.documentId = documentId;
     newDoc.metadata.title = title;
@@ -212,6 +231,9 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
     // Save document
     saveDocumentToStorage(documentId, newDoc);
     saveDocumentMetadata(documentId, metadata);
+
+    // Load the timeline from the newly created document into timelineStore
+    useTimelineStore.getState().loadTimeline(documentId, newDoc.timeline as unknown as Timeline);
 
     // Update workspace
     set((state) => {
@@ -259,6 +281,11 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
     if (!doc) {
       console.error(`Document ${documentId} not found`);
       return;
+    }
+
+    // Load timeline if it exists
+    if (doc.timeline) {
+      useTimelineStore.getState().loadTimeline(documentId, doc.timeline as unknown as Timeline);
     }
 
     set((state) => {
@@ -472,6 +499,10 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
       };
     });
 
+    // Initialize timeline for duplicated document - always copy the timeline
+    // since all documents now have timelines
+    useTimelineStore.getState().loadTimeline(newDocumentId, duplicatedDoc.timeline as unknown as Timeline);
+
     useToastStore.getState().showToast(`Document duplicated as "${newTitle}"`, 'success');
 
     return newDocumentId;
@@ -525,9 +556,13 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
           const documentId = generateDocumentId();
           const now = new Date().toISOString();
 
+          // Serialize actors and relations for storage
+          const serializedNodes = serializeActors(data.nodes);
+          const serializedEdges = serializeRelations(data.edges);
+
           const importedDoc = createDocumentHelper(
-            data.nodes,
-            data.edges,
+            serializedNodes,
+            serializedEdges,
             data.nodeTypes,
             data.edgeTypes
           );
@@ -543,6 +578,9 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
 
           saveDocumentToStorage(documentId, importedDoc);
           saveDocumentMetadata(documentId, metadata);
+
+          // Load the timeline from the imported document into timelineStore
+          useTimelineStore.getState().loadTimeline(documentId, importedDoc.timeline as unknown as Timeline);
 
           set((state) => {
             const newDocuments = new Map(state.documents);
@@ -593,12 +631,26 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
     }
 
     try {
-      exportGraphToFile(
-        doc.graph.nodes,
-        doc.graph.edges,
-        doc.graph.nodeTypes,
-        doc.graph.edgeTypes
-      );
+      // Ensure timeline is up-to-date before exporting (similar to saveDocument)
+      const timelineState = useTimelineStore.getState();
+      const timeline = timelineState.timelines.get(documentId);
+
+      if (timeline) {
+        // Serialize timeline (convert Map to object)
+        const serializedStates: Record<string, ConstellationState> = {};
+        timeline.states.forEach((state: ConstellationState, id: string) => {
+          serializedStates[id] = state;
+        });
+
+        doc.timeline = {
+          states: serializedStates,
+          currentStateId: timeline.currentStateId,
+          rootStateId: timeline.rootStateId,
+        };
+      }
+
+      // Export the complete document with all timeline states
+      exportDocumentToFile(doc);
       useToastStore.getState().showToast('Document exported successfully', 'success');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
@@ -673,6 +725,30 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
     const doc = state.documents.get(documentId);
     if (doc) {
       doc.metadata.updatedAt = new Date().toISOString();
+
+      // Save global node and edge types from graph store
+      const graphStore = useGraphStore.getState();
+      doc.nodeTypes = graphStore.nodeTypes;
+      doc.edgeTypes = graphStore.edgeTypes;
+
+      // Save timeline data if exists
+      const timelineState = useTimelineStore.getState();
+      const timeline = timelineState.timelines.get(documentId);
+
+      if (timeline) {
+        // Serialize timeline (convert Map to object)
+        const serializedStates: Record<string, ConstellationState> = {};
+        timeline.states.forEach((state: ConstellationState, id: string) => {
+          serializedStates[id] = state;
+        });
+
+        doc.timeline = {
+          states: serializedStates,
+          currentStateId: timeline.currentStateId,
+          rootStateId: timeline.rootStateId,
+        };
+      }
+
       saveDocumentToStorage(documentId, doc);
 
       const metadata = state.documentMetadata.get(documentId);

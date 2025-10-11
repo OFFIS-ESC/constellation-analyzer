@@ -52,11 +52,12 @@ export function migrateToWorkspace(): WorkspaceState | null {
     };
 
     // Create workspace settings from legacy document
+    // Node and edge types are now global per document
     const settings: WorkspaceSettings = {
       maxOpenDocuments: 10,
       autoSaveEnabled: true,
-      defaultNodeTypes: legacyDoc.graph.nodeTypes,
-      defaultEdgeTypes: legacyDoc.graph.edgeTypes,
+      defaultNodeTypes: legacyDoc.nodeTypes || [],
+      defaultEdgeTypes: legacyDoc.edgeTypes || [],
       recentFiles: [],
     };
 

@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { useWorkspaceStore } from '../workspaceStore';
 import { useGraphStore } from '../graphStore';
+import { useTimelineStore } from '../timelineStore';
 import type { Actor, Relation, NodeTypeConfig, EdgeTypeConfig } from '../../types';
+import { getCurrentGraphFromDocument } from '../persistence/loader';
 
 /**
  * useActiveDocument Hook
@@ -59,22 +61,29 @@ export function useActiveDocument() {
     if (activeDocument && activeDocumentId) {
       console.log(`Loading document into graph editor: ${activeDocumentId}`, activeDocument.metadata.title);
 
+      // Get the current graph from the document's timeline
+      const currentGraph = getCurrentGraphFromDocument(activeDocument);
+      if (!currentGraph) {
+        console.error('Failed to get current graph from document');
+        return;
+      }
+
       // Set loading flag before updating graph state
       isLoadingRef.current = true;
       lastLoadedDocIdRef.current = activeDocumentId;
 
-      setNodes(activeDocument.graph.nodes as never[]);
-      setEdges(activeDocument.graph.edges as never[]);
-      setNodeTypes(activeDocument.graph.nodeTypes as never[]);
-      setEdgeTypes(activeDocument.graph.edgeTypes as never[]);
+      setNodes(currentGraph.nodes as never[]);
+      setEdges(currentGraph.edges as never[]);
+      setNodeTypes(currentGraph.nodeTypes as never[]);
+      setEdgeTypes(currentGraph.edgeTypes as never[]);
 
       // Update the last synced state to match what we just loaded
       lastSyncedStateRef.current = {
         documentId: activeDocumentId,
-        nodes: activeDocument.graph.nodes as Actor[],
-        edges: activeDocument.graph.edges as Relation[],
-        nodeTypes: activeDocument.graph.nodeTypes as NodeTypeConfig[],
-        edgeTypes: activeDocument.graph.edgeTypes as EdgeTypeConfig[],
+        nodes: currentGraph.nodes as Actor[],
+        edges: currentGraph.edges as Relation[],
+        nodeTypes: currentGraph.nodeTypes as NodeTypeConfig[],
+        edgeTypes: currentGraph.edgeTypes as EdgeTypeConfig[],
       };
 
       // Clear loading flag after a brief delay to allow state to settle
@@ -153,14 +162,11 @@ export function useActiveDocument() {
         edgeTypes: graphEdgeTypes as EdgeTypeConfig[],
       };
 
-      // Update the document in the workspace store
-      const updatedDoc = documents.get(activeDocumentId);
-      if (updatedDoc) {
-        updatedDoc.graph.nodes = graphNodes as never[];
-        updatedDoc.graph.edges = graphEdges as never[];
-        updatedDoc.graph.nodeTypes = graphNodeTypes as never[];
-        updatedDoc.graph.edgeTypes = graphEdgeTypes as never[];
-      }
+      // Update the timeline's current state with the new graph data (nodes and edges only)
+      useTimelineStore.getState().saveCurrentGraph({
+        nodes: graphNodes as never[],
+        edges: graphEdges as never[],
+      });
 
       // Debounced save
       const timeoutId = setTimeout(() => {

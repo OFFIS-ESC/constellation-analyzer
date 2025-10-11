@@ -1,4 +1,5 @@
 import type { ActorData, RelationData, NodeTypeConfig, EdgeTypeConfig } from '../../types';
+import type { ConstellationState } from '../../types/timeline';
 
 /**
  * Persistence Types
@@ -26,6 +27,8 @@ export interface SerializedRelation {
 }
 
 // Complete document structure for storage
+// Every document has a timeline with states. The current graph is always
+// derived from the current state in the timeline.
 export interface ConstellationDocument {
   metadata: {
     version: string;           // Schema version (e.g., "1.0.0")
@@ -33,14 +36,18 @@ export interface ConstellationDocument {
     createdAt: string;         // ISO timestamp
     updatedAt: string;         // ISO timestamp
     lastSavedBy: string;       // Browser fingerprint or "unknown"
-    documentId?: string;       // NEW: Unique document ID (for workspace)
-    title?: string;            // NEW: Document title (for workspace)
+    documentId?: string;       // Unique document ID (for workspace)
+    title?: string;            // Document title (for workspace)
   };
-  graph: {
-    nodes: SerializedActor[];
-    edges: SerializedRelation[];
-    nodeTypes: NodeTypeConfig[];
-    edgeTypes: EdgeTypeConfig[];
+  // Global node and edge types for the entire document
+  nodeTypes: NodeTypeConfig[];
+  edgeTypes: EdgeTypeConfig[];
+  // Timeline with multiple states - every document has this
+  // The graph is stored within each state (nodes and edges only, not types)
+  timeline: {
+    states: Record<string, ConstellationState>;  // Map serialized as object
+    currentStateId: string;
+    rootStateId: string;
   };
 }
 

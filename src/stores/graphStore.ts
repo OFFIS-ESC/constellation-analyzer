@@ -8,7 +8,6 @@ import type {
   RelationData,
   GraphActions
 } from '../types';
-import { persistenceMiddleware } from './persistence/middleware';
 import { loadGraphState } from './persistence/loader';
 import { exportGraphToFile, selectFileForImport } from './persistence/fileIO';
 
@@ -72,12 +71,11 @@ const loadInitialState = (): GraphStore => {
 
 const initialState = loadInitialState();
 
-export const useGraphStore = create<GraphStore & GraphActions>(
-  persistenceMiddleware((set) => ({
-    nodes: initialState.nodes,
-    edges: initialState.edges,
-    nodeTypes: initialState.nodeTypes,
-    edgeTypes: initialState.edgeTypes,
+export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
+  nodes: initialState.nodes,
+  edges: initialState.edges,
+  nodeTypes: initialState.nodeTypes,
+  edgeTypes: initialState.edgeTypes,
 
   // Node operations
   addNode: (node: Actor) =>
@@ -224,4 +222,4 @@ export const useGraphStore = create<GraphStore & GraphActions>(
       nodeTypes: data.nodeTypes,
       edgeTypes: data.edgeTypes,
     }),
-})));
+}));

@@ -561,8 +561,8 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
                     return (
                       <>
                         {IconComponent && (
-                          <div className="flex-shrink-0" style={{ color: sourceType?.color }}>
-                            <IconComponent style={{ fontSize: '14px' }} />
+                          <div className="flex-shrink-0" style={{ color: sourceType?.color, fontSize: '14px' }}>
+                            <IconComponent fontSize="small" />
                           </div>
                         )}
                         <span className="font-medium truncate">{sourceNode?.data?.label || currentEdge.source}</span>
@@ -593,8 +593,8 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
                         <span className="text-gray-400 text-[10px] flex-shrink-0">({targetType?.label || 'Unknown'})</span>
                         <span className="font-medium truncate">{targetNode?.data?.label || currentEdge.target}</span>
                         {IconComponent && (
-                          <div className="flex-shrink-0" style={{ color: targetType?.color }}>
-                            <IconComponent style={{ fontSize: '14px' }} />
+                          <div className="flex-shrink-0" style={{ color: targetType?.color, fontSize: '14px' }}>
+                            <IconComponent fontSize="small" />
                           </div>
                         )}
                       </>

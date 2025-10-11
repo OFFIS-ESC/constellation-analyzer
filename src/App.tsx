@@ -14,6 +14,7 @@ import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
 import { useDocumentHistory } from "./hooks/useDocumentHistory";
 import { useWorkspaceStore } from "./stores/workspaceStore";
 import { usePanelStore } from "./stores/panelStore";
+import { useCreateDocument } from "./hooks/useCreateDocument";
 import type { Actor, Relation } from "./types";
 import type { ExportOptions } from "./utils/graphExport";
 
@@ -41,6 +42,7 @@ function AppContent() {
   const { undo, redo } = useDocumentHistory();
   const { activeDocumentId } = useWorkspaceStore();
   const { leftPanelVisible, rightPanelVisible } = usePanelStore();
+  const { handleNewDocument, NewDocumentDialog } = useCreateDocument();
   const [showDocumentManager, setShowDocumentManager] = useState(false);
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
   const [selectedNode, setSelectedNode] = useState<Actor | null>(null);
@@ -80,6 +82,7 @@ function AppContent() {
   useGlobalShortcuts({
     onUndo: undo,
     onRedo: redo,
+    onNewDocument: handleNewDocument,
     onOpenDocumentManager: () => setShowDocumentManager(true),
     onOpenHelp: () => setShowKeyboardHelp(true),
     onFitView: handleFitView,
@@ -212,6 +215,9 @@ function AppContent() {
 
       {/* Toast Notifications */}
       <ToastContainer />
+
+      {/* New Document Dialog */}
+      {NewDocumentDialog}
     </div>
   );
 }

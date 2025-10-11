@@ -7,6 +7,7 @@ import FolderZipIcon from '@mui/icons-material/FolderZip';
 import SearchIcon from '@mui/icons-material/Search';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useConfirm } from '../../hooks/useConfirm';
+import { useCreateDocument } from '../../hooks/useCreateDocument';
 import DocumentCard from './DocumentCard';
 
 /**
@@ -29,7 +30,6 @@ const DocumentManager = ({ isOpen, onClose }: DocumentManagerProps) => {
   const {
     documentMetadata,
     documentOrder,
-    createDocument,
     switchToDocument,
     duplicateDocument,
     exportDocument,
@@ -41,6 +41,7 @@ const DocumentManager = ({ isOpen, onClose }: DocumentManagerProps) => {
   } = useWorkspaceStore();
 
   const { confirm, ConfirmDialogComponent } = useConfirm();
+  const { handleNewDocument, NewDocumentDialog } = useCreateDocument();
   const [searchQuery, setSearchQuery] = useState('');
 
   // Get all document IDs from metadata (includes both open and closed documents)
@@ -68,11 +69,10 @@ const DocumentManager = ({ isOpen, onClose }: DocumentManagerProps) => {
     });
   }, [allDocumentIds, documentMetadata, searchQuery]);
 
-  const handleNewDocument = useCallback(() => {
-    const newDocId = createDocument();
-    switchToDocument(newDocId);
+  const handleNewDocumentClick = useCallback(() => {
+    handleNewDocument();
     onClose();
-  }, [createDocument, switchToDocument, onClose]);
+  }, [handleNewDocument, onClose]);
 
   const handleImportDocument = useCallback(async () => {
     const newDocId = await importDocumentFromFile();
@@ -158,7 +158,7 @@ const DocumentManager = ({ isOpen, onClose }: DocumentManagerProps) => {
         <div className="flex flex-col gap-3 px-6 py-4 border-b border-gray-200 bg-gray-50">
           <div className="flex gap-3 flex-wrap">
             <button
-              onClick={handleNewDocument}
+              onClick={handleNewDocumentClick}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
             >
               <AddIcon sx={{ fontSize: 20 }} />
@@ -219,7 +219,7 @@ const DocumentManager = ({ isOpen, onClose }: DocumentManagerProps) => {
             <div className="flex flex-col items-center justify-center h-full text-gray-400">
               <p className="text-lg mb-4">No documents yet</p>
               <button
-                onClick={handleNewDocument}
+                onClick={handleNewDocumentClick}
                 className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
               >
                 Create your first document
@@ -273,6 +273,9 @@ const DocumentManager = ({ isOpen, onClose }: DocumentManagerProps) => {
 
       {/* Confirmation Dialog */}
       {ConfirmDialogComponent}
+
+      {/* New Document Dialog */}
+      {NewDocumentDialog}
     </>
   );
 };

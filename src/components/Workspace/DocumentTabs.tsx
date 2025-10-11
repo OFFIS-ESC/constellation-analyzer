@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { useCreateDocument } from '../../hooks/useCreateDocument';
 import Tab from './Tab';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -29,12 +30,13 @@ const DocumentTabs = () => {
     switchToDocument,
     closeDocument,
     renameDocument,
-    createDocument,
     reorderDocuments,
     duplicateDocument,
     exportDocument,
     deleteDocument,
   } = useWorkspaceStore();
+
+  const { handleNewDocument, NewDocumentDialog } = useCreateDocument();
 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [contextMenu, setContextMenu] = useState<{
@@ -66,10 +68,6 @@ const DocumentTabs = () => {
     },
     [renameDocument]
   );
-
-  const handleNewDocument = useCallback(() => {
-    createDocument();
-  }, [createDocument]);
 
   const handleDragStart = useCallback((index: number) => {
     setDraggedIndex(index);
@@ -220,6 +218,9 @@ const DocumentTabs = () => {
           onClose={() => setContextMenu(null)}
         />
       )}
+
+      {/* New Document Dialog */}
+      {NewDocumentDialog}
     </div>
   );
 };

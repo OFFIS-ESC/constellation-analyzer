@@ -5,6 +5,7 @@ import { useGraphWithHistory } from '../../hooks/useGraphWithHistory';
 import DocumentManager from '../Workspace/DocumentManager';
 import NodeTypeConfigModal from '../Config/NodeTypeConfig';
 import EdgeTypeConfigModal from '../Config/EdgeTypeConfig';
+import InputDialog from '../Common/InputDialog';
 import { useConfirm } from '../../hooks/useConfirm';
 import { useShortcutLabels } from '../../hooks/useShortcutLabels';
 import type { ExportOptions } from '../../utils/graphExport';
@@ -31,6 +32,8 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onSelectAll, o
   const [showDocumentManager, setShowDocumentManager] = useState(false);
   const [showNodeConfig, setShowNodeConfig] = useState(false);
   const [showEdgeConfig, setShowEdgeConfig] = useState(false);
+  const [showNewDocDialog, setShowNewDocDialog] = useState(false);
+  const [showNewFromTemplateDialog, setShowNewFromTemplateDialog] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { confirm, ConfirmDialogComponent } = useConfirm();
   const { getShortcutLabel } = useShortcutLabels();
@@ -72,9 +75,14 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onSelectAll, o
   }, []);
 
   const handleNewDocument = useCallback(() => {
-    createDocument();
+    setShowNewDocDialog(true);
     closeMenu();
-  }, [createDocument, closeMenu]);
+  }, [closeMenu]);
+
+  const handleConfirmNewDocument = useCallback((title: string) => {
+    createDocument(title);
+    setShowNewDocDialog(false);
+  }, [createDocument]);
 
   const handleNewDocumentFromTemplate = useCallback(() => {
     if (!activeDocumentId) {
@@ -82,12 +90,18 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onSelectAll, o
       closeMenu();
       return;
     }
-    const newDocId = createDocumentFromTemplate(activeDocumentId);
+    setShowNewFromTemplateDialog(true);
+    closeMenu();
+  }, [activeDocumentId, closeMenu]);
+
+  const handleConfirmNewFromTemplate = useCallback((title: string) => {
+    if (!activeDocumentId) return;
+    const newDocId = createDocumentFromTemplate(activeDocumentId, title);
     if (newDocId) {
       switchToDocument(newDocId);
     }
-    closeMenu();
-  }, [createDocumentFromTemplate, activeDocumentId, switchToDocument, closeMenu]);
+    setShowNewFromTemplateDialog(false);
+  }, [createDocumentFromTemplate, activeDocumentId, switchToDocument]);
 
   const handleOpenDocumentManager = useCallback(() => {
     setShowDocumentManager(true);
@@ -402,6 +416,36 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onSelectAll, o
       <EdgeTypeConfigModal
         isOpen={showEdgeConfig}
         onClose={() => setShowEdgeConfig(false)}
+      />
+
+      {/* Input Dialogs */}
+      <InputDialog
+        isOpen={showNewDocDialog}
+        title="New Document"
+        message="Enter a name for the new document:"
+        placeholder="e.g., Team Analysis, Project Relationships..."
+        defaultValue="Untitled Analysis"
+        confirmLabel="Create"
+        onConfirm={handleConfirmNewDocument}
+        onCancel={() => setShowNewDocDialog(false)}
+        validateInput={(value) => {
+          if (!value.trim()) return 'Document name cannot be empty';
+          return null;
+        }}
+      />
+      <InputDialog
+        isOpen={showNewFromTemplateDialog}
+        title="New Document from Template"
+        message="Enter a name for the new document:"
+        placeholder="e.g., Team Analysis, Project Relationships..."
+        defaultValue="Untitled Analysis"
+        confirmLabel="Create"
+        onConfirm={handleConfirmNewFromTemplate}
+        onCancel={() => setShowNewFromTemplateDialog(false)}
+        validateInput={(value) => {
+          if (!value.trim()) return 'Document name cannot be empty';
+          return null;
+        }}
       />
 
       {/* Confirmation Dialog */}

@@ -26,6 +26,7 @@ import { useDocumentHistory } from "../../hooks/useDocumentHistory";
 import { useEditorStore } from "../../stores/editorStore";
 import { useActiveDocument } from "../../stores/workspace/useActiveDocument";
 import { useWorkspaceStore } from "../../stores/workspaceStore";
+import { useCreateDocument } from "../../hooks/useCreateDocument";
 import CustomNode from "../Nodes/CustomNode";
 import CustomEdge from "../Edges/CustomEdge";
 import ContextMenu from "./ContextMenu";
@@ -63,7 +64,8 @@ interface GraphEditorProps {
 const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest, onExportRequest }: GraphEditorProps) => {
   // Sync with workspace active document
   const { activeDocumentId } = useActiveDocument();
-  const { saveViewport, getViewport, createDocument } = useWorkspaceStore();
+  const { saveViewport, getViewport } = useWorkspaceStore();
+  const { handleNewDocument, NewDocumentDialog } = useCreateDocument();
 
   // Graph export functionality
   const { exportPNG, exportSVG } = useGraphExport();
@@ -555,14 +557,17 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest, onExportReq
   // Show empty state when no document is active
   if (!activeDocumentId) {
     return (
-      <EmptyState
-        onNewDocument={() => createDocument()}
-        onOpenDocumentManager={() => {
-          // This will be handled by the parent component
-          // We'll trigger it via a custom event
-          window.dispatchEvent(new CustomEvent("openDocumentManager"));
-        }}
-      />
+      <>
+        <EmptyState
+          onNewDocument={handleNewDocument}
+          onOpenDocumentManager={() => {
+            // This will be handled by the parent component
+            // We'll trigger it via a custom event
+            window.dispatchEvent(new CustomEvent("openDocumentManager"));
+          }}
+        />
+        {NewDocumentDialog}
+      </>
     );
   }
 

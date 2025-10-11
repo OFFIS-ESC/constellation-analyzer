@@ -11,6 +11,7 @@ import type { KeyboardShortcut } from "./useKeyboardShortcutManager";
  */
 
 interface UseGlobalShortcutsOptions {
+  onNewDocument?: () => void;
   onOpenDocumentManager?: () => void;
   onUndo?: () => void;
   onRedo?: () => void;
@@ -26,7 +27,6 @@ export function useGlobalShortcuts(options: UseGlobalShortcutsOptions = {}) {
     activeDocumentId,
     switchToDocument,
     closeDocument,
-    createDocument,
     saveDocument,
   } = useWorkspaceStore();
 
@@ -38,8 +38,9 @@ export function useGlobalShortcuts(options: UseGlobalShortcutsOptions = {}) {
         description: "New Document",
         key: "n",
         ctrl: true,
-        handler: () => createDocument(),
+        handler: () => options.onNewDocument?.(),
         category: "Document Management",
+        enabled: !!options.onNewDocument,
       },
       {
         id: "open-document-manager",
@@ -201,7 +202,6 @@ export function useGlobalShortcuts(options: UseGlobalShortcutsOptions = {}) {
     activeDocumentId,
     switchToDocument,
     closeDocument,
-    createDocument,
     saveDocument,
     options,
   ]);

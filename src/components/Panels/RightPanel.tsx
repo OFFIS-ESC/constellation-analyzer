@@ -482,9 +482,14 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
               value={relationDirectionality}
               exclusive
               onChange={(_, newValue) => {
-                if (newValue !== null) {
+                if (newValue !== null && selectedEdge) {
                   setRelationDirectionality(newValue);
-                  setHasEdgeChanges(true);
+                  // Apply directionality change instantly (no debounce)
+                  updateEdge(selectedEdge.id, {
+                    type: relationType,
+                    label: relationLabel.trim() || undefined,
+                    directionality: newValue,
+                  });
                 }
               }}
               size="small"

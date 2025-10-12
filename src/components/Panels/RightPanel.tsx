@@ -12,7 +12,7 @@ import { useGraphWithHistory } from '../../hooks/useGraphWithHistory';
 import { useDocumentHistory } from '../../hooks/useDocumentHistory';
 import { useConfirm } from '../../hooks/useConfirm';
 import GraphMetrics from '../Common/GraphMetrics';
-import { getIconComponent } from '../../utils/iconUtils';
+import ConnectionDisplay from '../Common/ConnectionDisplay';
 import type { Actor, Relation, EdgeDirectionality } from '../../types';
 
 /**
@@ -264,8 +264,18 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
             <select
               value={actorType}
               onChange={(e) => {
-                setActorType(e.target.value);
-                setHasNodeChanges(true);
+                const newType = e.target.value;
+                setActorType(newType);
+                // Apply actor type change instantly (no debounce)
+                if (selectedNode) {
+                  updateNode(selectedNode.id, {
+                    data: {
+                      type: newType,
+                      label: actorLabel,
+                      description: actorDescription || undefined,
+                    },
+                  });
+                }
               }}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
@@ -331,24 +341,37 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
             {connections.length === 0 ? (
               <p className="text-xs text-gray-500 italic">No connections</p>
             ) : (
-              <div className="space-y-1">
+              <div className="space-y-3">
                 {connections.map((edge) => {
                   const edgeConfig = edgeTypes.find((et) => et.id === edge.data?.type);
-                  const isOutgoing = edge.source === selectedNode.id;
-                  const otherId = isOutgoing ? edge.target : edge.source;
+                  const sourceNode = nodes.find(n => n.id === edge.source);
+                  const targetNode = nodes.find(n => n.id === edge.target);
+                  const edgeDirectionality = edge.data?.directionality || edgeConfig?.defaultDirectionality || 'directed';
 
                   return (
-                    <div
-                      key={edge.id}
-                      className="text-xs text-gray-600 flex items-center space-x-1"
-                    >
-                      <span
-                        className="inline-block w-2 h-2 rounded-full"
-                        style={{ backgroundColor: edgeConfig?.color || '#6b7280' }}
+                    <div key={edge.id} className="space-y-1">
+                      {/* Edge Type Badge */}
+                      <div className="flex items-center space-x-1">
+                        <span
+                          className="inline-block w-2 h-2 rounded-full"
+                          style={{ backgroundColor: edgeConfig?.color || '#6b7280' }}
+                        />
+                        <span className="text-xs font-medium text-gray-700">
+                          {edgeConfig?.label || 'Unknown'}
+                        </span>
+                        {edge.data?.label && edge.data.label !== edgeConfig?.label && (
+                          <span className="text-xs text-gray-500">
+                            ({edge.data.label})
+                          </span>
+                        )}
+                      </div>
+                      {/* Connection Display */}
+                      <ConnectionDisplay
+                        sourceNode={sourceNode}
+                        targetNode={targetNode}
+                        nodeTypes={nodeTypes}
+                        directionality={edgeDirectionality}
                       />
-                      <span className="font-medium">{edgeConfig?.label || 'Unknown'}</span>
-                      <span>{isOutgoing ? '→' : '←'}</span>
-                      <span className="text-gray-500">{otherId}</span>
                     </div>
                   );
                 })}
@@ -539,60 +562,12 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
                 </Tooltip>
               )}
             </div>
-            <div className="flex items-center justify-between text-xs text-gray-600 py-2 bg-gray-50 rounded px-2 space-x-2">
-              {/* Source Actor */}
-              <Tooltip title={`ID: ${currentEdge.source}`} placement="top">
-                <div className="flex items-center space-x-1 flex-1">
-                  {(() => {
-                    const sourceNode = nodes.find(n => n.id === currentEdge.source);
-                    const sourceType = nodeTypes.find(nt => nt.id === sourceNode?.data?.type);
-                    const IconComponent = sourceType ? getIconComponent(sourceType.icon) : null;
-
-                    return (
-                      <>
-                        {IconComponent && (
-                          <div className="flex-shrink-0" style={{ color: sourceType?.color, fontSize: '14px' }}>
-                            <IconComponent fontSize="small" />
-                          </div>
-                        )}
-                        <span className="font-medium truncate">{sourceNode?.data?.label || currentEdge.source}</span>
-                        <span className="text-gray-400 text-[10px] flex-shrink-0">({sourceType?.label || 'Unknown'})</span>
-                      </>
-                    );
-                  })()}
-                </div>
-              </Tooltip>
-
-              {/* Direction Indicator */}
-              <span className="flex-shrink-0 text-gray-500">
-                {relationDirectionality === 'directed' && '→'}
-                {relationDirectionality === 'bidirectional' && '↔'}
-                {relationDirectionality === 'undirected' && '—'}
-              </span>
-
-              {/* Target Actor */}
-              <Tooltip title={`ID: ${currentEdge.target}`} placement="top">
-                <div className="flex items-center space-x-1 flex-1 justify-end">
-                  {(() => {
-                    const targetNode = nodes.find(n => n.id === currentEdge.target);
-                    const targetType = nodeTypes.find(nt => nt.id === targetNode?.data?.type);
-                    const IconComponent = targetType ? getIconComponent(targetType.icon) : null;
-
-                    return (
-                      <>
-                        <span className="text-gray-400 text-[10px] flex-shrink-0">({targetType?.label || 'Unknown'})</span>
-                        <span className="font-medium truncate">{targetNode?.data?.label || currentEdge.target}</span>
-                        {IconComponent && (
-                          <div className="flex-shrink-0" style={{ color: targetType?.color, fontSize: '14px' }}>
-                            <IconComponent fontSize="small" />
-                          </div>
-                        )}
-                      </>
-                    );
-                  })()}
-                </div>
-              </Tooltip>
-            </div>
+            <ConnectionDisplay
+              sourceNode={nodes.find(n => n.id === currentEdge.source)}
+              targetNode={nodes.find(n => n.id === currentEdge.target)}
+              nodeTypes={nodeTypes}
+              directionality={relationDirectionality}
+            />
           </div>
         </div>
 

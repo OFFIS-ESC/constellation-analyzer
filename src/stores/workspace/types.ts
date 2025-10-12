@@ -87,6 +87,14 @@ export interface WorkspaceActions {
   markDocumentDirty: (documentId: string) => void;
   saveDocument: (documentId: string) => void;
 
+  // Type management (document-level)
+  addNodeTypeToDocument: (documentId: string, nodeType: NodeTypeConfig) => void;
+  updateNodeTypeInDocument: (documentId: string, typeId: string, updates: Partial<Omit<NodeTypeConfig, 'id'>>) => void;
+  deleteNodeTypeFromDocument: (documentId: string, typeId: string) => void;
+  addEdgeTypeToDocument: (documentId: string, edgeType: EdgeTypeConfig) => void;
+  updateEdgeTypeInDocument: (documentId: string, typeId: string, updates: Partial<Omit<EdgeTypeConfig, 'id'>>) => void;
+  deleteEdgeTypeFromDocument: (documentId: string, typeId: string) => void;
+
   // Viewport operations
   saveViewport: (documentId: string, viewport: { x: number; y: number; zoom: number }) => void;
   getViewport: (documentId: string) => { x: number; y: number; zoom: number } | undefined;

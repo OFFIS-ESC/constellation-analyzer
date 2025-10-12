@@ -715,10 +715,9 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
     if (doc) {
       doc.metadata.updatedAt = new Date().toISOString();
 
-      // Save global node and edge types from graph store
-      const graphStore = useGraphStore.getState();
-      doc.nodeTypes = graphStore.nodeTypes;
-      doc.edgeTypes = graphStore.edgeTypes;
+      // NOTE: nodeTypes and edgeTypes are already part of the document structure
+      // and are managed via workspaceStore's type management actions.
+      // We do NOT copy them from graphStore because the document is the source of truth.
 
       // Save timeline data if exists
       const timelineState = useTimelineStore.getState();
@@ -881,5 +880,154 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
     const state = get();
     const metadata = state.documentMetadata.get(documentId);
     return metadata?.viewport;
+  },
+
+  // Type management - document-level operations
+  addNodeTypeToDocument: (documentId: string, nodeType) => {
+    const state = get();
+    const doc = state.documents.get(documentId);
+
+    if (!doc) {
+      console.error(`Document ${documentId} not found`);
+      return;
+    }
+
+    // Add to document's node types
+    doc.nodeTypes = [...doc.nodeTypes, nodeType];
+
+    // Save document
+    saveDocumentToStorage(documentId, doc);
+
+    // Mark as dirty
+    get().markDocumentDirty(documentId);
+
+    // If this is the active document, sync to graphStore
+    if (documentId === state.activeDocumentId) {
+      useGraphStore.getState().setNodeTypes(doc.nodeTypes);
+    }
+  },
+
+  updateNodeTypeInDocument: (documentId: string, typeId: string, updates) => {
+    const state = get();
+    const doc = state.documents.get(documentId);
+
+    if (!doc) {
+      console.error(`Document ${documentId} not found`);
+      return;
+    }
+
+    // Update in document's node types
+    doc.nodeTypes = doc.nodeTypes.map((type) =>
+      type.id === typeId ? { ...type, ...updates } : type
+    );
+
+    // Save document
+    saveDocumentToStorage(documentId, doc);
+
+    // Mark as dirty
+    get().markDocumentDirty(documentId);
+
+    // If this is the active document, sync to graphStore
+    if (documentId === state.activeDocumentId) {
+      useGraphStore.getState().setNodeTypes(doc.nodeTypes);
+    }
+  },
+
+  deleteNodeTypeFromDocument: (documentId: string, typeId: string) => {
+    const state = get();
+    const doc = state.documents.get(documentId);
+
+    if (!doc) {
+      console.error(`Document ${documentId} not found`);
+      return;
+    }
+
+    // Remove from document's node types
+    doc.nodeTypes = doc.nodeTypes.filter((type) => type.id !== typeId);
+
+    // Save document
+    saveDocumentToStorage(documentId, doc);
+
+    // Mark as dirty
+    get().markDocumentDirty(documentId);
+
+    // If this is the active document, sync to graphStore
+    if (documentId === state.activeDocumentId) {
+      useGraphStore.getState().setNodeTypes(doc.nodeTypes);
+    }
+  },
+
+  addEdgeTypeToDocument: (documentId: string, edgeType) => {
+    const state = get();
+    const doc = state.documents.get(documentId);
+
+    if (!doc) {
+      console.error(`Document ${documentId} not found`);
+      return;
+    }
+
+    // Add to document's edge types
+    doc.edgeTypes = [...doc.edgeTypes, edgeType];
+
+    // Save document
+    saveDocumentToStorage(documentId, doc);
+
+    // Mark as dirty
+    get().markDocumentDirty(documentId);
+
+    // If this is the active document, sync to graphStore
+    if (documentId === state.activeDocumentId) {
+      useGraphStore.getState().setEdgeTypes(doc.edgeTypes);
+    }
+  },
+
+  updateEdgeTypeInDocument: (documentId: string, typeId: string, updates) => {
+    const state = get();
+    const doc = state.documents.get(documentId);
+
+    if (!doc) {
+      console.error(`Document ${documentId} not found`);
+      return;
+    }
+
+    // Update in document's edge types
+    doc.edgeTypes = doc.edgeTypes.map((type) =>
+      type.id === typeId ? { ...type, ...updates } : type
+    );
+
+    // Save document
+    saveDocumentToStorage(documentId, doc);
+
+    // Mark as dirty
+    get().markDocumentDirty(documentId);
+
+    // If this is the active document, sync to graphStore
+    if (documentId === state.activeDocumentId) {
+      useGraphStore.getState().setEdgeTypes(doc.edgeTypes);
+    }
+  },
+
+  deleteEdgeTypeFromDocument: (documentId: string, typeId: string) => {
+    const state = get();
+    const doc = state.documents.get(documentId);
+
+    if (!doc) {
+      console.error(`Document ${documentId} not found`);
+      return;
+    }
+
+    // Remove from document's edge types
+    doc.edgeTypes = doc.edgeTypes.filter((type) => type.id !== typeId);
+
+    // Save document
+    saveDocumentToStorage(documentId, doc);
+
+    // Mark as dirty
+    get().markDocumentDirty(documentId);
+
+    // If this is the active document, sync to graphStore
+    if (documentId === state.activeDocumentId) {
+      useGraphStore.getState().setEdgeTypes(doc.edgeTypes);
+    }
   },
 }));

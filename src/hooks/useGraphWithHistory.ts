@@ -1,5 +1,6 @@
 import { useCallback, useRef, useEffect } from 'react';
 import { useGraphStore } from '../stores/graphStore';
+import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useDocumentHistory } from './useDocumentHistory';
 import type { Actor, Relation, NodeTypeConfig, EdgeTypeConfig, RelationData } from '../types';
 
@@ -38,6 +39,13 @@ import type { Actor, Relation, NodeTypeConfig, EdgeTypeConfig, RelationData } fr
  */
 export function useGraphWithHistory() {
   const graphStore = useGraphStore();
+  const activeDocumentId = useWorkspaceStore((state) => state.activeDocumentId);
+  const addNodeTypeToDocument = useWorkspaceStore((state) => state.addNodeTypeToDocument);
+  const updateNodeTypeInDocument = useWorkspaceStore((state) => state.updateNodeTypeInDocument);
+  const deleteNodeTypeFromDocument = useWorkspaceStore((state) => state.deleteNodeTypeFromDocument);
+  const addEdgeTypeToDocument = useWorkspaceStore((state) => state.addEdgeTypeToDocument);
+  const updateEdgeTypeInDocument = useWorkspaceStore((state) => state.updateEdgeTypeInDocument);
+  const deleteEdgeTypeFromDocument = useWorkspaceStore((state) => state.deleteEdgeTypeFromDocument);
   const { pushToHistory } = useDocumentHistory();
 
   // Track if we're currently restoring from history to prevent recursive history pushes
@@ -169,76 +177,100 @@ export function useGraphWithHistory() {
 
   const addNodeType = useCallback(
     (nodeType: NodeTypeConfig) => {
+      if (!activeDocumentId) {
+        console.warn('No active document');
+        return;
+      }
       if (isRestoringRef.current) {
         graphStore.addNodeType(nodeType);
         return;
       }
       pushToHistory(`Add Node Type: ${nodeType.label}`); // Synchronous push BEFORE mutation
-      graphStore.addNodeType(nodeType);
+      addNodeTypeToDocument(activeDocumentId, nodeType);
     },
-    [graphStore, pushToHistory]
+    [activeDocumentId, graphStore, pushToHistory, addNodeTypeToDocument]
   );
 
   const updateNodeType = useCallback(
     (id: string, updates: Partial<Omit<NodeTypeConfig, 'id'>>) => {
+      if (!activeDocumentId) {
+        console.warn('No active document');
+        return;
+      }
       if (isRestoringRef.current) {
         graphStore.updateNodeType(id, updates);
         return;
       }
       pushToHistory('Update Node Type'); // Synchronous push BEFORE mutation
-      graphStore.updateNodeType(id, updates);
+      updateNodeTypeInDocument(activeDocumentId, id, updates);
     },
-    [graphStore, pushToHistory]
+    [activeDocumentId, graphStore, pushToHistory, updateNodeTypeInDocument]
   );
 
   const deleteNodeType = useCallback(
     (id: string) => {
+      if (!activeDocumentId) {
+        console.warn('No active document');
+        return;
+      }
       if (isRestoringRef.current) {
         graphStore.deleteNodeType(id);
         return;
       }
       const nodeType = graphStore.nodeTypes.find((nt) => nt.id === id);
       pushToHistory(`Delete Node Type: ${nodeType?.label || id}`); // Synchronous push BEFORE mutation
-      graphStore.deleteNodeType(id);
+      deleteNodeTypeFromDocument(activeDocumentId, id);
     },
-    [graphStore, pushToHistory]
+    [activeDocumentId, graphStore, pushToHistory, deleteNodeTypeFromDocument]
   );
 
   const addEdgeType = useCallback(
     (edgeType: EdgeTypeConfig) => {
+      if (!activeDocumentId) {
+        console.warn('No active document');
+        return;
+      }
       if (isRestoringRef.current) {
         graphStore.addEdgeType(edgeType);
         return;
       }
       pushToHistory(`Add Edge Type: ${edgeType.label}`); // Synchronous push BEFORE mutation
-      graphStore.addEdgeType(edgeType);
+      addEdgeTypeToDocument(activeDocumentId, edgeType);
     },
-    [graphStore, pushToHistory]
+    [activeDocumentId, graphStore, pushToHistory, addEdgeTypeToDocument]
   );
 
   const updateEdgeType = useCallback(
     (id: string, updates: Partial<Omit<EdgeTypeConfig, 'id'>>) => {
+      if (!activeDocumentId) {
+        console.warn('No active document');
+        return;
+      }
       if (isRestoringRef.current) {
         graphStore.updateEdgeType(id, updates);
         return;
       }
       pushToHistory('Update Edge Type'); // Synchronous push BEFORE mutation
-      graphStore.updateEdgeType(id, updates);
+      updateEdgeTypeInDocument(activeDocumentId, id, updates);
     },
-    [graphStore, pushToHistory]
+    [activeDocumentId, graphStore, pushToHistory, updateEdgeTypeInDocument]
   );
 
   const deleteEdgeType = useCallback(
     (id: string) => {
+      if (!activeDocumentId) {
+        console.warn('No active document');
+        return;
+      }
       if (isRestoringRef.current) {
         graphStore.deleteEdgeType(id);
         return;
       }
       const edgeType = graphStore.edgeTypes.find((et) => et.id === id);
       pushToHistory(`Delete Edge Type: ${edgeType?.label || id}`); // Synchronous push BEFORE mutation
-      graphStore.deleteEdgeType(id);
+      deleteEdgeTypeFromDocument(activeDocumentId, id);
     },
-    [graphStore, pushToHistory]
+    [activeDocumentId, graphStore, pushToHistory, deleteEdgeTypeFromDocument]
   );
 
   const clearGraph = useCallback(

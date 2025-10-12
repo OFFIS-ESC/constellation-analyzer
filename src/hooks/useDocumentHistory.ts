@@ -47,7 +47,8 @@ export function useDocumentHistory() {
       }
 
       // Get current state from stores
-      const graphStore = useGraphStore.getState();
+      const workspaceStore = useWorkspaceStore.getState();
+      const activeDoc = workspaceStore.getActiveDocument();
       const timelineStore = useTimelineStore.getState();
       const timeline = timelineStore.timelines.get(activeDocumentId);
 
@@ -56,15 +57,21 @@ export function useDocumentHistory() {
         return;
       }
 
+      if (!activeDoc) {
+        console.warn('Active document not found');
+        return;
+      }
+
       // Create a snapshot of the complete document state
+      // NOTE: Read types from the document, not from graphStore
       const snapshot: DocumentSnapshot = {
         timeline: {
           states: new Map(timeline.states), // Clone the Map
           currentStateId: timeline.currentStateId,
           rootStateId: timeline.rootStateId,
         },
-        nodeTypes: graphStore.nodeTypes,
-        edgeTypes: graphStore.edgeTypes,
+        nodeTypes: activeDoc.nodeTypes,
+        edgeTypes: activeDoc.edgeTypes,
       };
 
       // Push to history
@@ -87,7 +94,8 @@ export function useDocumentHistory() {
     }
 
     // Capture current state BEFORE undoing
-    const graphStore = useGraphStore.getState();
+    const workspaceStore = useWorkspaceStore.getState();
+    const activeDoc = workspaceStore.getActiveDocument();
     const timelineStore = useTimelineStore.getState();
     const timeline = timelineStore.timelines.get(activeDocumentId);
 
@@ -96,14 +104,20 @@ export function useDocumentHistory() {
       return;
     }
 
+    if (!activeDoc) {
+      console.warn('Active document not found');
+      return;
+    }
+
+    // NOTE: Read types from the document, not from graphStore
     const currentSnapshot: DocumentSnapshot = {
       timeline: {
         states: new Map(timeline.states),
         currentStateId: timeline.currentStateId,
         rootStateId: timeline.rootStateId,
       },
-      nodeTypes: graphStore.nodeTypes,
-      edgeTypes: graphStore.edgeTypes,
+      nodeTypes: activeDoc.nodeTypes,
+      edgeTypes: activeDoc.edgeTypes,
     };
 
     const restoredState = historyStore.undo(activeDocumentId, currentSnapshot);
@@ -112,7 +126,11 @@ export function useDocumentHistory() {
       // Restore complete document state (timeline + types)
       timelineStore.loadTimeline(activeDocumentId, restoredState.timeline);
 
-      // Update graph store types
+      // Update document's types (which will sync to graphStore via workspaceStore)
+      activeDoc.nodeTypes = restoredState.nodeTypes;
+      activeDoc.edgeTypes = restoredState.edgeTypes;
+
+      // Sync to graph store
       setNodeTypes(restoredState.nodeTypes);
       setEdgeTypes(restoredState.edgeTypes);
 
@@ -146,7 +164,8 @@ export function useDocumentHistory() {
     }
 
     // Capture current state BEFORE redoing
-    const graphStore = useGraphStore.getState();
+    const workspaceStore = useWorkspaceStore.getState();
+    const activeDoc = workspaceStore.getActiveDocument();
     const timelineStore = useTimelineStore.getState();
     const timeline = timelineStore.timelines.get(activeDocumentId);
 
@@ -155,14 +174,20 @@ export function useDocumentHistory() {
       return;
     }
 
+    if (!activeDoc) {
+      console.warn('Active document not found');
+      return;
+    }
+
+    // NOTE: Read types from the document, not from graphStore
     const currentSnapshot: DocumentSnapshot = {
       timeline: {
         states: new Map(timeline.states),
         currentStateId: timeline.currentStateId,
         rootStateId: timeline.rootStateId,
       },
-      nodeTypes: graphStore.nodeTypes,
-      edgeTypes: graphStore.edgeTypes,
+      nodeTypes: activeDoc.nodeTypes,
+      edgeTypes: activeDoc.edgeTypes,
     };
 
     const restoredState = historyStore.redo(activeDocumentId, currentSnapshot);
@@ -171,7 +196,11 @@ export function useDocumentHistory() {
       // Restore complete document state (timeline + types)
       timelineStore.loadTimeline(activeDocumentId, restoredState.timeline);
 
-      // Update graph store types
+      // Update document's types (which will sync to graphStore via workspaceStore)
+      activeDoc.nodeTypes = restoredState.nodeTypes;
+      activeDoc.edgeTypes = restoredState.edgeTypes;
+
+      // Sync to graph store
       setNodeTypes(restoredState.nodeTypes);
       setEdgeTypes(restoredState.edgeTypes);
 

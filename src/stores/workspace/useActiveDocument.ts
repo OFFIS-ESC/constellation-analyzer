@@ -143,17 +143,17 @@ export function useActiveDocument() {
     }
 
     // Mark document as dirty when graph changes
+    // NOTE: We only track nodes/edges here. Type changes are handled by workspaceStore's
+    // type management actions, which directly mark the document as dirty.
     const hasChanges =
       JSON.stringify(graphNodes) !== JSON.stringify(lastSyncedStateRef.current.nodes) ||
-      JSON.stringify(graphEdges) !== JSON.stringify(lastSyncedStateRef.current.edges) ||
-      JSON.stringify(graphNodeTypes) !== JSON.stringify(lastSyncedStateRef.current.nodeTypes) ||
-      JSON.stringify(graphEdgeTypes) !== JSON.stringify(lastSyncedStateRef.current.edgeTypes);
+      JSON.stringify(graphEdges) !== JSON.stringify(lastSyncedStateRef.current.edges);
 
     if (hasChanges) {
       console.log(`Document ${activeDocumentId} has changes, marking as dirty`);
       markDocumentDirty(activeDocumentId);
 
-      // Update the last synced state
+      // Update the last synced state (keep types for reference, but don't track them for changes)
       lastSyncedStateRef.current = {
         documentId: activeDocumentId,
         nodes: graphNodes as Actor[],

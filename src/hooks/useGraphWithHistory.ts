@@ -24,7 +24,7 @@ import type { Actor, Relation, NodeTypeConfig, EdgeTypeConfig, RelationData } fr
  * Read-only pass-through operations (no history):
  * - setNodes, setEdges (used for bulk updates during undo/redo/document loading)
  * - nodes, edges, nodeTypes, edgeTypes (state access)
- * - exportToFile, importFromFile, loadGraphState
+ * - loadGraphState
  *
  * Usage:
  *   const { addNode, updateNode, deleteNode, ... } = useGraphWithHistory();
@@ -278,9 +278,10 @@ export function useGraphWithHistory() {
     setEdges: graphStore.setEdges,
     setNodeTypes: graphStore.setNodeTypes,
     setEdgeTypes: graphStore.setEdgeTypes,
-    exportToFile: graphStore.exportToFile,
-    importFromFile: graphStore.importFromFile,
     loadGraphState: graphStore.loadGraphState,
+
+    // NOTE: exportToFile and importFromFile have been removed
+    // Import/export is now handled by the workspace-level system (useWorkspaceStore)
 
     // Expose flag for detecting restore operations
     isRestoringRef,

@@ -1,7 +1,7 @@
 import type { Actor, Relation, NodeTypeConfig, EdgeTypeConfig } from '../../types';
 import type { ConstellationDocument } from './types';
 import { createDocument, serializeActors, serializeRelations } from './saver';
-import { validateDocument, deserializeGraphState } from './loader';
+import { validateDocument } from './loader';
 
 /**
  * File I/O - Export and import ConstellationDocument to/from files
@@ -57,15 +57,11 @@ export function exportGraphToFile(
 
 /**
  * Import graph state from a JSON file
+ * Returns the full document with timeline preserved, not just the current graph state
  */
 export function importGraphFromFile(
   file: File,
-  onSuccess: (data: {
-    nodes: Actor[];
-    edges: Relation[];
-    nodeTypes: NodeTypeConfig[];
-    edgeTypes: EdgeTypeConfig[];
-  }) => void,
+  onSuccess: (document: ConstellationDocument) => void,
   onError: (error: string) => void
 ): void {
   const reader = new FileReader();
@@ -80,14 +76,8 @@ export function importGraphFromFile(
         throw new Error('Invalid file format: File does not match expected Constellation Analyzer format');
       }
 
-      // Deserialize the graph state
-      const graphState = deserializeGraphState(parsed as ConstellationDocument);
-
-      if (!graphState) {
-        throw new Error('Failed to parse graph data from file');
-      }
-
-      onSuccess(graphState);
+      // Return the full document with timeline intact
+      onSuccess(parsed as ConstellationDocument);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred while importing file';
       onError(errorMessage);
@@ -103,14 +93,10 @@ export function importGraphFromFile(
 
 /**
  * Trigger file selection dialog for import
+ * Returns the full document with timeline preserved
  */
 export function selectFileForImport(
-  onSuccess: (data: {
-    nodes: Actor[];
-    edges: Relation[];
-    nodeTypes: NodeTypeConfig[];
-    edgeTypes: EdgeTypeConfig[];
-  }) => void,
+  onSuccess: (document: ConstellationDocument) => void,
   onError: (error: string) => void
 ): void {
   const input = document.createElement('input');

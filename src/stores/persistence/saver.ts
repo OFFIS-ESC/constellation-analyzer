@@ -99,8 +99,6 @@ export function saveDocument(document: ConstellationDocument): boolean {
   }
 }
 
-// Clear saved state (legacy function)
-export function clearSavedState(): void {
-  localStorage.removeItem(STORAGE_KEYS.GRAPH_STATE);
-  localStorage.removeItem(STORAGE_KEYS.LAST_SAVED);
-}
+// NOTE: clearSavedState() has been removed
+// It was part of the legacy single-document system and is no longer needed
+// Workspace clearing is now handled by clearWorkspaceStorage() in workspace/persistence.ts

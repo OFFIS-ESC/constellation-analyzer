@@ -9,7 +9,6 @@ import type {
   GraphActions
 } from '../types';
 import { loadGraphState } from './persistence/loader';
-import { exportGraphToFile, selectFileForImport } from './persistence/fileIO';
 
 /**
  * ⚠️ IMPORTANT: DO NOT USE THIS STORE DIRECTLY IN COMPONENTS ⚠️
@@ -187,33 +186,9 @@ export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
       edgeTypes,
     }),
 
-  // File import/export operations
-  exportToFile: () => {
-    const state = useGraphStore.getState();
-    exportGraphToFile(state.nodes, state.edges, state.nodeTypes, state.edgeTypes);
-  },
-
-  importFromFile: (onError?: (error: string) => void) => {
-    selectFileForImport(
-      (data) => {
-        // Load the imported data into the store
-        set({
-          nodes: data.nodes,
-          edges: data.edges,
-          nodeTypes: data.nodeTypes,
-          edgeTypes: data.edgeTypes,
-        });
-      },
-      (error) => {
-        console.error('Import failed:', error);
-        if (onError) {
-          onError(error);
-        } else {
-          alert(`Failed to import file: ${error}`);
-        }
-      }
-    );
-  },
+  // NOTE: exportToFile and importFromFile have been removed
+  // Import/export is now handled by the workspace-level system
+  // See: workspaceStore.importDocumentFromFile() and workspaceStore.exportDocument()
 
   loadGraphState: (data) =>
     set({

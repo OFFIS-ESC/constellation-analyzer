@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { ConstellationDocument } from './persistence/types';
 import type { Workspace, WorkspaceActions, DocumentMetadata, WorkspaceSettings } from './workspace/types';
-import { createDocument as createDocumentHelper, serializeActors, serializeRelations } from './persistence/saver';
+import { createDocument as createDocumentHelper } from './persistence/saver';
 import { selectFileForImport, exportDocumentToFile } from './persistence/fileIO';
 import {
   generateWorkspaceId,
@@ -547,26 +547,19 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
   importDocumentFromFile: async () => {
     return new Promise((resolve) => {
       selectFileForImport(
-        (data) => {
+        (importedDoc) => {
           const documentId = generateDocumentId();
           const now = new Date().toISOString();
 
-          // Serialize actors and relations for storage
-          const serializedNodes = serializeActors(data.nodes);
-          const serializedEdges = serializeRelations(data.edges);
-
-          const importedDoc = createDocumentHelper(
-            serializedNodes,
-            serializedEdges,
-            data.nodeTypes,
-            data.edgeTypes
-          );
+          // Use the imported document as-is, preserving the complete timeline structure
+          // Just update the IDs and metadata for the new workspace context
           importedDoc.metadata.documentId = documentId;
-          importedDoc.metadata.title = 'Imported Analysis';
+          importedDoc.metadata.title = importedDoc.metadata.title || 'Imported Analysis';
+          importedDoc.metadata.updatedAt = now;
 
           const metadata: DocumentMetadata = {
             id: documentId,
-            title: 'Imported Analysis',
+            title: importedDoc.metadata.title || 'Imported Analysis',
             isDirty: false,
             lastModified: now,
           };
@@ -575,6 +568,7 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
           saveDocumentMetadata(documentId, metadata);
 
           // Load the timeline from the imported document into timelineStore
+          // This preserves all timeline states, not just the current one
           useTimelineStore.getState().loadTimeline(documentId, importedDoc.timeline as unknown as Timeline);
 
           set((state) => {

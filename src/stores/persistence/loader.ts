@@ -184,12 +184,5 @@ export function loadGraphState(): {
   return deserializeGraphState(document);
 }
 
-// Check if saved state exists
-export function hasSavedState(): boolean {
-  return localStorage.getItem(STORAGE_KEYS.GRAPH_STATE) !== null;
-}
-
-// Get last saved timestamp
-export function getLastSavedTimestamp(): string | null {
-  return localStorage.getItem(STORAGE_KEYS.LAST_SAVED);
-}
+// NOTE: hasSavedState() and getLastSavedTimestamp() have been removed
+// They were part of the legacy single-document system and are no longer needed

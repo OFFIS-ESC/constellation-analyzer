@@ -78,8 +78,8 @@ export interface GraphActions {
   setEdges: (edges: Relation[]) => void;
   setNodeTypes: (nodeTypes: NodeTypeConfig[]) => void;
   setEdgeTypes: (edgeTypes: EdgeTypeConfig[]) => void;
-  exportToFile: () => void;
-  importFromFile: (onError?: (error: string) => void) => void;
+  // NOTE: exportToFile and importFromFile have been removed
+  // Import/export is now handled by the workspace-level system (workspaceStore)
   loadGraphState: (data: { nodes: Actor[]; edges: Relation[]; nodeTypes: NodeTypeConfig[]; edgeTypes: EdgeTypeConfig[] }) => void;
 }
 

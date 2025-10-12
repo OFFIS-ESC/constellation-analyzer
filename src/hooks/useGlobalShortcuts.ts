@@ -18,6 +18,7 @@ interface UseGlobalShortcutsOptions {
   onOpenHelp?: () => void;
   onFitView?: () => void;
   onSelectAll?: () => void;
+  onFocusSearch?: () => void;
 }
 
 export function useGlobalShortcuts(options: UseGlobalShortcutsOptions = {}) {
@@ -182,6 +183,15 @@ export function useGlobalShortcuts(options: UseGlobalShortcutsOptions = {}) {
         handler: () => options.onOpenHelp?.(),
         category: "Navigation",
         enabled: !!options.onOpenHelp,
+      },
+      {
+        id: "focus-search",
+        description: "Focus Search",
+        key: "f",
+        ctrl: true,
+        handler: () => options.onFocusSearch?.(),
+        category: "Navigation",
+        enabled: !!options.onFocusSearch,
       },
     ];
 

@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import {
   EdgeProps,
   getBezierPath,
@@ -6,6 +6,7 @@ import {
   BaseEdge,
 } from 'reactflow';
 import { useGraphStore } from '../../stores/graphStore';
+import { useSearchStore } from '../../stores/searchStore';
 import type { RelationData } from '../../types';
 
 /**
@@ -32,6 +33,7 @@ const CustomEdge = ({
   selected,
 }: EdgeProps<RelationData>) => {
   const edgeTypes = useGraphStore((state) => state.edgeTypes);
+  const { visibleRelationTypes } = useSearchStore();
 
   // Calculate the bezier path
   const [edgePath, labelX, labelY] = getBezierPath({
@@ -60,6 +62,18 @@ const CustomEdge = ({
 
   // Get directionality (default to 'directed' for backwards compatibility)
   const directionality = data?.directionality || edgeTypeConfig?.defaultDirectionality || 'directed';
+
+  // Check if this edge matches the filter criteria
+  const isVisible = useMemo(() => {
+    const edgeType = data?.type || '';
+    return visibleRelationTypes[edgeType] !== false;
+  }, [data?.type, visibleRelationTypes]);
+
+  // Determine if filters are active
+  const hasActiveFilters = Object.values(visibleRelationTypes).some(v => v === false);
+
+  // Calculate opacity based on visibility
+  const edgeOpacity = hasActiveFilters && !isVisible ? 0.2 : 1.0;
 
   // Create unique marker IDs based on color (for reusability)
   const safeColor = edgeColor.replace('#', '');
@@ -114,6 +128,7 @@ const CustomEdge = ({
           stroke: edgeColor,
           strokeWidth: selected ? 3 : 2,
           strokeDasharray,
+          opacity: edgeOpacity,
         }}
         markerEnd={markerEnd}
         markerStart={markerStart}
@@ -127,6 +142,7 @@ const CustomEdge = ({
               position: 'absolute',
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
               pointerEvents: 'all',
+              opacity: edgeOpacity,
             }}
             className="bg-white px-2 py-1 rounded border border-gray-300 text-xs font-medium shadow-sm"
           >

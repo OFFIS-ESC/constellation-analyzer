@@ -1,18 +1,23 @@
-import { useCallback, useState } from 'react';
-import { IconButton, Tooltip } from '@mui/material';
+import { useCallback, useState, useMemo, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
+import { IconButton, Tooltip, Checkbox } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import SettingsIcon from '@mui/icons-material/Settings';
+import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
+import FilterAltOffIcon from '@mui/icons-material/FilterAltOff';
 import { usePanelStore } from '../../stores/panelStore';
 import { useGraphWithHistory } from '../../hooks/useGraphWithHistory';
 import { useEditorStore } from '../../stores/editorStore';
+import { useSearchStore } from '../../stores/searchStore';
 import { createNode } from '../../utils/nodeUtils';
 import { getIconComponent } from '../../utils/iconUtils';
 import { getContrastColor } from '../../utils/colorUtils';
 import NodeTypeConfigModal from '../Config/NodeTypeConfig';
 import EdgeTypeConfigModal from '../Config/EdgeTypeConfig';
+import type { Actor } from '../../types';
 
 /**
  * LeftPanel - Collapsible tools panel on the left side
@@ -31,7 +36,11 @@ interface LeftPanelProps {
   onAddNode?: (nodeTypeId: string, position?: { x: number; y: number }) => void;
 }
 
-const LeftPanel = ({ onDeselectAll, onAddNode }: LeftPanelProps) => {
+export interface LeftPanelRef {
+  focusSearch: () => void;
+}
+
+const LeftPanel = forwardRef<LeftPanelRef, LeftPanelProps>(({ onDeselectAll, onAddNode }, ref) => {
   const {
     leftPanelCollapsed,
     leftPanelWidth,
@@ -41,10 +50,98 @@ const LeftPanel = ({ onDeselectAll, onAddNode }: LeftPanelProps) => {
     expandLeftPanel,
   } = usePanelStore();
 
-  const { nodeTypes, edgeTypes, addNode } = useGraphWithHistory();
+  const { nodeTypes, edgeTypes, addNode, nodes } = useGraphWithHistory();
   const { selectedRelationType, setSelectedRelationType } = useEditorStore();
   const [showNodeConfig, setShowNodeConfig] = useState(false);
   const [showEdgeConfig, setShowEdgeConfig] = useState(false);
+
+  // Ref for the search input
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Expose focusSearch method to parent via ref
+  useImperativeHandle(ref, () => ({
+    focusSearch: () => {
+      // Expand left panel if collapsed
+      if (leftPanelCollapsed) {
+        expandLeftPanel();
+      }
+
+      // Expand search section if collapsed
+      if (!leftPanelSections.search) {
+        toggleLeftPanelSection('search');
+      }
+
+      // Focus the search input after a small delay to ensure DOM updates
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 100);
+    },
+  }), [leftPanelCollapsed, leftPanelSections.search, expandLeftPanel, toggleLeftPanelSection]);
+
+  // Search and filter state
+  const {
+    searchText,
+    setSearchText,
+    visibleActorTypes,
+    setActorTypeVisible,
+    visibleRelationTypes,
+    setRelationTypeVisible,
+    clearFilters,
+    hasActiveFilters,
+  } = useSearchStore();
+
+  // Initialize filter state when node/edge types change
+  useEffect(() => {
+    nodeTypes.forEach((nodeType) => {
+      if (!(nodeType.id in visibleActorTypes)) {
+        setActorTypeVisible(nodeType.id, true);
+      }
+    });
+  }, [nodeTypes, visibleActorTypes, setActorTypeVisible]);
+
+  useEffect(() => {
+    edgeTypes.forEach((edgeType) => {
+      if (!(edgeType.id in visibleRelationTypes)) {
+        setRelationTypeVisible(edgeType.id, true);
+      }
+    });
+  }, [edgeTypes, visibleRelationTypes, setRelationTypeVisible]);
+
+  // Calculate matching nodes based on search and filters
+  const matchingNodes = useMemo(() => {
+    const searchLower = searchText.toLowerCase().trim();
+
+    return nodes.filter((node) => {
+      const actor = node as Actor;
+      const actorType = actor.data?.type || '';
+
+      // Filter by actor type visibility
+      const isTypeVisible = visibleActorTypes[actorType] !== false;
+      if (!isTypeVisible) {
+        return false;
+      }
+
+      // Filter by search text
+      if (searchLower) {
+        const label = actor.data?.label?.toLowerCase() || '';
+        const description = actor.data?.description?.toLowerCase() || '';
+        const nodeTypeConfig = nodeTypes.find((nt) => nt.id === actorType);
+        const typeName = nodeTypeConfig?.label?.toLowerCase() || '';
+
+        const matches =
+          label.includes(searchLower) ||
+          description.includes(searchLower) ||
+          typeName.includes(searchLower);
+
+        if (!matches) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [nodes, searchText, visibleActorTypes, nodeTypes]);
+
 
   const handleAddNode = useCallback(
     (nodeTypeId: string) => {
@@ -265,10 +362,140 @@ const LeftPanel = ({ onDeselectAll, onAddNode }: LeftPanelProps) => {
             {leftPanelSections.search ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
           </button>
           {leftPanelSections.search && (
-            <div className="px-3 py-3">
-              <p className="text-xs text-gray-500 italic">
-                Search features coming soon
-              </p>
+            <div className="px-3 py-3 space-y-4">
+              {/* Search Input */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-medium text-gray-600">
+                    Search
+                  </label>
+                  {/* Reset Filters Link */}
+                  {hasActiveFilters() && (
+                    <button
+                      onClick={clearFilters}
+                      className="flex items-center space-x-1 text-xs text-gray-500 hover:text-blue-600 transition-colors"
+                    >
+                      <FilterAltOffIcon sx={{ fontSize: 14 }} />
+                      <span>Reset filters</span>
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <div className="absolute left-2.5 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                    <SearchIcon className="text-gray-400" sx={{ fontSize: 18 }} />
+                  </div>
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                    placeholder="Search actors..."
+                    className="w-full pl-9 pr-9 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {searchText && (
+                    <div className="absolute right-1 top-1/2 transform -translate-y-1/2">
+                      <IconButton
+                        size="small"
+                        onClick={() => setSearchText('')}
+                        sx={{ padding: '4px' }}
+                      >
+                        <ClearIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Filter by Actor Type */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-2">
+                  Filter by Actor Type
+                </label>
+                <div className="space-y-1.5">
+                  {nodeTypes.map((nodeType) => {
+                    const isVisible = visibleActorTypes[nodeType.id] !== false;
+                    const IconComponent = getIconComponent(nodeType.icon);
+
+                    return (
+                      <label
+                        key={nodeType.id}
+                        className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 px-2 py-1 rounded transition-colors"
+                      >
+                        <Checkbox
+                          checked={isVisible}
+                          onChange={() => setActorTypeVisible(nodeType.id, !isVisible)}
+                          size="small"
+                          sx={{ padding: '2px' }}
+                        />
+                        <div className="flex items-center space-x-2 flex-1">
+                          {IconComponent ? (
+                            <div
+                              className="w-4 h-4 flex items-center justify-center"
+                              style={{ color: nodeType.color, fontSize: '1rem' }}
+                            >
+                              <IconComponent />
+                            </div>
+                          ) : (
+                            <div
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: nodeType.color }}
+                            />
+                          )}
+                          <span className="text-sm text-gray-700">{nodeType.label}</span>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Filter by Relation */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-2">
+                  Filter by Relation
+                </label>
+                <div className="space-y-1.5">
+                  {edgeTypes.map((edgeType) => {
+                    const isVisible = visibleRelationTypes[edgeType.id] !== false;
+
+                    return (
+                      <label
+                        key={edgeType.id}
+                        className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 px-2 py-1 rounded transition-colors"
+                      >
+                        <Checkbox
+                          checked={isVisible}
+                          onChange={() => setRelationTypeVisible(edgeType.id, !isVisible)}
+                          size="small"
+                          sx={{ padding: '2px' }}
+                        />
+                        <div className="flex items-center space-x-2 flex-1">
+                          <div
+                            className="w-6 h-0.5"
+                            style={{
+                              backgroundColor: edgeType.color,
+                              borderStyle: edgeType.style === 'dashed' ? 'dashed' : edgeType.style === 'dotted' ? 'dotted' : 'solid',
+                              borderWidth: edgeType.style !== 'solid' ? '1px' : '0',
+                              borderColor: edgeType.style !== 'solid' ? edgeType.color : 'transparent',
+                              height: edgeType.style !== 'solid' ? '0' : '2px',
+                            }}
+                          />
+                          <span className="text-sm text-gray-700">{edgeType.label}</span>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Results Summary */}
+              <div className="pt-2 border-t border-gray-100">
+                <div className="text-xs text-gray-600">
+                  <span className="font-medium">Results:</span>{' '}
+                  {matchingNodes.length} actor{matchingNodes.length !== 1 ? 's' : ''}
+                  {searchText || hasActiveFilters() ? ` of ${nodes.length}` : ''}
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -285,6 +512,8 @@ const LeftPanel = ({ onDeselectAll, onAddNode }: LeftPanelProps) => {
       />
     </div>
   );
-};
+});
+
+LeftPanel.displayName = 'LeftPanel';
 
 export default LeftPanel;

@@ -1,7 +1,7 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { ReactFlowProvider, useReactFlow } from "reactflow";
 import GraphEditor from "./components/Editor/GraphEditor";
-import LeftPanel from "./components/Panels/LeftPanel";
+import LeftPanel, { type LeftPanelRef } from "./components/Panels/LeftPanel";
 import RightPanel from "./components/Panels/RightPanel";
 import BottomPanel from "./components/Timeline/BottomPanel";
 import DocumentTabs from "./components/Workspace/DocumentTabs";
@@ -46,6 +46,9 @@ function AppContent() {
   const { handleNewDocument, NewDocumentDialog } = useCreateDocument();
   const [showDocumentManager, setShowDocumentManager] = useState(false);
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
+
+  // Ref for LeftPanel to call focusSearch
+  const leftPanelRef = useRef<LeftPanelRef>(null);
   const [selectedNode, setSelectedNode] = useState<Actor | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<Relation | null>(null);
   const [addNodeCallback, setAddNodeCallback] = useState<
@@ -88,6 +91,7 @@ function AppContent() {
     onOpenHelp: () => setShowKeyboardHelp(true),
     onFitView: handleFitView,
     onSelectAll: handleSelectAll,
+    onFocusSearch: () => leftPanelRef.current?.focusSearch(),
   });
 
   // Escape key to close property panels
@@ -147,6 +151,7 @@ function AppContent() {
           {/* Left Panel */}
           {leftPanelVisible && activeDocumentId && (
             <LeftPanel
+              ref={leftPanelRef}
               onDeselectAll={() => {
                 setSelectedNode(null);
                 setSelectedEdge(null);

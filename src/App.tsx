@@ -5,7 +5,6 @@ import LeftPanel, { type LeftPanelRef } from "./components/Panels/LeftPanel";
 import RightPanel from "./components/Panels/RightPanel";
 import BottomPanel from "./components/Timeline/BottomPanel";
 import DocumentTabs from "./components/Workspace/DocumentTabs";
-import Toolbar from "./components/Toolbar/Toolbar";
 import MenuBar from "./components/Menu/MenuBar";
 import DocumentManager from "./components/Workspace/DocumentManager";
 import KeyboardShortcutsHelp from "./components/Common/KeyboardShortcutsHelp";
@@ -24,9 +23,8 @@ import type { ExportOptions } from "./utils/graphExport";
  *
  * Layout:
  * - Header with title
- * - Menu bar (File, Edit, View)
+ * - Menu bar (File, Edit, View) with undo/redo controls
  * - Document tabs for multi-file support
- * - Toolbar for graph editing controls
  * - Main graph editor canvas
  *
  * Features:
@@ -140,9 +138,6 @@ function AppContent() {
 
       {/* Document Tabs */}
       <DocumentTabs />
-
-      {/* Toolbar */}
-      {activeDocumentId && <Toolbar />}
 
       {/* Main content area with side panels and bottom panel */}
       <main className="flex-1 overflow-hidden flex flex-col">

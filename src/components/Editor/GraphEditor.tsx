@@ -223,6 +223,20 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest, onExportReq
     getCurrentViewport,
   ]);
 
+  // Listen for custom event to close all menus (including context menus)
+  useEffect(() => {
+    const handleCloseAllMenus = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      // Don't close if the event came from context menu itself (source: 'contextmenu')
+      if (customEvent.detail?.source !== 'contextmenu') {
+        setContextMenu(null);
+      }
+    };
+
+    window.addEventListener('closeAllMenus', handleCloseAllMenus);
+    return () => window.removeEventListener('closeAllMenus', handleCloseAllMenus);
+  }, []);
+
   // Save viewport periodically (debounced)
   const handleViewportChange = useCallback(
     (_event: MouseEvent | TouchEvent | null, viewport: Viewport) => {
@@ -455,6 +469,10 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest, onExportReq
       y: event.clientY,
       type: "pane",
     });
+    // Close other menus when opening context menu (after state update)
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('closeAllMenus', { detail: { source: 'contextmenu' } }));
+    }, 0);
   }, []);
 
   // Handle right-click on node
@@ -467,6 +485,10 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest, onExportReq
         type: "node",
         target: node,
       });
+      // Close other menus when opening context menu (after state update)
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('closeAllMenus', { detail: { source: 'contextmenu' } }));
+      }, 0);
     },
     [],
   );
@@ -481,6 +503,10 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest, onExportReq
         type: "edge",
         target: edge,
       });
+      // Close other menus when opening context menu (after state update)
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('closeAllMenus', { detail: { source: 'contextmenu' } }));
+      }, 0);
     },
     [],
   );
@@ -490,6 +516,8 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest, onExportReq
     if (contextMenu) {
       setContextMenu(null);
     }
+    // Close all menus (menu bar dropdowns and context menus) when clicking on the graph canvas
+    window.dispatchEvent(new Event('closeAllMenus'));
   }, [contextMenu]);
 
   // Shared node creation logic (used by context menu and left panel)

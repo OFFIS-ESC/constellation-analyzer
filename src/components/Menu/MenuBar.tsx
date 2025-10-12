@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useGraphWithHistory } from '../../hooks/useGraphWithHistory';
+import { useDocumentHistory } from '../../hooks/useDocumentHistory';
 import DocumentManager from '../Workspace/DocumentManager';
 import NodeTypeConfigModal from '../Config/NodeTypeConfig';
 import EdgeTypeConfigModal from '../Config/EdgeTypeConfig';
@@ -51,6 +52,21 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onSelectAll, o
   } = useWorkspaceStore();
 
   const { clearGraph } = useGraphWithHistory();
+  const { undo, redo, canUndo, canRedo, undoDescription, redoDescription } = useDocumentHistory();
+
+  // Listen for custom event to close all menus (e.g., from graph canvas clicks, context menu opens)
+  useEffect(() => {
+    const handleCloseMenuEvent = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      // Don't close if the event came from MenuBar itself (source: 'menubar')
+      if (customEvent.detail?.source !== 'menubar') {
+        setActiveMenu(null);
+      }
+    };
+
+    window.addEventListener('closeAllMenus', handleCloseMenuEvent);
+    return () => window.removeEventListener('closeAllMenus', handleCloseMenuEvent);
+  }, []);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -67,7 +83,17 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onSelectAll, o
   }, [activeMenu]);
 
   const toggleMenu = useCallback((menuName: string) => {
-    setActiveMenu((current) => (current === menuName ? null : menuName));
+    setActiveMenu((current) => {
+      const newMenu = current === menuName ? null : menuName;
+      // When opening a menu (not closing), dispatch event to close context menus after state updates
+      if (newMenu !== null && current !== menuName) {
+        // Use setTimeout to dispatch after the render phase completes
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('closeAllMenus', { detail: { source: 'menubar' } }));
+        }, 0);
+      }
+      return newMenu;
+    });
   }, []);
 
   const closeMenu = useCallback(() => {
@@ -147,6 +173,16 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onSelectAll, o
     setShowEdgeConfig(true);
     closeMenu();
   }, [closeMenu]);
+
+  const handleUndo = useCallback(() => {
+    undo();
+    closeMenu();
+  }, [undo, closeMenu]);
+
+  const handleRedo = useCallback(() => {
+    redo();
+    closeMenu();
+  }, [redo, closeMenu]);
 
   const handleClearGraph = useCallback(async () => {
     const confirmed = await confirm({
@@ -301,6 +337,31 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onSelectAll, o
 
             {activeMenu === 'edit' && (
               <div className="absolute top-full left-0 mt-1 w-56 bg-white border border-gray-200 rounded-md shadow-lg py-1 z-50">
+                <button
+                  onClick={handleUndo}
+                  disabled={!canUndo}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between disabled:opacity-40 disabled:cursor-not-allowed"
+                  title={undoDescription ? `Undo: ${undoDescription}` : 'Undo'}
+                >
+                  <span>Undo{undoDescription ? `: ${undoDescription}` : ''}</span>
+                  {getShortcutLabel('undo') && (
+                    <span className="text-xs text-gray-400">{getShortcutLabel('undo')}</span>
+                  )}
+                </button>
+                <button
+                  onClick={handleRedo}
+                  disabled={!canRedo}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between disabled:opacity-40 disabled:cursor-not-allowed"
+                  title={redoDescription ? `Redo: ${redoDescription}` : 'Redo'}
+                >
+                  <span>Redo{redoDescription ? `: ${redoDescription}` : ''}</span>
+                  {getShortcutLabel('redo') && (
+                    <span className="text-xs text-gray-400">{getShortcutLabel('redo')}</span>
+                  )}
+                </button>
+
+                <hr className="my-1 border-gray-200" />
+
                 <button
                   onClick={handleConfigureActors}
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"

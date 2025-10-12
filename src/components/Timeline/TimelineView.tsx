@@ -171,6 +171,20 @@ const TimelineViewInner: React.FC = () => {
     setEdges(layoutEdges);
   }, [layoutNodes, layoutEdges, setNodes, setEdges]);
 
+  // Listen for custom event to close all menus (including context menus)
+  React.useEffect(() => {
+    const handleCloseAllMenus = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      // Don't close if the event came from context menu itself (source: 'contextmenu')
+      if (customEvent.detail?.source !== 'contextmenu') {
+        setContextMenu(null);
+      }
+    };
+
+    window.addEventListener('closeAllMenus', handleCloseAllMenus);
+    return () => window.removeEventListener('closeAllMenus', handleCloseAllMenus);
+  }, []);
+
   // Handle node click - switch to state
   const handleNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
@@ -185,6 +199,8 @@ const TimelineViewInner: React.FC = () => {
     if (contextMenu) {
       setContextMenu(null);
     }
+    // Close all menus (menu bar dropdowns and context menus) when clicking on the timeline canvas
+    window.dispatchEvent(new Event('closeAllMenus'));
   }, [contextMenu]);
 
   // Handle node context menu
@@ -196,6 +212,10 @@ const TimelineViewInner: React.FC = () => {
         y: event.clientY,
         stateId: node.id,
       });
+      // Close other menus when opening context menu (after state update)
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('closeAllMenus', { detail: { source: 'contextmenu' } }));
+      }, 0);
     },
     []
   );

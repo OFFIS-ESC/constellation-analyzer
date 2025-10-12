@@ -49,10 +49,11 @@ function AppContent() {
   const leftPanelRef = useRef<LeftPanelRef>(null);
   const [selectedNode, setSelectedNode] = useState<Actor | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<Relation | null>(null);
-  const [addNodeCallback, setAddNodeCallback] = useState<
+  // Use refs for callbacks to avoid triggering re-renders
+  const addNodeCallbackRef = useRef<
     ((nodeTypeId: string, position?: { x: number; y: number }) => void) | null
   >(null);
-  const [exportCallback, setExportCallback] = useState<
+  const exportCallbackRef = useRef<
     ((format: "png" | "svg", options?: ExportOptions) => Promise<void>) | null
   >(null);
   const { fitView } = useReactFlow();
@@ -133,7 +134,7 @@ function AppContent() {
         onOpenHelp={() => setShowKeyboardHelp(true)}
         onFitView={handleFitView}
         onSelectAll={handleSelectAll}
-        onExport={exportCallback || undefined}
+        onExport={exportCallbackRef.current || undefined}
       />
 
       {/* Document Tabs */}
@@ -151,7 +152,7 @@ function AppContent() {
                 setSelectedNode(null);
                 setSelectedEdge(null);
               }}
-              onAddNode={addNodeCallback || undefined}
+              onAddNode={addNodeCallbackRef.current || undefined}
             />
           )}
 
@@ -179,13 +180,17 @@ function AppContent() {
                   nodeTypeId: string,
                   position?: { x: number; y: number },
                 ) => void,
-              ) => setAddNodeCallback(() => callback)}
+              ) => {
+                addNodeCallbackRef.current = callback;
+              }}
               onExportRequest={(
                 callback: (
                   format: "png" | "svg",
                   options?: ExportOptions,
                 ) => Promise<void>,
-              ) => setExportCallback(() => callback)}
+              ) => {
+                exportCallbackRef.current = callback;
+              }}
             />
           </div>
 

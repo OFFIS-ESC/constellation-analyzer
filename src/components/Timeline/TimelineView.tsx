@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useState } from 'react';
+import React, { useMemo, useCallback, useState } from "react";
 import ReactFlow, {
   Background,
   Controls,
@@ -9,18 +9,18 @@ import ReactFlow, {
   useEdgesState,
   BackgroundVariant,
   ReactFlowProvider,
-} from 'reactflow';
-import 'reactflow/dist/style.css';
-import { useTimelineStore } from '../../stores/timelineStore';
-import { useWorkspaceStore } from '../../stores/workspaceStore';
-import StateNode from './StateNode';
-import ContextMenu from '../Editor/ContextMenu';
-import RenameStateDialog from './RenameStateDialog';
-import EditIcon from '@mui/icons-material/Edit';
-import FileCopyIcon from '@mui/icons-material/FileCopy';
-import CallSplitIcon from '@mui/icons-material/CallSplit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import type { ConstellationState, StateId } from '../../types/timeline';
+} from "reactflow";
+import "reactflow/dist/style.css";
+import { useTimelineStore } from "../../stores/timelineStore";
+import { useWorkspaceStore } from "../../stores/workspaceStore";
+import StateNode from "./StateNode";
+import ContextMenu from "../Editor/ContextMenu";
+import RenameStateDialog from "./RenameStateDialog";
+import EditIcon from "@mui/icons-material/Edit";
+import FileCopyIcon from "@mui/icons-material/FileCopy";
+import CallSplitIcon from "@mui/icons-material/CallSplit";
+import DeleteIcon from "@mui/icons-material/Delete";
+import type { ConstellationState, StateId } from "../../types/timeline";
 
 /**
  * Layout states in a horizontal timeline with branches
@@ -28,7 +28,7 @@ import type { ConstellationState, StateId } from '../../types/timeline';
 function layoutStates(
   states: ConstellationState[],
   currentStateId: StateId,
-  rootStateId: StateId
+  rootStateId: StateId,
 ): { nodes: Node[]; edges: Edge[] } {
   const horizontalSpacing = 200;
   const verticalSpacing = 100;
@@ -91,7 +91,7 @@ function layoutStates(
 
     return {
       id: state.id,
-      type: 'stateNode',
+      type: "stateNode",
       position: {
         x: level * horizontalSpacing,
         y: lane * verticalSpacing,
@@ -111,11 +111,11 @@ function layoutStates(
         id: `${state.parentStateId}-${state.id}`,
         source: state.parentStateId,
         target: state.id,
-        type: 'smoothstep',
+        type: "smoothstep",
         animated: state.id === currentStateId,
         style: {
           strokeWidth: state.id === currentStateId ? 3 : 2,
-          stroke: state.id === currentStateId ? '#10b981' : '#9ca3af',
+          stroke: state.id === currentStateId ? "#10b981" : "#9ca3af",
         },
       });
     }
@@ -129,7 +129,14 @@ function layoutStates(
  */
 const TimelineViewInner: React.FC = () => {
   const activeDocumentId = useWorkspaceStore((state) => state.activeDocumentId);
-  const { timelines, switchToState, updateState, duplicateState, duplicateStateAsChild, deleteState } = useTimelineStore();
+  const {
+    timelines,
+    switchToState,
+    updateState,
+    duplicateState,
+    duplicateStateAsChild,
+    deleteState,
+  } = useTimelineStore();
 
   const timeline = activeDocumentId ? timelines.get(activeDocumentId) : null;
 
@@ -152,14 +159,44 @@ const TimelineViewInner: React.FC = () => {
     return Array.from(timeline.states.values());
   }, [timeline]);
 
+  // Handle rename request from node
+  const handleRenameRequest = useCallback(
+    (stateId: string) => {
+      console.log("Rename requested for state:", stateId);
+      const state = timeline?.states.get(stateId);
+      if (state) {
+        setRenameDialog({
+          stateId: stateId,
+          currentLabel: state.label,
+        });
+      }
+    },
+    [timeline],
+  );
+
   // Layout nodes and edges
   const { nodes: layoutNodes, edges: layoutEdges } = useMemo(() => {
     if (!timeline || states.length === 0) {
       return { nodes: [], edges: [] };
     }
 
-    return layoutStates(states, timeline.currentStateId, timeline.rootStateId);
-  }, [states, timeline]);
+    const { nodes, edges } = layoutStates(
+      states,
+      timeline.currentStateId,
+      timeline.rootStateId,
+    );
+
+    // Add rename handler to each node's data
+    const nodesWithRename = nodes.map((node) => ({
+      ...node,
+      data: {
+        ...node.data,
+        onRename: handleRenameRequest,
+      },
+    }));
+
+    return { nodes: nodesWithRename, edges };
+  }, [states, timeline, handleRenameRequest]);
 
   // React Flow state
   const [nodes, setNodes, onNodesChange] = useNodesState(layoutNodes);
@@ -176,22 +213,34 @@ const TimelineViewInner: React.FC = () => {
     const handleCloseAllMenus = (event: Event) => {
       const customEvent = event as CustomEvent;
       // Don't close if the event came from context menu itself (source: 'contextmenu')
-      if (customEvent.detail?.source !== 'contextmenu') {
+      if (customEvent.detail?.source !== "contextmenu") {
         setContextMenu(null);
       }
     };
 
-    window.addEventListener('closeAllMenus', handleCloseAllMenus);
-    return () => window.removeEventListener('closeAllMenus', handleCloseAllMenus);
+    window.addEventListener("closeAllMenus", handleCloseAllMenus);
+    return () =>
+      window.removeEventListener("closeAllMenus", handleCloseAllMenus);
   }, []);
 
   // Handle node click - switch to state
   const handleNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
+      console.log("Single click on node:", node.id);
       switchToState(node.id);
       setContextMenu(null); // Close context menu if open
     },
-    [switchToState]
+    [switchToState],
+  );
+
+  // Handle node click - switch to state
+  const handleNodeDoubleClick = useCallback(
+    (_event: React.MouseEvent, node: Node) => {
+      console.log("Double click on node:", node.id);
+      handleRenameRequest(node.id);
+      setContextMenu(null); // Close context menu if open
+    },
+    [handleRenameRequest],
   );
 
   // Handle pane click - close context menu
@@ -200,7 +249,7 @@ const TimelineViewInner: React.FC = () => {
       setContextMenu(null);
     }
     // Close all menus (menu bar dropdowns and context menus) when clicking on the timeline canvas
-    window.dispatchEvent(new Event('closeAllMenus'));
+    window.dispatchEvent(new Event("closeAllMenus"));
   }, [contextMenu]);
 
   // Handle node context menu
@@ -214,10 +263,14 @@ const TimelineViewInner: React.FC = () => {
       });
       // Close other menus when opening context menu (after state update)
       setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('closeAllMenus', { detail: { source: 'contextmenu' } }));
+        window.dispatchEvent(
+          new CustomEvent("closeAllMenus", {
+            detail: { source: "contextmenu" },
+          }),
+        );
       }, 0);
     },
-    []
+    [],
   );
 
   // Context menu actions
@@ -260,7 +313,7 @@ const TimelineViewInner: React.FC = () => {
         updateState(renameDialog.stateId, { label: newLabel });
       }
     },
-    [renameDialog, updateState]
+    [renameDialog, updateState],
   );
 
   // Custom node types
@@ -268,7 +321,7 @@ const TimelineViewInner: React.FC = () => {
     () => ({
       stateNode: StateNode,
     }),
-    []
+    [],
   );
 
   if (!timeline) {
@@ -276,7 +329,9 @@ const TimelineViewInner: React.FC = () => {
       <div className="flex items-center justify-center h-full text-gray-500">
         <div className="text-center">
           <p>No timeline for this document.</p>
-          <p className="text-sm mt-1">Create a timeline to manage multiple states.</p>
+          <p className="text-sm mt-1">
+            Create a timeline to manage multiple states.
+          </p>
         </div>
       </div>
     );
@@ -298,6 +353,7 @@ const TimelineViewInner: React.FC = () => {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeClick={handleNodeClick}
+        onNodeDoubleClick={handleNodeDoubleClick}
         onNodeContextMenu={handleNodeContextMenu}
         onPaneClick={handlePaneClick}
         nodeTypes={nodeTypes}
@@ -310,10 +366,12 @@ const TimelineViewInner: React.FC = () => {
         panOnDrag={true}
         zoomOnScroll={true}
         zoomOnPinch={true}
+        zoomOnDoubleClick={false}
         preventScrolling={false}
         panOnScroll={false}
         selectionOnDrag={false}
         selectNodesOnDrag={false}
+        nodesFocusable={false}
         proOptions={{ hideAttribution: true }}
       >
         <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
@@ -329,22 +387,22 @@ const TimelineViewInner: React.FC = () => {
             {
               actions: [
                 {
-                  label: 'Rename',
+                  label: "Rename",
                   icon: <EditIcon fontSize="small" />,
                   onClick: handleRenameFromMenu,
                 },
               ],
             },
             {
-              title: 'Duplicate',
+              title: "Duplicate",
               actions: [
                 {
-                  label: 'Duplicate (Parallel)',
+                  label: "Duplicate (Parallel)",
                   icon: <FileCopyIcon fontSize="small" />,
                   onClick: handleDuplicateParallelFromMenu,
                 },
                 {
-                  label: 'Duplicate (Series)',
+                  label: "Duplicate (Series)",
                   icon: <CallSplitIcon fontSize="small" />,
                   onClick: handleDuplicateSeriesFromMenu,
                 },
@@ -353,7 +411,7 @@ const TimelineViewInner: React.FC = () => {
             {
               actions: [
                 {
-                  label: 'Delete',
+                  label: "Delete",
                   icon: <DeleteIcon fontSize="small" />,
                   onClick: handleDeleteFromMenu,
                 },

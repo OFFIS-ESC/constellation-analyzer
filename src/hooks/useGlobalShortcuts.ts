@@ -17,7 +17,6 @@ interface UseGlobalShortcutsOptions {
   onRedo?: () => void;
   onOpenHelp?: () => void;
   onFitView?: () => void;
-  onSelectAll?: () => void;
   onFocusSearch?: () => void;
 }
 
@@ -143,15 +142,6 @@ export function useGlobalShortcuts(options: UseGlobalShortcutsOptions = {}) {
       },
 
       // Selection
-      {
-        id: "select-all",
-        description: "Select All",
-        key: "a",
-        ctrl: true,
-        handler: () => options.onSelectAll?.(),
-        category: "Selection",
-        enabled: !!options.onSelectAll,
-      },
       {
         id: "deselect-all",
         description: "Deselect All",

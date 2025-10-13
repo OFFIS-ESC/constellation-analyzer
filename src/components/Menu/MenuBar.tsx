@@ -24,11 +24,10 @@ import type { ExportOptions } from '../../utils/graphExport';
 interface MenuBarProps {
   onOpenHelp?: () => void;
   onFitView?: () => void;
-  onSelectAll?: () => void;
   onExport?: (format: 'png' | 'svg', options?: ExportOptions) => Promise<void>;
 }
 
-const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onSelectAll, onExport }) => {
+const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) => {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [showDocumentManager, setShowDocumentManager] = useState(false);
   const [showNodeConfig, setShowNodeConfig] = useState(false);
@@ -413,18 +412,6 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onSelectAll, o
                   <span>Fit View to Content</span>
                   {getShortcutLabel('fit-view') && (
                     <span className="text-xs text-gray-400">{getShortcutLabel('fit-view')}</span>
-                  )}
-                </button>
-                <button
-                  onClick={() => {
-                    onSelectAll?.();
-                    closeMenu();
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between"
-                >
-                  <span>Select All</span>
-                  {getShortcutLabel('select-all') && (
-                    <span className="text-xs text-gray-400">{getShortcutLabel('select-all')}</span>
                   )}
                 </button>
               </div>

@@ -75,12 +75,6 @@ function AppContent() {
     fitView({ padding: 0.2, duration: 300 });
   }, [fitView]);
 
-  const handleSelectAll = useCallback(() => {
-    // This will be implemented in GraphEditor
-    // For now, we'll just document it
-    console.log("Select All - to be implemented");
-  }, []);
-
   // Setup global keyboard shortcuts
   useGlobalShortcuts({
     onUndo: undo,
@@ -89,7 +83,6 @@ function AppContent() {
     onOpenDocumentManager: () => setShowDocumentManager(true),
     onOpenHelp: () => setShowKeyboardHelp(true),
     onFitView: handleFitView,
-    onSelectAll: handleSelectAll,
     onFocusSearch: () => leftPanelRef.current?.focusSearch(),
   });
 
@@ -133,7 +126,6 @@ function AppContent() {
       <MenuBar
         onOpenHelp={() => setShowKeyboardHelp(true)}
         onFitView={handleFitView}
-        onSelectAll={handleSelectAll}
         onExport={exportCallbackRef.current || undefined}
       />
 

@@ -8,6 +8,7 @@ import {
 } from "../../utils/colorUtils";
 import { getIconComponent } from "../../utils/iconUtils";
 import type { ActorData } from "../../types";
+import NodeShapeRenderer from "./Shapes/NodeShapeRenderer";
 
 /**
  * CustomNode - Represents an actor in the constellation graph
@@ -32,6 +33,7 @@ const CustomNode = ({ data, selected }: NodeProps<ActorData>) => {
   const nodeTypeConfig = nodeTypes.find((nt) => nt.id === data.type);
   const nodeColor = nodeTypeConfig?.color || "#6b7280";
   const nodeLabel = nodeTypeConfig?.label || "Unknown";
+  const nodeShape = nodeTypeConfig?.shape || "rectangle";
   const IconComponent = getIconComponent(nodeTypeConfig?.icon);
 
   // Determine text color based on background
@@ -86,23 +88,9 @@ const CustomNode = ({ data, selected }: NodeProps<ActorData>) => {
 
   return (
     <div
-      className={`
-        px-4 py-3 rounded-lg shadow-md min-w-[120px]
-        transition-all duration-200
-        ${selected ? "shadow-xl" : "shadow-md"}
-      `}
+      className="relative"
       style={{
-        backgroundColor: nodeColor,
-        borderWidth: "3px", // Keep consistent border width
-        borderStyle: "solid",
-        borderColor: borderColor,
-        color: textColor,
         opacity: nodeOpacity,
-        boxShadow: selected
-          ? `0 0 0 3px ${nodeColor}40` // Add outer glow when selected (40 = ~25% opacity)
-          : isHighlighted
-            ? `0 0 0 3px ${nodeColor}80, 0 0 12px ${nodeColor}60` // Highlight glow for search matches
-            : undefined,
       }}
     >
       {/* Connection handles - shown only when selected or connecting */}
@@ -166,34 +154,43 @@ const CustomNode = ({ data, selected }: NodeProps<ActorData>) => {
         }}
       />
 
-      {/* Node content */}
-      <div className="space-y-1">
-        {/* Icon (if available) */}
-        {IconComponent && (
+      {/* Node content with shape renderer */}
+      <NodeShapeRenderer
+        shape={nodeShape}
+        color={nodeColor}
+        borderColor={borderColor}
+        textColor={textColor}
+        selected={selected}
+        isHighlighted={isHighlighted}
+      >
+        <div className="space-y-1">
+          {/* Icon (if available) */}
+          {IconComponent && (
+            <div
+              className="flex justify-center mb-1"
+              style={{ color: textColor, fontSize: "2rem" }}
+            >
+              <IconComponent />
+            </div>
+          )}
+
+          {/* Main label */}
           <div
-            className="flex justify-center mb-1"
-            style={{ color: textColor, fontSize: "2rem" }}
+            className="text-base font-bold text-center break-words leading-tight"
+            style={{ color: textColor }}
           >
-            <IconComponent />
+            {data.label}
           </div>
-        )}
 
-        {/* Main label */}
-        <div
-          className="text-base font-bold text-center break-words leading-tight"
-          style={{ color: textColor }}
-        >
-          {data.label}
+          {/* Type as subtle subtitle */}
+          <div
+            className="text-xs text-center opacity-70 font-medium leading-tight"
+            style={{ color: textColor }}
+          >
+            {nodeLabel}
+          </div>
         </div>
-
-        {/* Type as subtle subtitle */}
-        <div
-          className="text-xs text-center opacity-70 font-medium leading-tight"
-          style={{ color: textColor }}
-        >
-          {nodeLabel}
-        </div>
-      </div>
+      </NodeShapeRenderer>
     </div>
   );
 };

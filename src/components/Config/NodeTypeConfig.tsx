@@ -25,6 +25,7 @@ const NodeTypeConfigModal = ({ isOpen, onClose }: Props) => {
 
   const [newTypeName, setNewTypeName] = useState('');
   const [newTypeColor, setNewTypeColor] = useState('#6366f1');
+  const [newTypeShape, setNewTypeShape] = useState<import('../../types').NodeShape>('rectangle');
   const [newTypeDescription, setNewTypeDescription] = useState('');
   const [newTypeIcon, setNewTypeIcon] = useState('');
 
@@ -32,6 +33,7 @@ const NodeTypeConfigModal = ({ isOpen, onClose }: Props) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState('');
   const [editColor, setEditColor] = useState('');
+  const [editShape, setEditShape] = useState<import('../../types').NodeShape>('rectangle');
   const [editIcon, setEditIcon] = useState('');
   const [editDescription, setEditDescription] = useState('');
 
@@ -53,6 +55,7 @@ const NodeTypeConfigModal = ({ isOpen, onClose }: Props) => {
       id,
       label: newTypeName.trim(),
       color: newTypeColor,
+      shape: newTypeShape,
       icon: newTypeIcon || undefined,
       description: newTypeDescription.trim() || undefined,
     };
@@ -62,6 +65,7 @@ const NodeTypeConfigModal = ({ isOpen, onClose }: Props) => {
     // Reset form
     setNewTypeName('');
     setNewTypeColor('#6366f1');
+    setNewTypeShape('rectangle');
     setNewTypeDescription('');
     setNewTypeIcon('');
   };
@@ -82,6 +86,7 @@ const NodeTypeConfigModal = ({ isOpen, onClose }: Props) => {
     setEditingId(type.id);
     setEditLabel(type.label);
     setEditColor(type.color);
+    setEditShape(type.shape || 'rectangle');
     setEditIcon(type.icon || '');
     setEditDescription(type.description || '');
   };
@@ -92,6 +97,7 @@ const NodeTypeConfigModal = ({ isOpen, onClose }: Props) => {
     updateNodeType(editingId, {
       label: editLabel.trim(),
       color: editColor,
+      shape: editShape,
       icon: editIcon || undefined,
       description: editDescription.trim() || undefined,
     });
@@ -124,10 +130,12 @@ const NodeTypeConfigModal = ({ isOpen, onClose }: Props) => {
             <NodeTypeForm
               name={newTypeName}
               color={newTypeColor}
+              shape={newTypeShape}
               icon={newTypeIcon}
               description={newTypeDescription}
               onNameChange={setNewTypeName}
               onColorChange={setNewTypeColor}
+              onShapeChange={setNewTypeShape}
               onIconChange={setNewTypeIcon}
               onDescriptionChange={setNewTypeDescription}
             />
@@ -154,10 +162,12 @@ const NodeTypeConfigModal = ({ isOpen, onClose }: Props) => {
                       <NodeTypeForm
                         name={editLabel}
                         color={editColor}
+                        shape={editShape}
                         icon={editIcon}
                         description={editDescription}
                         onNameChange={setEditLabel}
                         onColorChange={setEditColor}
+                        onShapeChange={setEditShape}
                         onIconChange={setEditIcon}
                         onDescriptionChange={setEditDescription}
                       />

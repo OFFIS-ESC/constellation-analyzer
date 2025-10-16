@@ -23,11 +23,20 @@ export interface RelationData {
 
 export type Relation = Edge<RelationData>;
 
+// Node Shape Types
+export type NodeShape =
+  | 'rectangle'
+  | 'circle'
+  | 'roundedRectangle'
+  | 'ellipse'
+  | 'pill';
+
 // Node Type Configuration
 export interface NodeTypeConfig {
   id: string;
   label: string;
   color: string;
+  shape: NodeShape;
   icon?: string;
   description?: string;
 }

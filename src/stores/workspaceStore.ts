@@ -39,10 +39,10 @@ const defaultSettings: WorkspaceSettings = {
   maxOpenDocuments: 10,
   autoSaveEnabled: true,
   defaultNodeTypes: [
-    { id: 'person', label: 'Person', color: '#3b82f6', icon: 'Person', description: 'Individual person' },
-    { id: 'organization', label: 'Organization', color: '#10b981', icon: 'Business', description: 'Company or group' },
-    { id: 'system', label: 'System', color: '#f59e0b', icon: 'Computer', description: 'Technical system' },
-    { id: 'concept', label: 'Concept', color: '#8b5cf6', icon: 'Lightbulb', description: 'Abstract concept' },
+    { id: 'person', label: 'Person', color: '#3b82f6', shape: 'circle', icon: 'Person', description: 'Individual person' },
+    { id: 'organization', label: 'Organization', color: '#10b981', shape: 'rectangle', icon: 'Business', description: 'Company or group' },
+    { id: 'system', label: 'System', color: '#f59e0b', shape: 'roundedRectangle', icon: 'Computer', description: 'Technical system' },
+    { id: 'concept', label: 'Concept', color: '#8b5cf6', shape: 'roundedRectangle', icon: 'Lightbulb', description: 'Abstract concept' },
   ],
   defaultEdgeTypes: [
     { id: 'collaborates', label: 'Collaborates', color: '#3b82f6', style: 'solid' },

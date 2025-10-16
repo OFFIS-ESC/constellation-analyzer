@@ -140,6 +140,23 @@ export function getCurrentGraphFromDocument(document: ConstellationDocument): {
   }
 }
 
+// Migrate node types to include shape property if missing
+function migrateNodeTypes(nodeTypes: NodeTypeConfig[]): NodeTypeConfig[] {
+  return nodeTypes.map(nodeType => {
+    // If shape property already exists, return as-is
+    if (nodeType.shape) {
+      return nodeType;
+    }
+
+    // Otherwise, add default shape (rectangle) for backward compatibility
+    console.log(`Migrating node type "${nodeType.id}" to include shape property (defaulting to rectangle)`);
+    return {
+      ...nodeType,
+      shape: 'rectangle' as const,
+    };
+  });
+}
+
 // Deserialize graph state from a document
 export function deserializeGraphState(document: ConstellationDocument): {
   nodes: Actor[];
@@ -156,10 +173,13 @@ export function deserializeGraphState(document: ConstellationDocument): {
     const nodes = deserializeActors(currentGraph.nodes);
     const edges = deserializeRelations(currentGraph.edges);
 
+    // Migrate node types to include shape property
+    const migratedNodeTypes = migrateNodeTypes(currentGraph.nodeTypes);
+
     return {
       nodes,
       edges,
-      nodeTypes: currentGraph.nodeTypes,
+      nodeTypes: migratedNodeTypes,
       edgeTypes: currentGraph.edgeTypes,
     };
   } catch (error) {

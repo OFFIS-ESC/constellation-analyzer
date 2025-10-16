@@ -1,4 +1,6 @@
 import IconSelector from './IconSelector';
+import ShapeSelector from './ShapeSelector';
+import type { NodeShape } from '../../types';
 
 /**
  * NodeTypeForm - Reusable form fields for creating/editing node types
@@ -6,6 +8,7 @@ import IconSelector from './IconSelector';
  * Features:
  * - Name input
  * - Color picker (visual + text input)
+ * - Shape selector
  * - Icon selector
  * - Description input
  */
@@ -13,10 +16,12 @@ import IconSelector from './IconSelector';
 interface Props {
   name: string;
   color: string;
+  shape: NodeShape;
   icon: string;
   description: string;
   onNameChange: (value: string) => void;
   onColorChange: (value: string) => void;
+  onShapeChange: (value: NodeShape) => void;
   onIconChange: (value: string) => void;
   onDescriptionChange: (value: string) => void;
 }
@@ -24,10 +29,12 @@ interface Props {
 const NodeTypeForm = ({
   name,
   color,
+  shape,
   icon,
   description,
   onNameChange,
   onColorChange,
+  onShapeChange,
   onIconChange,
   onDescriptionChange,
 }: Props) => {
@@ -66,6 +73,8 @@ const NodeTypeForm = ({
           />
         </div>
       </div>
+
+      <ShapeSelector value={shape} onChange={onShapeChange} color={color} />
 
       <IconSelector selectedIcon={icon} onSelect={onIconChange} />
 

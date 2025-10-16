@@ -50,7 +50,7 @@ const LeftPanel = forwardRef<LeftPanelRef, LeftPanelProps>(({ onDeselectAll, onA
     expandLeftPanel,
   } = usePanelStore();
 
-  const { nodeTypes, edgeTypes, addNode, nodes } = useGraphWithHistory();
+  const { nodeTypes, edgeTypes, addNode, nodes, edges } = useGraphWithHistory();
   const { selectedRelationType, setSelectedRelationType } = useEditorStore();
   const [showNodeConfig, setShowNodeConfig] = useState(false);
   const [showEdgeConfig, setShowEdgeConfig] = useState(false);
@@ -141,6 +141,38 @@ const LeftPanel = forwardRef<LeftPanelRef, LeftPanelProps>(({ onDeselectAll, onA
       return true;
     });
   }, [nodes, searchText, visibleActorTypes, nodeTypes]);
+
+  // Calculate matching edges based on search and filters
+  const matchingEdges = useMemo(() => {
+    const searchLower = searchText.toLowerCase().trim();
+
+    return edges.filter((edge) => {
+      const edgeType = edge.data?.type || '';
+
+      // Filter by edge type visibility
+      const isTypeVisible = visibleRelationTypes[edgeType] !== false;
+      if (!isTypeVisible) {
+        return false;
+      }
+
+      // Filter by search text
+      if (searchLower) {
+        const label = edge.data?.label?.toLowerCase() || '';
+        const edgeTypeConfig = edgeTypes.find((et) => et.id === edgeType);
+        const typeName = edgeTypeConfig?.label?.toLowerCase() || '';
+
+        const matches =
+          label.includes(searchLower) ||
+          typeName.includes(searchLower);
+
+        if (!matches) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [edges, searchText, visibleRelationTypes, edgeTypes]);
 
 
   const handleAddNode = useCallback(
@@ -389,7 +421,7 @@ const LeftPanel = forwardRef<LeftPanelRef, LeftPanelProps>(({ onDeselectAll, onA
                     type="text"
                     value={searchText}
                     onChange={(e) => setSearchText(e.target.value)}
-                    placeholder="Search actors..."
+                    placeholder="Search actors and relations..."
                     className="w-full pl-9 pr-9 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   {searchText && (
@@ -490,10 +522,17 @@ const LeftPanel = forwardRef<LeftPanelRef, LeftPanelProps>(({ onDeselectAll, onA
 
               {/* Results Summary */}
               <div className="pt-2 border-t border-gray-100">
-                <div className="text-xs text-gray-600">
-                  <span className="font-medium">Results:</span>{' '}
-                  {matchingNodes.length} actor{matchingNodes.length !== 1 ? 's' : ''}
-                  {searchText || hasActiveFilters() ? ` of ${nodes.length}` : ''}
+                <div className="text-xs text-gray-600 space-y-1">
+                  <div>
+                    <span className="font-medium">Actors:</span>{' '}
+                    {matchingNodes.length}
+                    {searchText || hasActiveFilters() ? ` of ${nodes.length}` : ''}
+                  </div>
+                  <div>
+                    <span className="font-medium">Relations:</span>{' '}
+                    {matchingEdges.length}
+                    {searchText || hasActiveFilters() ? ` of ${edges.length}` : ''}
+                  </div>
                 </div>
               </div>
             </div>

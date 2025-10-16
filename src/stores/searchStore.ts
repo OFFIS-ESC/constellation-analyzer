@@ -4,14 +4,14 @@ import { create } from 'zustand';
  * SearchStore - Manages search and filter state
  *
  * Features:
- * - Search text for filtering nodes by label, description, or type
+ * - Search text for filtering both actors (by label, description, or type) and relations (by label or type)
  * - Filter by actor types (show/hide specific node types)
  * - Filter by relation types (show/hide specific edge types)
  * - Results tracking
  */
 
 interface SearchStore {
-  // Search text
+  // Search text (applies to both actors and edges)
   searchText: string;
   setSearchText: (text: string) => void;
 

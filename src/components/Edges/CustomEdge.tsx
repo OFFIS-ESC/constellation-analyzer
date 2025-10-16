@@ -33,7 +33,7 @@ const CustomEdge = ({
   selected,
 }: EdgeProps<RelationData>) => {
   const edgeTypes = useGraphStore((state) => state.edgeTypes);
-  const { visibleRelationTypes } = useSearchStore();
+  const { searchText, visibleRelationTypes } = useSearchStore();
 
   // Calculate the bezier path
   const [edgePath, labelX, labelY] = getBezierPath({
@@ -64,16 +64,33 @@ const CustomEdge = ({
   const directionality = data?.directionality || edgeTypeConfig?.defaultDirectionality || 'directed';
 
   // Check if this edge matches the filter criteria
-  const isVisible = useMemo(() => {
+  const isMatch = useMemo(() => {
+    // Check type visibility
     const edgeType = data?.type || '';
-    return visibleRelationTypes[edgeType] !== false;
-  }, [data?.type, visibleRelationTypes]);
+    const isTypeVisible = visibleRelationTypes[edgeType] !== false;
+    if (!isTypeVisible) {
+      return false;
+    }
+
+    // Check search text match
+    if (searchText.trim()) {
+      const searchLower = searchText.toLowerCase();
+      const label = data?.label?.toLowerCase() || '';
+      const typeName = edgeTypeConfig?.label?.toLowerCase() || '';
+
+      return label.includes(searchLower) || typeName.includes(searchLower);
+    }
+
+    return true;
+  }, [searchText, visibleRelationTypes, data?.type, data?.label, edgeTypeConfig?.label]);
 
   // Determine if filters are active
-  const hasActiveFilters = Object.values(visibleRelationTypes).some(v => v === false);
+  const hasActiveFilters =
+    searchText.trim() !== '' ||
+    Object.values(visibleRelationTypes).some(v => v === false);
 
   // Calculate opacity based on visibility
-  const edgeOpacity = hasActiveFilters && !isVisible ? 0.2 : 1.0;
+  const edgeOpacity = hasActiveFilters && !isMatch ? 0.2 : 1.0;
 
   // Create unique marker IDs based on color (for reusability)
   const safeColor = edgeColor.replace('#', '');

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useGraphWithHistory } from '../../hooks/useGraphWithHistory';
 import { useConfirm } from '../../hooks/useConfirm';
 import { useToastStore } from '../../stores/toastStore';
@@ -23,14 +23,28 @@ import type { NodeTypeConfig, NodeShape } from '../../types';
 interface Props {
   isOpen: boolean;
   onClose: () => void;
+  initialEditingTypeId?: string | null;
 }
 
-const NodeTypeConfigModal = ({ isOpen, onClose }: Props) => {
+const NodeTypeConfigModal = ({ isOpen, onClose, initialEditingTypeId }: Props) => {
   const { nodeTypes, addNodeType, updateNodeType, deleteNodeType } = useGraphWithHistory();
   const { confirm, ConfirmDialogComponent } = useConfirm();
   const { showToast } = useToastStore();
 
   const [editingType, setEditingType] = useState<NodeTypeConfig | null>(null);
+
+  // Set editing type when initialEditingTypeId changes
+  useEffect(() => {
+    if (initialEditingTypeId && isOpen) {
+      const typeToEdit = nodeTypes.find(t => t.id === initialEditingTypeId);
+      if (typeToEdit) {
+        setEditingType(typeToEdit);
+      }
+    } else if (!isOpen) {
+      // Clear editing type when modal closes
+      setEditingType(null);
+    }
+  }, [initialEditingTypeId, isOpen, nodeTypes]);
 
   const handleAddType = (type: { name: string; color: string; shape: NodeShape; icon: string; description: string }) => {
     const id = type.name.toLowerCase().replace(/\s+/g, '-');

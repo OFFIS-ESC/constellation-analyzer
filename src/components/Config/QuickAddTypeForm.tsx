@@ -82,7 +82,6 @@ const QuickAddTypeForm = ({ onAdd }: Props) => {
         onKeyDown={handleKeyDown}
         nameInputRef={nameInputRef}
         autoFocusName={false}
-        showAdvancedByDefault={false}
       />
 
       <button

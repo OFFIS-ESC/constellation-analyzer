@@ -1,17 +1,23 @@
 import { useState } from 'react';
 import { useGraphWithHistory } from '../../hooks/useGraphWithHistory';
-import NodeTypeForm from './NodeTypeForm';
 import { useConfirm } from '../../hooks/useConfirm';
-import type { NodeTypeConfig } from '../../types';
+import { useToastStore } from '../../stores/toastStore';
+import QuickAddTypeForm from './QuickAddTypeForm';
+import TypeManagementList from './TypeManagementList';
+import EditTypeInline from './EditTypeInline';
+import type { NodeTypeConfig, NodeShape } from '../../types';
 
 /**
  * NodeTypeConfig - Modal for managing actor/node types
  *
  * Features:
- * - Add new node types with custom name and color
- * - Edit existing node types
- * - Delete node types
- * - Color picker for visual customization
+ * - Two-column layout: quick add (left) + management/edit (right)
+ * - Progressive disclosure for advanced options
+ * - Inline editing replaces right column
+ * - Compact card-based management list
+ * - Type duplication support
+ * - Toast notifications for actions
+ * - Full keyboard accessibility
  */
 
 interface Props {
@@ -22,55 +28,34 @@ interface Props {
 const NodeTypeConfigModal = ({ isOpen, onClose }: Props) => {
   const { nodeTypes, addNodeType, updateNodeType, deleteNodeType } = useGraphWithHistory();
   const { confirm, ConfirmDialogComponent } = useConfirm();
+  const { showToast } = useToastStore();
 
-  const [newTypeName, setNewTypeName] = useState('');
-  const [newTypeColor, setNewTypeColor] = useState('#6366f1');
-  const [newTypeShape, setNewTypeShape] = useState<import('../../types').NodeShape>('rectangle');
-  const [newTypeDescription, setNewTypeDescription] = useState('');
-  const [newTypeIcon, setNewTypeIcon] = useState('');
+  const [editingType, setEditingType] = useState<NodeTypeConfig | null>(null);
 
-  // Editing state
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editLabel, setEditLabel] = useState('');
-  const [editColor, setEditColor] = useState('');
-  const [editShape, setEditShape] = useState<import('../../types').NodeShape>('rectangle');
-  const [editIcon, setEditIcon] = useState('');
-  const [editDescription, setEditDescription] = useState('');
-
-  const handleAddType = () => {
-    if (!newTypeName.trim()) {
-      alert('Please enter a name for the node type');
-      return;
-    }
-
-    const id = newTypeName.toLowerCase().replace(/\s+/g, '-');
+  const handleAddType = (type: { name: string; color: string; shape: NodeShape; icon: string; description: string }) => {
+    const id = type.name.toLowerCase().replace(/\s+/g, '-');
 
     // Check if ID already exists
     if (nodeTypes.some(nt => nt.id === id)) {
-      alert('A node type with this name already exists');
+      showToast('A node type with this name already exists', 'error');
       return;
     }
 
     const newType: NodeTypeConfig = {
       id,
-      label: newTypeName.trim(),
-      color: newTypeColor,
-      shape: newTypeShape,
-      icon: newTypeIcon || undefined,
-      description: newTypeDescription.trim() || undefined,
+      label: type.name,
+      color: type.color,
+      shape: type.shape,
+      icon: type.icon || undefined,
+      description: type.description || undefined,
     };
 
     addNodeType(newType);
-
-    // Reset form
-    setNewTypeName('');
-    setNewTypeColor('#6366f1');
-    setNewTypeShape('rectangle');
-    setNewTypeDescription('');
-    setNewTypeIcon('');
+    showToast(`Actor type "${type.name}" created`, 'success');
   };
 
   const handleDeleteType = async (id: string) => {
+    const type = nodeTypes.find(t => t.id === id);
     const confirmed = await confirm({
       title: 'Delete Actor Type',
       message: 'Are you sure you want to delete this actor type? This action cannot be undone.',
@@ -79,166 +64,137 @@ const NodeTypeConfigModal = ({ isOpen, onClose }: Props) => {
     });
     if (confirmed) {
       deleteNodeType(id);
+      showToast(`Actor type "${type?.label}" deleted`, 'success');
     }
   };
 
   const handleEditType = (type: NodeTypeConfig) => {
-    setEditingId(type.id);
-    setEditLabel(type.label);
-    setEditColor(type.color);
-    setEditShape(type.shape || 'rectangle');
-    setEditIcon(type.icon || '');
-    setEditDescription(type.description || '');
+    setEditingType(type);
   };
 
-  const handleSaveEdit = () => {
-    if (!editingId || !editLabel.trim()) return;
-
-    updateNodeType(editingId, {
-      label: editLabel.trim(),
-      color: editColor,
-      shape: editShape,
-      icon: editIcon || undefined,
-      description: editDescription.trim() || undefined,
-    });
-
-    setEditingId(null);
+  const handleSaveEdit = (id: string, updates: { label: string; color: string; shape: NodeShape; icon?: string; description?: string }) => {
+    updateNodeType(id, updates);
+    setEditingType(null);
+    showToast(`Actor type "${updates.label}" updated`, 'success');
   };
 
   const handleCancelEdit = () => {
-    setEditingId(null);
+    setEditingType(null);
+  };
+
+  const handleDuplicateType = (type: NodeTypeConfig) => {
+    // Generate a unique ID for the duplicate
+    let suffix = 2;
+    let newId = `${type.id}-copy`;
+    let newLabel = `${type.label} (Copy)`;
+
+    while (nodeTypes.some(nt => nt.id === newId)) {
+      newId = `${type.id}-copy-${suffix}`;
+      newLabel = `${type.label} (Copy ${suffix})`;
+      suffix++;
+    }
+
+    const duplicatedType: NodeTypeConfig = {
+      id: newId,
+      label: newLabel,
+      color: type.color,
+      shape: type.shape,
+      icon: type.icon,
+      description: type.description,
+    };
+
+    addNodeType(duplicatedType);
+    showToast(`Actor type duplicated as "${newLabel}"`, 'success');
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900">Configure Actor Types</h2>
-          <p className="text-sm text-gray-600 mt-1">
-            Customize the types of actors that can be added to your constellation
-          </p>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {/* Add New Type Form */}
-          <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Add New Actor Type</h3>
-            <NodeTypeForm
-              name={newTypeName}
-              color={newTypeColor}
-              shape={newTypeShape}
-              icon={newTypeIcon}
-              description={newTypeDescription}
-              onNameChange={setNewTypeName}
-              onColorChange={setNewTypeColor}
-              onShapeChange={setNewTypeShape}
-              onIconChange={setNewTypeIcon}
-              onDescriptionChange={setNewTypeDescription}
-            />
-            <button
-              onClick={handleAddType}
-              className="w-full mt-3 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
-            >
-              Add Actor Type
-            </button>
+    <>
+      {/* Main Modal */}
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[85vh] overflow-hidden flex flex-col">
+          {/* Header */}
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-xl font-bold text-gray-900">Configure Actor Types</h2>
+            <p className="text-sm text-gray-600 mt-1">
+              Quickly add and manage the types of actors in your constellation
+            </p>
           </div>
 
-          {/* Existing Types List */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Existing Actor Types</h3>
-            <div className="space-y-2">
-              {nodeTypes.map((type) => (
-                <div
-                  key={type.id}
-                  className="border border-gray-200 rounded-md overflow-hidden"
-                >
-                  {editingId === type.id ? (
-                    // Edit mode
-                    <div className="bg-blue-50 p-4">
-                      <NodeTypeForm
-                        name={editLabel}
-                        color={editColor}
-                        shape={editShape}
-                        icon={editIcon}
-                        description={editDescription}
-                        onNameChange={setEditLabel}
-                        onColorChange={setEditColor}
-                        onShapeChange={setEditShape}
-                        onIconChange={setEditIcon}
-                        onDescriptionChange={setEditDescription}
-                      />
-                      <div className="flex space-x-2 mt-3">
-                        <button
-                          onClick={handleSaveEdit}
-                          className="flex-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
-                        >
-                          Save
-                        </button>
-                        <button
-                          onClick={handleCancelEdit}
-                          className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 text-sm font-medium rounded-md hover:bg-gray-300 transition-colors"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    // View mode
-                    <div className="flex items-center justify-between p-3 hover:bg-gray-50 transition-colors">
-                      <div className="flex items-center space-x-3 flex-1">
-                        <div
-                          className="w-8 h-8 rounded"
-                          style={{ backgroundColor: type.color }}
-                        />
-                        <div className="flex-1">
-                          <div className="text-sm font-medium text-gray-900">
-                            {type.label}
-                          </div>
-                          {type.description && (
-                            <div className="text-xs text-gray-500">{type.description}</div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => handleEditType(type)}
-                          className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDeleteType(type.id)}
-                          className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  )}
+          {/* Content - Two-Column or Full-Width Edit */}
+          <div className="flex-1 overflow-hidden flex">
+            {editingType ? (
+              /* Full-Width Edit Mode */
+              <div className="w-full p-6 overflow-y-auto">
+                <div className="max-w-2xl mx-auto">
+                  <EditTypeInline
+                    type={editingType}
+                    onSave={handleSaveEdit}
+                    onCancel={handleCancelEdit}
+                  />
                 </div>
-              ))}
-            </div>
-          </div>
-        </div>
+              </div>
+            ) : (
+              <>
+                {/* Left Column - Quick Add (60%) */}
+                <div className="w-3/5 border-r border-gray-200 p-6 overflow-y-auto">
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-700 mb-4">
+                      Quick Add Actor Type
+                    </h3>
+                    <QuickAddTypeForm onAdd={handleAddType} />
+                  </div>
 
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-200 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-200 text-gray-800 text-sm font-medium rounded-md hover:bg-gray-300 transition-colors"
-          >
-            Close
-          </button>
+                  {/* Helper Text */}
+                  <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h4 className="text-sm font-semibold text-blue-900 mb-1">Pro Tips</h4>
+                    <ul className="text-xs text-blue-800 space-y-1">
+                      <li>• Press <kbd className="px-1 py-0.5 bg-white border border-blue-300 rounded text-xs">Enter</kbd> to quickly add a type</li>
+                      <li>• Shape and icon are optional - focus on name and color first</li>
+                      <li>• Click any type on the right to edit it</li>
+                      <li>• Use duplicate to create variations quickly</li>
+                    </ul>
+                  </div>
+                </div>
+
+                {/* Right Column - Management (40%) */}
+                <div className="w-2/5 p-6 overflow-y-auto bg-gray-50">
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-sm font-semibold text-gray-700">
+                        Actor Types ({nodeTypes.length})
+                      </h3>
+                    </div>
+                    <TypeManagementList
+                      types={nodeTypes}
+                      onEdit={handleEditType}
+                      onDelete={handleDeleteType}
+                      onDuplicate={handleDuplicateType}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Footer - Hidden when editing */}
+          {!editingType && (
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-end">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 bg-gray-200 text-gray-800 text-sm font-medium rounded-md hover:bg-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              >
+                Done
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Confirmation Dialog */}
       {ConfirmDialogComponent}
-    </div>
+    </>
   );
 };
 

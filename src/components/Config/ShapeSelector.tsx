@@ -49,10 +49,10 @@ const SHAPE_OPTIONS: ShapeOption[] = [
 const ShapeSelector = ({ value, onChange, color = '#3b82f6' }: ShapeSelectorProps) => {
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-gray-700">
-        Shape
+      <label className="block text-xs font-medium text-gray-700">
+        Shape (optional)
       </label>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-5 gap-2">
         {SHAPE_OPTIONS.map((option) => {
           const isSelected = value === option.id;
           return (
@@ -61,27 +61,30 @@ const ShapeSelector = ({ value, onChange, color = '#3b82f6' }: ShapeSelectorProp
               type="button"
               onClick={() => onChange(option.id)}
               className={`
-                relative p-3 rounded-lg border-2 transition-all
+                relative p-2 rounded-md border-2 transition-all
                 hover:border-blue-400 hover:bg-blue-50
+                focus:outline-none focus:ring-2 focus:ring-blue-500
                 ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-white'}
               `}
               title={option.description}
+              aria-label={option.label}
+              aria-pressed={isSelected}
             >
               {/* Shape Preview */}
-              <div className="flex justify-center items-center h-12 mb-2">
-                <ShapePreview shape={option.id} color={color} size={40} />
+              <div className="flex justify-center items-center h-8">
+                <ShapePreview shape={option.id} color={color} size={28} />
               </div>
 
               {/* Shape Label */}
-              <div className="text-xs text-center text-gray-700 font-medium">
-                {option.label}
+              <div className="text-xs text-center text-gray-700 font-medium mt-1 truncate">
+                {option.label.split(' ')[0]}
               </div>
 
               {/* Selected Indicator */}
               {isSelected && (
-                <div className="absolute top-1 right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                <div className="absolute top-0.5 right-0.5 w-3 h-3 bg-blue-500 rounded-full flex items-center justify-center">
                   <svg
-                    className="w-3 h-3 text-white"
+                    className="w-2 h-2 text-white"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"

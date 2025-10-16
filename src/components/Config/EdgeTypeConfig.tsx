@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useGraphWithHistory } from '../../hooks/useGraphWithHistory';
 import { useConfirm } from '../../hooks/useConfirm';
 import { useToastStore } from '../../stores/toastStore';
@@ -21,14 +21,28 @@ import type { EdgeTypeConfig, EdgeDirectionality } from '../../types';
 interface Props {
   isOpen: boolean;
   onClose: () => void;
+  initialEditingTypeId?: string | null;
 }
 
-const EdgeTypeConfigModal = ({ isOpen, onClose }: Props) => {
+const EdgeTypeConfigModal = ({ isOpen, onClose, initialEditingTypeId }: Props) => {
   const { edgeTypes, addEdgeType, updateEdgeType, deleteEdgeType } = useGraphWithHistory();
   const { confirm, ConfirmDialogComponent } = useConfirm();
   const { showToast } = useToastStore();
 
   const [editingType, setEditingType] = useState<EdgeTypeConfig | null>(null);
+
+  // Set editing type when initialEditingTypeId changes
+  useEffect(() => {
+    if (initialEditingTypeId && isOpen) {
+      const typeToEdit = edgeTypes.find(t => t.id === initialEditingTypeId);
+      if (typeToEdit) {
+        setEditingType(typeToEdit);
+      }
+    } else if (!isOpen) {
+      // Clear editing type when modal closes
+      setEditingType(null);
+    }
+  }, [initialEditingTypeId, isOpen, edgeTypes]);
 
   const handleAddType = (type: {
     label: string;

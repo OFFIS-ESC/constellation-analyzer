@@ -15,6 +15,7 @@ import { useConfirm } from '../../hooks/useConfirm';
 import GraphMetrics from '../Common/GraphMetrics';
 import ConnectionDisplay from '../Common/ConnectionDisplay';
 import NodeTypeConfigModal from '../Config/NodeTypeConfig';
+import EdgeTypeConfigModal from '../Config/EdgeTypeConfig';
 import type { Actor, Relation, EdgeDirectionality } from '../../types';
 
 /**
@@ -85,6 +86,10 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
   // Actor type modal state
   const [showActorTypeModal, setShowActorTypeModal] = useState(false);
   const [editingActorTypeId, setEditingActorTypeId] = useState<string | null>(null);
+
+  // Relation type modal state
+  const [showRelationTypeModal, setShowRelationTypeModal] = useState(false);
+  const [editingRelationTypeId, setEditingRelationTypeId] = useState<string | null>(null);
 
   // Update state when selected node changes
   useEffect(() => {
@@ -223,6 +228,19 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
     setEditingActorTypeId(null);
   };
 
+  // Handle edit relation type
+  const handleEditRelationType = () => {
+    if (!relationType) return;
+    setEditingRelationTypeId(relationType);
+    setShowRelationTypeModal(true);
+  };
+
+  // Handle close relation type modal
+  const handleCloseRelationTypeModal = () => {
+    setShowRelationTypeModal(false);
+    setEditingRelationTypeId(null);
+  };
+
   // Get connections for selected node
   const getNodeConnections = () => {
     if (!selectedNode) return [];
@@ -249,6 +267,11 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
           onClose={handleCloseActorTypeModal}
           initialEditingTypeId={editingActorTypeId}
         />
+        <EdgeTypeConfigModal
+          isOpen={showRelationTypeModal}
+          onClose={handleCloseRelationTypeModal}
+          initialEditingTypeId={editingRelationTypeId}
+        />
       </div>
     );
   }
@@ -267,6 +290,11 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
           isOpen={showActorTypeModal}
           onClose={handleCloseActorTypeModal}
           initialEditingTypeId={editingActorTypeId}
+        />
+        <EdgeTypeConfigModal
+          isOpen={showRelationTypeModal}
+          onClose={handleCloseRelationTypeModal}
+          initialEditingTypeId={editingRelationTypeId}
         />
       </div>
     );
@@ -451,6 +479,11 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
           onClose={handleCloseActorTypeModal}
           initialEditingTypeId={editingActorTypeId}
         />
+        <EdgeTypeConfigModal
+          isOpen={showRelationTypeModal}
+          onClose={handleCloseRelationTypeModal}
+          initialEditingTypeId={editingRelationTypeId}
+        />
       </div>
     );
   }
@@ -495,9 +528,20 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
         <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-3 space-y-4">
           {/* Relation Type */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              Relation Type
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-medium text-gray-700">
+                Relation Type
+              </label>
+              <Tooltip title="Edit Relation Type">
+                <IconButton
+                  size="small"
+                  onClick={handleEditRelationType}
+                  sx={{ padding: '2px' }}
+                >
+                  <EditIcon sx={{ fontSize: 14 }} />
+                </IconButton>
+              </Tooltip>
+            </div>
             <select
               value={relationType}
               onChange={(e) => {
@@ -632,10 +676,10 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
           )}
         </div>
         {ConfirmDialogComponent}
-        <NodeTypeConfigModal
-          isOpen={showActorTypeModal}
-          onClose={handleCloseActorTypeModal}
-          initialEditingTypeId={editingActorTypeId}
+        <EdgeTypeConfigModal
+          isOpen={showRelationTypeModal}
+          onClose={handleCloseRelationTypeModal}
+          initialEditingTypeId={editingRelationTypeId}
         />
       </div>
     );
@@ -648,6 +692,11 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
         isOpen={showActorTypeModal}
         onClose={handleCloseActorTypeModal}
         initialEditingTypeId={editingActorTypeId}
+      />
+      <EdgeTypeConfigModal
+        isOpen={showRelationTypeModal}
+        onClose={handleCloseRelationTypeModal}
+        initialEditingTypeId={editingRelationTypeId}
       />
     </>
   );

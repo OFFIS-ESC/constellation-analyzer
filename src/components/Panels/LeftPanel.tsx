@@ -13,6 +13,7 @@ import { usePanelStore } from '../../stores/panelStore';
 import { useGraphWithHistory } from '../../hooks/useGraphWithHistory';
 import { useEditorStore } from '../../stores/editorStore';
 import { useSearchStore } from '../../stores/searchStore';
+import { useSettingsStore } from '../../stores/settingsStore';
 import { createNode } from '../../utils/nodeUtils';
 import { getIconComponent } from '../../utils/iconUtils';
 import { getContrastColor } from '../../utils/colorUtils';
@@ -87,11 +88,12 @@ const LeftPanel = forwardRef<LeftPanelRef, LeftPanelProps>(({ onDeselectAll, onA
     setActorTypeVisible,
     visibleRelationTypes,
     setRelationTypeVisible,
-    autoZoomEnabled,
-    setAutoZoomEnabled,
     clearFilters,
     hasActiveFilters,
   } = useSearchStore();
+
+  // Settings
+  const { autoZoomEnabled, setAutoZoomEnabled } = useSettingsStore();
 
   // Initialize filter state when node/edge types change
   useEffect(() => {

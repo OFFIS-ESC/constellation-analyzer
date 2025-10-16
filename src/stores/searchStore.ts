@@ -7,7 +7,6 @@ import { create } from 'zustand';
  * - Search text for filtering both actors (by label, description, or type) and relations (by label or type)
  * - Filter by actor types (show/hide specific node types)
  * - Filter by relation types (show/hide specific edge types)
- * - Auto-zoom to filtered results (optional, enabled by default)
  * - Results tracking
  */
 
@@ -28,10 +27,6 @@ interface SearchStore {
   toggleRelationType: (typeId: string) => void;
   setAllRelationTypesVisible: (visible: boolean) => void;
 
-  // Auto-zoom to filtered results
-  autoZoomEnabled: boolean;
-  setAutoZoomEnabled: (enabled: boolean) => void;
-
   // Clear all filters
   clearFilters: () => void;
 
@@ -43,7 +38,6 @@ export const useSearchStore = create<SearchStore>((set, get) => ({
   searchText: '',
   visibleActorTypes: {},
   visibleRelationTypes: {},
-  autoZoomEnabled: true,
 
   setSearchText: (text: string) =>
     set({ searchText: text }),
@@ -97,9 +91,6 @@ export const useSearchStore = create<SearchStore>((set, get) => ({
       });
       return { visibleRelationTypes: updated };
     }),
-
-  setAutoZoomEnabled: (enabled: boolean) =>
-    set({ autoZoomEnabled: enabled }),
 
   clearFilters: () =>
     set((state) => {

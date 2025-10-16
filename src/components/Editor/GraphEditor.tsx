@@ -25,6 +25,7 @@ import { useGraphWithHistory } from "../../hooks/useGraphWithHistory";
 import { useDocumentHistory } from "../../hooks/useDocumentHistory";
 import { useEditorStore } from "../../stores/editorStore";
 import { useSearchStore } from "../../stores/searchStore";
+import { useSettingsStore } from "../../stores/settingsStore";
 import { useActiveDocument } from "../../stores/workspace/useActiveDocument";
 import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { useCreateDocument } from "../../hooks/useCreateDocument";
@@ -108,8 +109,10 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest, onExportReq
     searchText,
     visibleActorTypes,
     visibleRelationTypes,
-    autoZoomEnabled,
   } = useSearchStore();
+
+  // Settings for auto-zoom
+  const { autoZoomEnabled } = useSettingsStore();
 
   // Track previous document ID to save viewport before switching
   const prevDocumentIdRef = useRef<string | null>(null);

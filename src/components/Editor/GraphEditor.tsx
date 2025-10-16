@@ -24,6 +24,7 @@ import "reactflow/dist/style.css";
 import { useGraphWithHistory } from "../../hooks/useGraphWithHistory";
 import { useDocumentHistory } from "../../hooks/useDocumentHistory";
 import { useEditorStore } from "../../stores/editorStore";
+import { useSearchStore } from "../../stores/searchStore";
 import { useActiveDocument } from "../../stores/workspace/useActiveDocument";
 import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { useCreateDocument } from "../../hooks/useCreateDocument";
@@ -99,7 +100,16 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest, onExportReq
     screenToFlowPosition,
     setViewport,
     getViewport: getCurrentViewport,
+    fitView,
   } = useReactFlow();
+
+  // Search and filter state for auto-zoom
+  const {
+    searchText,
+    visibleActorTypes,
+    visibleRelationTypes,
+    autoZoomEnabled,
+  } = useSearchStore();
 
   // Track previous document ID to save viewport before switching
   const prevDocumentIdRef = useRef<string | null>(null);
@@ -236,6 +246,83 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest, onExportReq
     window.addEventListener('closeAllMenus', handleCloseAllMenus);
     return () => window.removeEventListener('closeAllMenus', handleCloseAllMenus);
   }, []);
+
+  // Auto-zoom to filtered results when search/filter changes
+  useEffect(() => {
+    // Skip if auto-zoom is disabled
+    if (!autoZoomEnabled) return;
+
+    // Skip if there are no nodes
+    if (nodes.length === 0) return;
+
+    // Check if any filters are active
+    const hasSearchText = searchText.trim() !== '';
+    const hasTypeFilters =
+      Object.values(visibleActorTypes).some(v => v === false) ||
+      Object.values(visibleRelationTypes).some(v => v === false);
+
+    // Skip if no filters are active
+    if (!hasSearchText && !hasTypeFilters) return;
+
+    // Debounce to avoid excessive viewport changes while typing
+    const timeoutId = setTimeout(() => {
+      const searchLower = searchText.toLowerCase().trim();
+
+      // Calculate matching nodes (same logic as LeftPanel and CustomNode)
+      const matchingNodeIds = nodes
+        .filter((node) => {
+          const actor = node as Actor;
+          const actorType = actor.data?.type || '';
+
+          // Filter by actor type visibility
+          const isTypeVisible = visibleActorTypes[actorType] !== false;
+          if (!isTypeVisible) {
+            return false;
+          }
+
+          // Filter by search text
+          if (searchLower) {
+            const label = actor.data?.label?.toLowerCase() || '';
+            const description = actor.data?.description?.toLowerCase() || '';
+            const nodeTypeConfig = nodeTypeConfigs.find((nt) => nt.id === actorType);
+            const typeName = nodeTypeConfig?.label?.toLowerCase() || '';
+
+            const matches =
+              label.includes(searchLower) ||
+              description.includes(searchLower) ||
+              typeName.includes(searchLower);
+
+            if (!matches) {
+              return false;
+            }
+          }
+
+          return true;
+        })
+        .map((node) => node.id);
+
+      // Only zoom if there are matching nodes and not all nodes match
+      if (matchingNodeIds.length > 0 && matchingNodeIds.length < nodes.length) {
+        fitView({
+          nodes: matchingNodeIds.map((id) => ({ id })),
+          padding: 0.2,      // 20% padding around selection
+          duration: 300,     // 300ms smooth animation
+          maxZoom: 2.5,      // Allow more zoom in
+          minZoom: 0.5,      // Don't zoom out too much
+        });
+      }
+    }, 300); // Debounce 300ms
+
+    return () => clearTimeout(timeoutId);
+  }, [
+    searchText,
+    visibleActorTypes,
+    visibleRelationTypes,
+    autoZoomEnabled,
+    nodes,
+    nodeTypeConfigs,
+    fitView,
+  ]);
 
   // Save viewport periodically (debounced)
   const handleViewportChange = useCallback(

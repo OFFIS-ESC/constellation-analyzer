@@ -8,6 +8,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import FilterAltOffIcon from '@mui/icons-material/FilterAltOff';
+import CenterFocusStrongIcon from '@mui/icons-material/CenterFocusStrong';
 import { usePanelStore } from '../../stores/panelStore';
 import { useGraphWithHistory } from '../../hooks/useGraphWithHistory';
 import { useEditorStore } from '../../stores/editorStore';
@@ -86,6 +87,8 @@ const LeftPanel = forwardRef<LeftPanelRef, LeftPanelProps>(({ onDeselectAll, onA
     setActorTypeVisible,
     visibleRelationTypes,
     setRelationTypeVisible,
+    autoZoomEnabled,
+    setAutoZoomEnabled,
     clearFilters,
     hasActiveFilters,
   } = useSearchStore();
@@ -401,16 +404,33 @@ const LeftPanel = forwardRef<LeftPanelRef, LeftPanelProps>(({ onDeselectAll, onA
                   <label className="block text-xs font-medium text-gray-600">
                     Search
                   </label>
-                  {/* Reset Filters Link */}
-                  {hasActiveFilters() && (
-                    <button
-                      onClick={clearFilters}
-                      className="flex items-center space-x-1 text-xs text-gray-500 hover:text-blue-600 transition-colors"
-                    >
-                      <FilterAltOffIcon sx={{ fontSize: 14 }} />
-                      <span>Reset filters</span>
-                    </button>
-                  )}
+                  <div className="flex items-center space-x-1">
+                    {/* Reset Filters Link */}
+                    {hasActiveFilters() && (
+                      <button
+                        onClick={clearFilters}
+                        className="flex items-center space-x-1 text-xs text-gray-500 hover:text-blue-600 transition-colors"
+                      >
+                        <FilterAltOffIcon sx={{ fontSize: 14 }} />
+                        <span>Reset filters</span>
+                      </button>
+                    )}
+                    {/* Auto-zoom toggle icon */}
+                    <Tooltip title={autoZoomEnabled ? "Auto-zoom enabled" : "Auto-zoom disabled"} placement="top">
+                      <IconButton
+                        size="small"
+                        onClick={() => setAutoZoomEnabled(!autoZoomEnabled)}
+                        sx={{ padding: '4px' }}
+                      >
+                        <CenterFocusStrongIcon
+                          sx={{
+                            fontSize: 16,
+                            color: autoZoomEnabled ? '#3b82f6' : '#9ca3af'
+                          }}
+                        />
+                      </IconButton>
+                    </Tooltip>
+                  </div>
                 </div>
                 <div className="relative">
                   <div className="absolute left-2.5 top-1/2 transform -translate-y-1/2 pointer-events-none">

@@ -6,6 +6,7 @@ export interface ActorData {
   type: string;
   description?: string;
   labels?: string[];  // Array of LabelConfig IDs
+  citations?: string[];  // Array of bibliography reference IDs
   metadata?: Record<string, unknown>;
 }
 
@@ -20,6 +21,7 @@ export interface RelationData {
   directionality?: EdgeDirectionality;
   strength?: number;
   labels?: string[];  // Array of LabelConfig IDs
+  citations?: string[];  // Array of bibliography reference IDs
   metadata?: Record<string, unknown>;
 }
 

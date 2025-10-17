@@ -7,7 +7,9 @@ import { useConfirm } from '../../hooks/useConfirm';
 import ConnectionDisplay from '../Common/ConnectionDisplay';
 import NodeTypeConfigModal from '../Config/NodeTypeConfig';
 import LabelConfigModal from '../Config/LabelConfig';
+import BibliographyConfigModal from '../Config/BibliographyConfig';
 import AutocompleteLabelSelector from '../Common/AutocompleteLabelSelector';
+import CitationSelector from '../Common/CitationSelector';
 import type { Actor } from '../../types';
 
 interface NodeEditorPanelProps {
@@ -24,6 +26,7 @@ const NodeEditorPanel = ({ selectedNode, onClose }: NodeEditorPanelProps) => {
   const [actorLabel, setActorLabel] = useState('');
   const [actorDescription, setActorDescription] = useState('');
   const [actorLabels, setActorLabels] = useState<string[]>([]);
+  const [actorCitations, setActorCitations] = useState<string[]>([]);
   const labelInputRef = useRef<HTMLInputElement>(null);
 
   // Track if user has made changes
@@ -36,12 +39,16 @@ const NodeEditorPanel = ({ selectedNode, onClose }: NodeEditorPanelProps) => {
   // Label modal state
   const [showLabelModal, setShowLabelModal] = useState(false);
 
+  // Bibliography modal state
+  const [showBibliographyModal, setShowBibliographyModal] = useState(false);
+
   // Update state when selected node changes
   useEffect(() => {
     setActorType(selectedNode.data?.type || '');
     setActorLabel(selectedNode.data?.label || '');
     setActorDescription(selectedNode.data?.description || '');
     setActorLabels(selectedNode.data?.labels || []);
+    setActorCitations(selectedNode.data?.citations || []);
     setHasNodeChanges(false);
 
     // Focus and select the label input when node is selected
@@ -62,10 +69,11 @@ const NodeEditorPanel = ({ selectedNode, onClose }: NodeEditorPanelProps) => {
         label: actorLabel,
         description: actorDescription || undefined,
         labels: actorLabels.length > 0 ? actorLabels : undefined,
+        citations: actorCitations.length > 0 ? actorCitations : undefined,
       },
     });
     setHasNodeChanges(false);
-  }, [selectedNode.id, actorType, actorLabel, actorDescription, actorLabels, hasNodeChanges, updateNode]);
+  }, [selectedNode.id, actorType, actorLabel, actorDescription, actorLabels, actorCitations, hasNodeChanges, updateNode]);
 
   // Debounce live updates
   useEffect(() => {
@@ -147,6 +155,7 @@ const NodeEditorPanel = ({ selectedNode, onClose }: NodeEditorPanelProps) => {
                   label: actorLabel,
                   description: actorDescription || undefined,
                   labels: actorLabels.length > 0 ? actorLabels : undefined,
+                  citations: actorCitations.length > 0 ? actorCitations : undefined,
                 },
               });
             }}
@@ -232,6 +241,21 @@ const NodeEditorPanel = ({ selectedNode, onClose }: NodeEditorPanelProps) => {
           />
         </div>
 
+        {/* Citations */}
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Citations (optional)
+          </label>
+          <CitationSelector
+            value={actorCitations}
+            onChange={(newCitations) => {
+              setActorCitations(newCitations);
+              setHasNodeChanges(true);
+            }}
+            onOpenBibliography={() => setShowBibliographyModal(true)}
+          />
+        </div>
+
         {/* Connections */}
         <div className="pt-3 border-t border-gray-200">
           <h3 className="text-xs font-semibold text-gray-700 mb-2">
@@ -313,6 +337,10 @@ const NodeEditorPanel = ({ selectedNode, onClose }: NodeEditorPanelProps) => {
       <LabelConfigModal
         isOpen={showLabelModal}
         onClose={() => setShowLabelModal(false)}
+      />
+      <BibliographyConfigModal
+        isOpen={showBibliographyModal}
+        onClose={() => setShowBibliographyModal(false)}
       />
     </>
   );

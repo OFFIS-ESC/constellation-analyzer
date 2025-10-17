@@ -26,8 +26,12 @@ import {
 import { useToastStore } from './toastStore';
 import { useTimelineStore } from './timelineStore';
 import { useGraphStore } from './graphStore';
+import { useBibliographyStore } from './bibliographyStore';
 import type { ConstellationState, Timeline } from '../types/timeline';
 import { getCurrentGraphFromDocument } from './persistence/loader';
+// @ts-expect-error - citation.js doesn't have TypeScript definitions
+import { Cite } from '@citation-js/core';
+import type { CSLReference } from '../types/bibliography';
 
 /**
  * Workspace Store
@@ -91,6 +95,19 @@ function initializeWorkspace(): Workspace {
         if (doc.timeline) {
           useTimelineStore.getState().loadTimeline(savedState.activeDocumentId, doc.timeline as unknown as Timeline);
         }
+
+        // Load bibliography into bibliographyStore
+        const bibliographyStore = useBibliographyStore.getState();
+        if (doc.bibliography) {
+          bibliographyStore.citeInstance = new Cite(doc.bibliography.references);
+          bibliographyStore.appMetadata = doc.bibliography.metadata;
+          bibliographyStore.settings = doc.bibliography.settings;
+        } else {
+          // Initialize empty bibliography if not present (backward compatibility)
+          bibliographyStore.citeInstance = new Cite([]);
+          bibliographyStore.appMetadata = {};
+          bibliographyStore.settings = { defaultStyle: 'apa', sortOrder: 'author' };
+        }
       }
     }
 
@@ -144,6 +161,11 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
     newDoc.metadata.documentId = documentId;
     newDoc.metadata.title = title;
     newDoc.labels = [];  // Initialize with empty labels
+    newDoc.bibliography = {  // Initialize with empty bibliography
+      references: [],
+      metadata: {},
+      settings: { defaultStyle: 'apa', sortOrder: 'author' },
+    };
 
     const metadata: DocumentMetadata = {
       id: documentId,
@@ -223,6 +245,11 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
     newDoc.metadata.documentId = documentId;
     newDoc.metadata.title = title;
     newDoc.labels = sourceDoc.labels || [];  // Copy labels from source document
+    newDoc.bibliography = {  // Initialize with empty bibliography (don't copy bibliography from template)
+      references: [],
+      metadata: {},
+      settings: sourceDoc.bibliography?.settings || { defaultStyle: 'apa', sortOrder: 'author' },
+    };
 
     const metadata: DocumentMetadata = {
       id: documentId,
@@ -289,6 +316,19 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
     // Load timeline if it exists
     if (doc.timeline) {
       useTimelineStore.getState().loadTimeline(documentId, doc.timeline as unknown as Timeline);
+    }
+
+    // Load bibliography into bibliographyStore
+    const bibliographyStore = useBibliographyStore.getState();
+    if (doc.bibliography) {
+      bibliographyStore.citeInstance = new Cite(doc.bibliography.references);
+      bibliographyStore.appMetadata = doc.bibliography.metadata;
+      bibliographyStore.settings = doc.bibliography.settings;
+    } else {
+      // Initialize empty bibliography if not present (backward compatibility)
+      bibliographyStore.citeInstance = new Cite([]);
+      bibliographyStore.appMetadata = {};
+      bibliographyStore.settings = { defaultStyle: 'apa', sortOrder: 'author' };
     }
 
     set((state) => {
@@ -459,6 +499,16 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
+      // Deep copy bibliography to avoid shared references
+      bibliography: sourceDoc.bibliography ? {
+        references: JSON.parse(JSON.stringify(sourceDoc.bibliography.references)),
+        metadata: JSON.parse(JSON.stringify(sourceDoc.bibliography.metadata)),
+        settings: { ...sourceDoc.bibliography.settings },
+      } : {
+        references: [],
+        metadata: {},
+        settings: { defaultStyle: 'apa', sortOrder: 'author' },
+      },
     };
 
     const metadata: DocumentMetadata = {
@@ -574,6 +624,19 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
           // This preserves all timeline states, not just the current one
           useTimelineStore.getState().loadTimeline(documentId, importedDoc.timeline as unknown as Timeline);
 
+          // Load bibliography into bibliographyStore
+          const bibliographyStore = useBibliographyStore.getState();
+          if (importedDoc.bibliography) {
+            bibliographyStore.citeInstance = new Cite(importedDoc.bibliography.references);
+            bibliographyStore.appMetadata = importedDoc.bibliography.metadata;
+            bibliographyStore.settings = importedDoc.bibliography.settings;
+          } else {
+            // Initialize empty bibliography if not present (backward compatibility)
+            bibliographyStore.citeInstance = new Cite([]);
+            bibliographyStore.appMetadata = {};
+            bibliographyStore.settings = { defaultStyle: 'apa', sortOrder: 'author' };
+          }
+
           set((state) => {
             const newDocuments = new Map(state.documents);
             newDocuments.set(documentId, importedDoc);
@@ -640,6 +703,14 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
           rootStateId: timeline.rootStateId,
         };
       }
+
+      // Ensure bibliography is up-to-date before exporting
+      const bibliographyStore = useBibliographyStore.getState();
+      doc.bibliography = {
+        references: bibliographyStore.citeInstance.data as CSLReference[],
+        metadata: bibliographyStore.appMetadata,
+        settings: bibliographyStore.settings,
+      };
 
       // Export the complete document with all timeline states
       exportDocumentToFile(doc);
@@ -739,6 +810,14 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
           rootStateId: timeline.rootStateId,
         };
       }
+
+      // Save bibliography from bibliographyStore
+      const bibliographyStore = useBibliographyStore.getState();
+      doc.bibliography = {
+        references: bibliographyStore.citeInstance.data as CSLReference[],
+        metadata: bibliographyStore.appMetadata,
+        settings: bibliographyStore.settings,
+      };
 
       saveDocumentToStorage(documentId, doc);
 

@@ -7,6 +7,7 @@ import DocumentManager from '../Workspace/DocumentManager';
 import NodeTypeConfigModal from '../Config/NodeTypeConfig';
 import EdgeTypeConfigModal from '../Config/EdgeTypeConfig';
 import LabelConfigModal from '../Config/LabelConfig';
+import BibliographyConfigModal from '../Config/BibliographyConfig';
 import InputDialog from '../Common/InputDialog';
 import { useConfirm } from '../../hooks/useConfirm';
 import { useShortcutLabels } from '../../hooks/useShortcutLabels';
@@ -34,6 +35,7 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) =>
   const [showNodeConfig, setShowNodeConfig] = useState(false);
   const [showEdgeConfig, setShowEdgeConfig] = useState(false);
   const [showLabelConfig, setShowLabelConfig] = useState(false);
+  const [showBibliographyConfig, setShowBibliographyConfig] = useState(false);
   const [showNewDocDialog, setShowNewDocDialog] = useState(false);
   const [showNewFromTemplateDialog, setShowNewFromTemplateDialog] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -177,6 +179,11 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) =>
 
   const handleConfigureLabels = useCallback(() => {
     setShowLabelConfig(true);
+    closeMenu();
+  }, [closeMenu]);
+
+  const handleManageBibliography = useCallback(() => {
+    setShowBibliographyConfig(true);
     closeMenu();
   }, [closeMenu]);
 
@@ -386,6 +393,12 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) =>
                 >
                   Configure Labels
                 </button>
+                <button
+                  onClick={handleManageBibliography}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  Manage Bibliography
+                </button>
 
                 <hr className="my-1 border-gray-200" />
 
@@ -481,6 +494,10 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) =>
       <LabelConfigModal
         isOpen={showLabelConfig}
         onClose={() => setShowLabelConfig(false)}
+      />
+      <BibliographyConfigModal
+        isOpen={showBibliographyConfig}
+        onClose={() => setShowBibliographyConfig(false)}
       />
 
       {/* Input Dialogs */}

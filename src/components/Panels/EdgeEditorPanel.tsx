@@ -12,7 +12,9 @@ import { useConfirm } from '../../hooks/useConfirm';
 import ConnectionDisplay from '../Common/ConnectionDisplay';
 import EdgeTypeConfigModal from '../Config/EdgeTypeConfig';
 import LabelConfigModal from '../Config/LabelConfig';
+import BibliographyConfigModal from '../Config/BibliographyConfig';
 import AutocompleteLabelSelector from '../Common/AutocompleteLabelSelector';
+import CitationSelector from '../Common/CitationSelector';
 import type { Relation, EdgeDirectionality } from '../../types';
 
 interface EdgeEditorPanelProps {
@@ -29,6 +31,7 @@ const EdgeEditorPanel = ({ selectedEdge, onClose }: EdgeEditorPanelProps) => {
   const [relationType, setRelationType] = useState('');
   const [relationLabel, setRelationLabel] = useState('');
   const [relationLabels, setRelationLabels] = useState<string[]>([]);
+  const [relationCitations, setRelationCitations] = useState<string[]>([]);
   const [relationDirectionality, setRelationDirectionality] = useState<EdgeDirectionality>('directed');
 
   // Track if user has made changes
@@ -41,6 +44,9 @@ const EdgeEditorPanel = ({ selectedEdge, onClose }: EdgeEditorPanelProps) => {
   // Label modal state
   const [showLabelModal, setShowLabelModal] = useState(false);
 
+  // Bibliography modal state
+  const [showBibliographyModal, setShowBibliographyModal] = useState(false);
+
   // Update state when selected edge changes
   useEffect(() => {
     if (selectedEdge.data) {
@@ -49,6 +55,7 @@ const EdgeEditorPanel = ({ selectedEdge, onClose }: EdgeEditorPanelProps) => {
       const hasCustomLabel = selectedEdge.data.label && selectedEdge.data.label !== typeLabel;
       setRelationLabel((hasCustomLabel && selectedEdge.data.label) || '');
       setRelationLabels(selectedEdge.data.labels || []);
+      setRelationCitations(selectedEdge.data.citations || []);
       const edgeTypeConfig = edgeTypes.find((et) => et.id === selectedEdge.data?.type);
       setRelationDirectionality(selectedEdge.data.directionality || edgeTypeConfig?.defaultDirectionality || 'directed');
       setHasEdgeChanges(false);
@@ -63,9 +70,10 @@ const EdgeEditorPanel = ({ selectedEdge, onClose }: EdgeEditorPanelProps) => {
       label: relationLabel.trim() || undefined,
       directionality: relationDirectionality,
       labels: relationLabels.length > 0 ? relationLabels : undefined,
+      citations: relationCitations.length > 0 ? relationCitations : undefined,
     });
     setHasEdgeChanges(false);
-  }, [selectedEdge.id, relationType, relationLabel, relationDirectionality, relationLabels, hasEdgeChanges, updateEdge]);
+  }, [selectedEdge.id, relationType, relationLabel, relationDirectionality, relationLabels, relationCitations, hasEdgeChanges, updateEdge]);
 
   // Debounce live updates
   useEffect(() => {
@@ -187,6 +195,7 @@ const EdgeEditorPanel = ({ selectedEdge, onClose }: EdgeEditorPanelProps) => {
                 label: relationLabel.trim() || undefined,
                 directionality: relationDirectionality,
                 labels: relationLabels.length > 0 ? relationLabels : undefined,
+                citations: relationCitations.length > 0 ? relationCitations : undefined,
               });
             }}
             className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -246,6 +255,21 @@ const EdgeEditorPanel = ({ selectedEdge, onClose }: EdgeEditorPanelProps) => {
           />
         </div>
 
+        {/* Citations */}
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Citations (optional)
+          </label>
+          <CitationSelector
+            value={relationCitations}
+            onChange={(newCitations) => {
+              setRelationCitations(newCitations);
+              setHasEdgeChanges(true);
+            }}
+            onOpenBibliography={() => setShowBibliographyModal(true)}
+          />
+        </div>
+
         {/* Directionality */}
         <div className="pt-3 border-t border-gray-200">
           <label className="block text-xs font-medium text-gray-700 mb-2">
@@ -263,6 +287,7 @@ const EdgeEditorPanel = ({ selectedEdge, onClose }: EdgeEditorPanelProps) => {
                   label: relationLabel.trim() || undefined,
                   directionality: newValue,
                   labels: relationLabels.length > 0 ? relationLabels : undefined,
+                  citations: relationCitations.length > 0 ? relationCitations : undefined,
                 });
               }
             }}
@@ -344,6 +369,10 @@ const EdgeEditorPanel = ({ selectedEdge, onClose }: EdgeEditorPanelProps) => {
       <LabelConfigModal
         isOpen={showLabelModal}
         onClose={() => setShowLabelModal(false)}
+      />
+      <BibliographyConfigModal
+        isOpen={showBibliographyModal}
+        onClose={() => setShowBibliographyModal(false)}
       />
     </>
   );

@@ -1,5 +1,6 @@
 import type { ActorData, RelationData, NodeTypeConfig, EdgeTypeConfig, LabelConfig } from '../../types';
 import type { ConstellationState } from '../../types/timeline';
+import type { Bibliography } from '../../types/bibliography';
 
 /**
  * Persistence Types
@@ -44,6 +45,8 @@ export interface ConstellationDocument {
   edgeTypes: EdgeTypeConfig[];
   // Global labels for the entire document (optional for backward compatibility)
   labels?: LabelConfig[];
+  // Global bibliography for the entire document (optional for backward compatibility)
+  bibliography?: Bibliography;
   // Timeline with multiple states - every document has this
   // The graph is stored within each state (nodes and edges only, not types)
   timeline: {

@@ -1,17 +1,21 @@
 // @ts-expect-error - citation.js doesn't have TypeScript definitions
-import { Cite } from '@citation-js/core';
-import type { CSLReference } from '../../types/bibliography';
+import { Cite } from "@citation-js/core";
+import type { CSLReference } from "../../types/bibliography";
 
 /**
  * Parse any citation input using citation.js
  * Handles: DOI, URL, BibTeX, RIS, ISBN, PubMed ID, etc.
  */
-export const parseSmartInput = async (input: string): Promise<CSLReference[]> => {
+export const parseSmartInput = async (
+  input: string,
+): Promise<CSLReference[]> => {
   try {
     const cite = await Cite.async(input);
     return cite.data as CSLReference[];
   } catch (error) {
-    throw new Error(`Could not parse input: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Could not parse input: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 };
 
@@ -46,9 +50,8 @@ export const isValidCitationInput = (input: string): boolean => {
   // Wikidata ID (Q followed by numbers)
   if (/^(wikidata:)?Q\d+$/i.test(trimmed)) return true;
 
-  // Zenodo ID or URL
-  if (/^zenodo\.\d+$/i.test(trimmed)) return true;
-  if (/zenodo\.org\/record\/\d+/i.test(trimmed)) return true;
+  // Zenodo DOI (10.5281/zenodo.xxxxx)
+  if (/^10\.5281\/zenodo\.\d+/i.test(trimmed)) return true;
 
   // CFF (Citation File Format) - YAML-based
   if (/^cff-version:/m.test(trimmed)) return true;
@@ -62,17 +65,16 @@ export const isValidCitationInput = (input: string): boolean => {
 export const getInputTypeHint = (input: string): string => {
   const trimmed = input.trim();
 
-  if (/^10\.\d{4,}\//.test(trimmed)) return 'DOI';
-  if (/zenodo\.org\/record\/\d+/i.test(trimmed)) return 'Zenodo URL';
-  if (/^zenodo\.\d+$/i.test(trimmed)) return 'Zenodo ID';
-  if (/^https?:\/\//.test(trimmed)) return 'URL';
-  if (/^@\w+\{/.test(trimmed)) return 'BibTeX';
-  if (/^TY\s+-\s+/m.test(trimmed)) return 'RIS Format';
-  if (/^PMID:/i.test(trimmed)) return 'PubMed ID (PMID)';
-  if (/^PMC\d+/i.test(trimmed)) return 'PubMed Central ID (PMCID)';
-  if (/^ISBN/i.test(trimmed)) return 'ISBN';
-  if (/^(wikidata:)?Q\d+$/i.test(trimmed)) return 'Wikidata ID';
-  if (/^cff-version:/m.test(trimmed)) return 'Citation File Format (CFF)';
+  if (/^10\.5281\/zenodo\.\d+/i.test(trimmed)) return "Zenodo DOI";
+  if (/^10\.\d{4,}\//.test(trimmed)) return "DOI";
+  if (/^https?:\/\//.test(trimmed)) return "URL";
+  if (/^@\w+\{/.test(trimmed)) return "BibTeX";
+  if (/^TY\s+-\s+/m.test(trimmed)) return "RIS Format";
+  if (/^PMID:/i.test(trimmed)) return "PubMed ID (PMID)";
+  if (/^PMC\d+/i.test(trimmed)) return "PubMed Central ID (PMCID)";
+  if (/^ISBN/i.test(trimmed)) return "ISBN";
+  if (/^(wikidata:)?Q\d+$/i.test(trimmed)) return "Wikidata ID";
+  if (/^cff-version:/m.test(trimmed)) return "Citation File Format (CFF)";
 
-  return 'Unknown';
+  return "Unknown";
 };

@@ -1,29 +1,31 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 // @ts-expect-error - citation.js doesn't have TypeScript definitions
-import { Cite } from '@citation-js/core';
+import { Cite } from "@citation-js/core";
 // Load plugins
-import '@citation-js/plugin-csl';
-import '@citation-js/plugin-doi';
-import '@citation-js/plugin-bibtex';
-import '@citation-js/plugin-ris';
+import "@citation-js/plugin-csl";
+import "@citation-js/plugin-doi";
+import "@citation-js/plugin-bibtex";
+import "@citation-js/plugin-ris";
+import "@citation-js/plugin-pubmed";
+import "@citation-js/plugin-software-formats";
 
 import type {
   BibliographyReference,
   CSLReference,
   ReferenceAppMetadata,
-  BibliographySettings
-} from '../types/bibliography';
+  BibliographySettings,
+} from "../types/bibliography";
 
 interface BibliographyStore {
   // State
-  citeInstance: Cite;  // The citation.js instance
-  appMetadata: Record<string, ReferenceAppMetadata>;  // App-specific data
+  citeInstance: Cite; // The citation.js instance
+  appMetadata: Record<string, ReferenceAppMetadata>; // App-specific data
   settings: BibliographySettings;
 
   // Getters
-  getReferences: () => BibliographyReference[];  // Merges CSL + app data
+  getReferences: () => BibliographyReference[]; // Merges CSL + app data
   getReferenceById: (id: string) => BibliographyReference | undefined;
-  getCSLData: () => CSLReference[];  // Raw CSL-JSON from Cite
+  getCSLData: () => CSLReference[]; // Raw CSL-JSON from Cite
 
   // CRUD operations (use citation.js methods)
   addReference: (ref: Partial<CSLReference>) => string;
@@ -43,18 +45,22 @@ interface BibliographyStore {
   setSettings: (settings: BibliographySettings) => void;
 
   // Citation.js powered operations
-  formatReference: (id: string, style?: string, format?: 'html' | 'text') => string;
-  formatBibliography: (style?: string, format?: 'html' | 'text') => string;
+  formatReference: (
+    id: string,
+    style?: string,
+    format?: "html" | "text",
+  ) => string;
+  formatBibliography: (style?: string, format?: "html" | "text") => string;
   parseInput: (input: string) => Promise<CSLReference[]>;
-  exportAs: (format: 'bibtex' | 'ris' | 'json') => string;
+  exportAs: (format: "bibtex" | "ris" | "json") => string;
 }
 
 export const useBibliographyStore = create<BibliographyStore>((set, get) => ({
   citeInstance: new Cite([]),
   appMetadata: {},
   settings: {
-    defaultStyle: 'apa',
-    sortOrder: 'author',
+    defaultStyle: "apa",
+    sortOrder: "author",
   },
 
   getReferences: () => {
@@ -62,7 +68,7 @@ export const useBibliographyStore = create<BibliographyStore>((set, get) => ({
     const metadata = get().appMetadata;
 
     // Merge CSL data with app metadata
-    return csl.map(ref => ({
+    return csl.map((ref) => ({
       ...ref,
       _app: metadata[ref.id],
     }));
@@ -70,7 +76,7 @@ export const useBibliographyStore = create<BibliographyStore>((set, get) => ({
 
   getReferenceById: (id) => {
     const refs = get().getReferences();
-    return refs.find(ref => ref.id === id);
+    return refs.find((ref) => ref.id === id);
   },
 
   getCSLData: () => {
@@ -81,7 +87,8 @@ export const useBibliographyStore = create<BibliographyStore>((set, get) => ({
     const { citeInstance } = get();
 
     // Generate ID if not provided
-    const id = ref.id || `ref-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    const id =
+      ref.id || `ref-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     const fullRef = { ...ref, id };
 
     // Use citation.js add() method
@@ -89,7 +96,7 @@ export const useBibliographyStore = create<BibliographyStore>((set, get) => ({
 
     // Add app metadata
     const now = new Date().toISOString();
-    set(state => ({
+    set((state) => ({
       appMetadata: {
         ...state.appMetadata,
         [id]: {
@@ -109,15 +116,15 @@ export const useBibliographyStore = create<BibliographyStore>((set, get) => ({
     const data = citeInstance.data as CSLReference[];
 
     // Find and update the reference
-    const updatedData = data.map(ref =>
-      ref.id === id ? { ...ref, ...updates } : ref
+    const updatedData = data.map((ref) =>
+      ref.id === id ? { ...ref, ...updates } : ref,
     );
 
     // Use citation.js set() method to replace all data
     citeInstance.set(updatedData);
 
     // Update metadata timestamp
-    set(state => ({
+    set((state) => ({
       appMetadata: {
         ...state.appMetadata,
         [id]: {
@@ -133,11 +140,11 @@ export const useBibliographyStore = create<BibliographyStore>((set, get) => ({
     const data = citeInstance.data as CSLReference[];
 
     // Remove from citation.js
-    const filteredData = data.filter(ref => ref.id !== id);
+    const filteredData = data.filter((ref) => ref.id !== id);
     citeInstance.set(filteredData);
 
     // Remove metadata
-    set(state => {
+    set((state) => {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { [id]: _removed, ...rest } = state.appMetadata;
       return { appMetadata: rest };
@@ -146,7 +153,7 @@ export const useBibliographyStore = create<BibliographyStore>((set, get) => ({
 
   duplicateReference: (id) => {
     const original = get().getReferenceById(id);
-    if (!original) return '';
+    if (!original) return "";
 
     const newId = `ref-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     const duplicate = {
@@ -173,7 +180,7 @@ export const useBibliographyStore = create<BibliographyStore>((set, get) => ({
     const metadata: Record<string, ReferenceAppMetadata> = {};
     const now = new Date().toISOString();
 
-    refs.forEach(ref => {
+    refs.forEach((ref) => {
       metadata[ref.id] = {
         id: ref.id,
         tags: [],
@@ -193,9 +200,9 @@ export const useBibliographyStore = create<BibliographyStore>((set, get) => ({
 
     // Add metadata for new references
     const now = new Date().toISOString();
-    set(state => {
+    set((state) => {
       const newMetadata = { ...state.appMetadata };
-      refs.forEach(ref => {
+      refs.forEach((ref) => {
         if (!newMetadata[ref.id]) {
           newMetadata[ref.id] = {
             id: ref.id,
@@ -210,12 +217,12 @@ export const useBibliographyStore = create<BibliographyStore>((set, get) => ({
   },
 
   clearAll: () => {
-    get().citeInstance.reset();  // citation.js method to clear all data
+    get().citeInstance.reset(); // citation.js method to clear all data
     set({ appMetadata: {} });
   },
 
   updateMetadata: (id, updates) => {
-    set(state => ({
+    set((state) => ({
       appMetadata: {
         ...state.appMetadata,
         [id]: {
@@ -229,34 +236,34 @@ export const useBibliographyStore = create<BibliographyStore>((set, get) => ({
 
   setSettings: (settings) => set({ settings }),
 
-  formatReference: (id, style, format = 'html') => {
+  formatReference: (id, style, format = "html") => {
     const { citeInstance, settings } = get();
     const styleToUse = style || settings.defaultStyle;
 
     // Find the reference
-    const ref = (citeInstance.data as CSLReference[]).find(r => r.id === id);
-    if (!ref) return '';
+    const ref = (citeInstance.data as CSLReference[]).find((r) => r.id === id);
+    if (!ref) return "";
 
     // Create temporary Cite instance for single reference
     const cite = new Cite(ref);
 
     // Use citation.js format() method
-    return cite.format('bibliography', {
+    return cite.format("bibliography", {
       format: format,
       template: styleToUse,
-      lang: 'en-US',
+      lang: "en-US",
     });
   },
 
-  formatBibliography: (style, format = 'html') => {
+  formatBibliography: (style, format = "html") => {
     const { citeInstance, settings } = get();
     const styleToUse = style || settings.defaultStyle;
 
     // Use citation.js format() method on entire instance
-    return citeInstance.format('bibliography', {
+    return citeInstance.format("bibliography", {
       format: format,
       template: styleToUse,
-      lang: 'en-US',
+      lang: "en-US",
     });
   },
 
@@ -267,8 +274,8 @@ export const useBibliographyStore = create<BibliographyStore>((set, get) => ({
       const cite = await Cite.async(input);
       return cite.data as CSLReference[];
     } catch (error) {
-      console.error('Failed to parse input:', error);
-      throw new Error('Could not parse citation data');
+      console.error("Failed to parse input:", error);
+      throw new Error("Could not parse citation data");
     }
   },
 
@@ -277,14 +284,14 @@ export const useBibliographyStore = create<BibliographyStore>((set, get) => ({
 
     // Use citation.js format() method
     switch (format) {
-      case 'bibtex':
-        return citeInstance.format('bibtex');
-      case 'ris':
-        return citeInstance.format('ris');
-      case 'json':
+      case "bibtex":
+        return citeInstance.format("bibtex");
+      case "ris":
+        return citeInstance.format("ris");
+      case "json":
         return JSON.stringify(citeInstance.data, null, 2);
       default:
-        return '';
+        return "";
     }
   },
 }));
@@ -295,8 +302,8 @@ export const clearBibliographyForDocumentSwitch = () => {
     citeInstance: new Cite([]),
     appMetadata: {},
     settings: {
-      defaultStyle: 'apa',
-      sortOrder: 'author',
+      defaultStyle: "apa",
+      sortOrder: "author",
     },
   });
 };

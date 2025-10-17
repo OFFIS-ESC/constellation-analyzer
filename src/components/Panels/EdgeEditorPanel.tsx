@@ -11,6 +11,7 @@ import { useDocumentHistory } from '../../hooks/useDocumentHistory';
 import { useConfirm } from '../../hooks/useConfirm';
 import ConnectionDisplay from '../Common/ConnectionDisplay';
 import EdgeTypeConfigModal from '../Config/EdgeTypeConfig';
+import LabelConfigModal from '../Config/LabelConfig';
 import AutocompleteLabelSelector from '../Common/AutocompleteLabelSelector';
 import type { Relation, EdgeDirectionality } from '../../types';
 
@@ -36,6 +37,9 @@ const EdgeEditorPanel = ({ selectedEdge, onClose }: EdgeEditorPanelProps) => {
   // Relation type modal state
   const [showRelationTypeModal, setShowRelationTypeModal] = useState(false);
   const [editingRelationTypeId, setEditingRelationTypeId] = useState<string | null>(null);
+
+  // Label modal state
+  const [showLabelModal, setShowLabelModal] = useState(false);
 
   // Update state when selected edge changes
   useEffect(() => {
@@ -218,9 +222,20 @@ const EdgeEditorPanel = ({ selectedEdge, onClose }: EdgeEditorPanelProps) => {
 
         {/* Labels */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">
-            Labels (optional)
-          </label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-xs font-medium text-gray-700">
+              Labels (optional)
+            </label>
+            <Tooltip title="Manage Labels">
+              <IconButton
+                size="small"
+                onClick={() => setShowLabelModal(true)}
+                sx={{ padding: '2px' }}
+              >
+                <EditIcon sx={{ fontSize: 14 }} />
+              </IconButton>
+            </Tooltip>
+          </div>
           <AutocompleteLabelSelector
             value={relationLabels}
             onChange={(newLabels) => {
@@ -325,6 +340,10 @@ const EdgeEditorPanel = ({ selectedEdge, onClose }: EdgeEditorPanelProps) => {
         isOpen={showRelationTypeModal}
         onClose={handleCloseRelationTypeModal}
         initialEditingTypeId={editingRelationTypeId}
+      />
+      <LabelConfigModal
+        isOpen={showLabelModal}
+        onClose={() => setShowLabelModal(false)}
       />
     </>
   );

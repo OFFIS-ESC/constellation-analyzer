@@ -6,6 +6,7 @@ import { useGraphWithHistory } from '../../hooks/useGraphWithHistory';
 import { useConfirm } from '../../hooks/useConfirm';
 import ConnectionDisplay from '../Common/ConnectionDisplay';
 import NodeTypeConfigModal from '../Config/NodeTypeConfig';
+import LabelConfigModal from '../Config/LabelConfig';
 import AutocompleteLabelSelector from '../Common/AutocompleteLabelSelector';
 import type { Actor } from '../../types';
 
@@ -31,6 +32,9 @@ const NodeEditorPanel = ({ selectedNode, onClose }: NodeEditorPanelProps) => {
   // Actor type modal state
   const [showActorTypeModal, setShowActorTypeModal] = useState(false);
   const [editingActorTypeId, setEditingActorTypeId] = useState<string | null>(null);
+
+  // Label modal state
+  const [showLabelModal, setShowLabelModal] = useState(false);
 
   // Update state when selected node changes
   useEffect(() => {
@@ -204,9 +208,20 @@ const NodeEditorPanel = ({ selectedNode, onClose }: NodeEditorPanelProps) => {
 
         {/* Labels */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">
-            Labels (optional)
-          </label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-xs font-medium text-gray-700">
+              Labels (optional)
+            </label>
+            <Tooltip title="Manage Labels">
+              <IconButton
+                size="small"
+                onClick={() => setShowLabelModal(true)}
+                sx={{ padding: '2px' }}
+              >
+                <EditIcon sx={{ fontSize: 14 }} />
+              </IconButton>
+            </Tooltip>
+          </div>
           <AutocompleteLabelSelector
             value={actorLabels}
             onChange={(newLabels) => {
@@ -294,6 +309,10 @@ const NodeEditorPanel = ({ selectedNode, onClose }: NodeEditorPanelProps) => {
         isOpen={showActorTypeModal}
         onClose={handleCloseActorTypeModal}
         initialEditingTypeId={editingActorTypeId}
+      />
+      <LabelConfigModal
+        isOpen={showLabelModal}
+        onClose={() => setShowLabelModal(false)}
       />
     </>
   );

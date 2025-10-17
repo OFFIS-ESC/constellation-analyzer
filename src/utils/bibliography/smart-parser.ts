@@ -31,11 +31,27 @@ export const isValidCitationInput = (input: string): boolean => {
   // BibTeX patterns
   if (/^@\w+\{/.test(trimmed)) return true;
 
-  // PubMed ID
+  // RIS format (starts with TY  -)
+  if (/^TY\s+-\s+/m.test(trimmed)) return true;
+
+  // PubMed ID (PMID)
   if (/^PMID:\s*\d+/i.test(trimmed)) return true;
+
+  // PubMed Central ID (PMCID)
+  if (/^PMC\d+/i.test(trimmed)) return true;
 
   // ISBN
   if (/^ISBN[:\s]*[\d-]+/i.test(trimmed)) return true;
+
+  // Wikidata ID (Q followed by numbers)
+  if (/^(wikidata:)?Q\d+$/i.test(trimmed)) return true;
+
+  // Zenodo ID or URL
+  if (/^zenodo\.\d+$/i.test(trimmed)) return true;
+  if (/zenodo\.org\/record\/\d+/i.test(trimmed)) return true;
+
+  // CFF (Citation File Format) - YAML-based
+  if (/^cff-version:/m.test(trimmed)) return true;
 
   return false;
 };
@@ -47,10 +63,16 @@ export const getInputTypeHint = (input: string): string => {
   const trimmed = input.trim();
 
   if (/^10\.\d{4,}\//.test(trimmed)) return 'DOI';
+  if (/zenodo\.org\/record\/\d+/i.test(trimmed)) return 'Zenodo URL';
+  if (/^zenodo\.\d+$/i.test(trimmed)) return 'Zenodo ID';
   if (/^https?:\/\//.test(trimmed)) return 'URL';
   if (/^@\w+\{/.test(trimmed)) return 'BibTeX';
-  if (/^PMID:/i.test(trimmed)) return 'PubMed ID';
+  if (/^TY\s+-\s+/m.test(trimmed)) return 'RIS Format';
+  if (/^PMID:/i.test(trimmed)) return 'PubMed ID (PMID)';
+  if (/^PMC\d+/i.test(trimmed)) return 'PubMed Central ID (PMCID)';
   if (/^ISBN/i.test(trimmed)) return 'ISBN';
+  if (/^(wikidata:)?Q\d+$/i.test(trimmed)) return 'Wikidata ID';
+  if (/^cff-version:/m.test(trimmed)) return 'Citation File Format (CFF)';
 
   return 'Unknown';
 };

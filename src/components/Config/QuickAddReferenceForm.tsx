@@ -175,14 +175,14 @@ const QuickAddReferenceForm = () => {
         <div className="space-y-3">
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">
-              DOI, URL, BibTeX, or PubMed ID
+              DOI, URL, BibTeX, RIS, or Identifier
             </label>
             <textarea
               ref={smartInputRef}
               value={smartInput}
               onChange={(e) => setSmartInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Paste DOI (10.1234/example), URL, BibTeX entry, or PubMed ID..."
+              placeholder="Paste DOI, URL, BibTeX, RIS, PubMed ID, ISBN, Wikidata ID, Zenodo record, or CFF..."
               rows={4}
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none font-mono"
             />

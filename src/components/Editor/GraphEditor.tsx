@@ -107,8 +107,9 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest, onExportReq
   // Search and filter state for auto-zoom
   const {
     searchText,
-    visibleActorTypes,
-    visibleRelationTypes,
+    selectedActorTypes,
+    selectedRelationTypes,
+    selectedLabels,
   } = useSearchStore();
 
   // Settings for auto-zoom
@@ -260,12 +261,11 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest, onExportReq
 
     // Check if any filters are active
     const hasSearchText = searchText.trim() !== '';
-    const hasTypeFilters =
-      Object.values(visibleActorTypes).some(v => v === false) ||
-      Object.values(visibleRelationTypes).some(v => v === false);
+    const hasTypeFilters = selectedActorTypes.length > 0 || selectedRelationTypes.length > 0;
+    const hasLabelFilters = selectedLabels.length > 0;
 
     // Skip if no filters are active
-    if (!hasSearchText && !hasTypeFilters) return;
+    if (!hasSearchText && !hasTypeFilters && !hasLabelFilters) return;
 
     // Debounce to avoid excessive viewport changes while typing
     const timeoutId = setTimeout(() => {
@@ -277,10 +277,22 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest, onExportReq
           const actor = node as Actor;
           const actorType = actor.data?.type || '';
 
-          // Filter by actor type visibility
-          const isTypeVisible = visibleActorTypes[actorType] !== false;
-          if (!isTypeVisible) {
-            return false;
+          // Filter by actor type (POSITIVE: if types selected, node must be one of them)
+          if (selectedActorTypes.length > 0) {
+            if (!selectedActorTypes.includes(actorType)) {
+              return false;
+            }
+          }
+
+          // Filter by label (POSITIVE: if labels selected, node must have at least one)
+          if (selectedLabels.length > 0) {
+            const nodeLabels = actor.data?.labels || [];
+            const hasSelectedLabel = nodeLabels.some((labelId) =>
+              selectedLabels.includes(labelId)
+            );
+            if (!hasSelectedLabel) {
+              return false;
+            }
           }
 
           // Filter by search text
@@ -319,8 +331,9 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest, onExportReq
     return () => clearTimeout(timeoutId);
   }, [
     searchText,
-    visibleActorTypes,
-    visibleRelationTypes,
+    selectedActorTypes,
+    selectedRelationTypes,
+    selectedLabels,
     autoZoomEnabled,
     nodes,
     nodeTypeConfigs,
@@ -631,12 +644,16 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest, onExportReq
     [nodeTypeConfigs, addNodeWithHistory],
   );
 
-  // Call the onAddNodeRequest callback if provided
+  // Store callbacks in refs and call parent callbacks only once on mount
+  const handleAddNodeRef = useRef(handleAddNode);
+  handleAddNodeRef.current = handleAddNode;
+
   useEffect(() => {
     if (onAddNodeRequest) {
-      onAddNodeRequest(handleAddNode);
+      onAddNodeRequest((...args) => handleAddNodeRef.current(...args));
     }
-  }, [onAddNodeRequest, handleAddNode]);
+     
+  }, [onAddNodeRequest]); // Only run when onAddNodeRequest changes
 
   // Provide export callback to parent
   const handleExport = useCallback(
@@ -650,11 +667,15 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest, onExportReq
     [exportPNG, exportSVG]
   );
 
+  const handleExportRef = useRef(handleExport);
+  handleExportRef.current = handleExport;
+
   useEffect(() => {
     if (onExportRequest) {
-      onExportRequest(handleExport);
+      onExportRequest((...args) => handleExportRef.current(...args));
     }
-  }, [onExportRequest, handleExport]);
+     
+  }, [onExportRequest]); // Only run when onExportRequest changes
 
   // Add new actor at context menu position
   const handleAddActorFromContextMenu = useCallback(

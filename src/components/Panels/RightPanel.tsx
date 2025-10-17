@@ -16,6 +16,7 @@ import GraphMetrics from '../Common/GraphMetrics';
 import ConnectionDisplay from '../Common/ConnectionDisplay';
 import NodeTypeConfigModal from '../Config/NodeTypeConfig';
 import EdgeTypeConfigModal from '../Config/EdgeTypeConfig';
+import AutocompleteLabelSelector from '../Common/AutocompleteLabelSelector';
 import type { Actor, Relation, EdgeDirectionality } from '../../types';
 
 /**
@@ -72,11 +73,13 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
   const [actorType, setActorType] = useState('');
   const [actorLabel, setActorLabel] = useState('');
   const [actorDescription, setActorDescription] = useState('');
+  const [actorLabels, setActorLabels] = useState<string[]>([]);
   const labelInputRef = useRef<HTMLInputElement>(null);
 
   // Edge property states
   const [relationType, setRelationType] = useState('');
   const [relationLabel, setRelationLabel] = useState('');
+  const [relationLabels, setRelationLabels] = useState<string[]>([]);
   const [relationDirectionality, setRelationDirectionality] = useState<EdgeDirectionality>('directed');
 
   // Track if user has made changes
@@ -97,6 +100,7 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
       setActorType(selectedNode.data?.type || '');
       setActorLabel(selectedNode.data?.label || '');
       setActorDescription(selectedNode.data?.description || '');
+      setActorLabels(selectedNode.data?.labels || []);
       setHasNodeChanges(false);
 
       // Focus and select the label input when node is selected
@@ -116,6 +120,7 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
       const typeLabel = edgeTypes.find((et) => et.id === selectedEdge.data?.type)?.label;
       const hasCustomLabel = selectedEdge.data.label && selectedEdge.data.label !== typeLabel;
       setRelationLabel((hasCustomLabel && selectedEdge.data.label) || '');
+      setRelationLabels(selectedEdge.data.labels || []);
       const edgeTypeConfig = edgeTypes.find((et) => et.id === selectedEdge.data?.type);
       setRelationDirectionality(selectedEdge.data.directionality || edgeTypeConfig?.defaultDirectionality || 'directed');
       setHasEdgeChanges(false);
@@ -130,10 +135,11 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
         type: actorType,
         label: actorLabel,
         description: actorDescription || undefined,
+        labels: actorLabels.length > 0 ? actorLabels : undefined,
       },
     });
     setHasNodeChanges(false);
-  }, [selectedNode, actorType, actorLabel, actorDescription, hasNodeChanges, updateNode]);
+  }, [selectedNode, actorType, actorLabel, actorDescription, actorLabels, hasNodeChanges, updateNode]);
 
   // Live update edge properties (debounced)
   const updateEdgeProperties = useCallback(() => {
@@ -142,9 +148,10 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
       type: relationType,
       label: relationLabel.trim() || undefined,
       directionality: relationDirectionality,
+      labels: relationLabels.length > 0 ? relationLabels : undefined,
     });
     setHasEdgeChanges(false);
-  }, [selectedEdge, relationType, relationLabel, relationDirectionality, hasEdgeChanges, updateEdge]);
+  }, [selectedEdge, relationType, relationLabel, relationDirectionality, relationLabels, hasEdgeChanges, updateEdge]);
 
   // Debounce live updates
   useEffect(() => {
@@ -341,6 +348,7 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
                       type: newType,
                       label: actorLabel,
                       description: actorDescription || undefined,
+                      labels: actorLabels.length > 0 ? actorLabels : undefined,
                     },
                   });
                 }
@@ -398,6 +406,21 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
               placeholder="Add a description"
               rows={3}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            />
+          </div>
+
+          {/* Labels */}
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Labels (optional)
+            </label>
+            <AutocompleteLabelSelector
+              value={actorLabels}
+              onChange={(newLabels) => {
+                setActorLabels(newLabels);
+                setHasNodeChanges(true);
+              }}
+              scope="actors"
             />
           </div>
 
@@ -553,6 +576,7 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
                     type: newType,
                     label: relationLabel.trim() || undefined,
                     directionality: relationDirectionality,
+                    labels: relationLabels.length > 0 ? relationLabels : undefined,
                   });
                 }
               }}
@@ -587,6 +611,21 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
             </p>
           </div>
 
+          {/* Labels */}
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Labels (optional)
+            </label>
+            <AutocompleteLabelSelector
+              value={relationLabels}
+              onChange={(newLabels) => {
+                setRelationLabels(newLabels);
+                setHasEdgeChanges(true);
+              }}
+              scope="relations"
+            />
+          </div>
+
           {/* Directionality */}
           <div className="pt-3 border-t border-gray-200">
             <label className="block text-xs font-medium text-gray-700 mb-2">
@@ -603,6 +642,7 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
                     type: relationType,
                     label: relationLabel.trim() || undefined,
                     directionality: newValue,
+                    labels: relationLabels.length > 0 ? relationLabels : undefined,
                   });
                 }
               }}

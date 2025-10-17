@@ -5,8 +5,10 @@ import { create } from 'zustand';
  *
  * Features:
  * - Search text for filtering both actors (by label, description, or type) and relations (by label or type)
- * - Filter by actor types (show/hide specific node types)
- * - Filter by relation types (show/hide specific edge types)
+ * - POSITIVE FILTERS (empty = show all, selected = show only selected):
+ *   - Filter by actor types
+ *   - Filter by relation types
+ *   - Filter by labels
  * - Results tracking
  */
 
@@ -15,17 +17,20 @@ interface SearchStore {
   searchText: string;
   setSearchText: (text: string) => void;
 
-  // Filter visibility by actor types (nodeTypeId -> visible)
-  visibleActorTypes: Record<string, boolean>;
-  setActorTypeVisible: (typeId: string, visible: boolean) => void;
-  toggleActorType: (typeId: string) => void;
-  setAllActorTypesVisible: (visible: boolean) => void;
+  // POSITIVE actor type filter: selected type IDs to show (empty = show all)
+  selectedActorTypes: string[];
+  toggleSelectedActorType: (typeId: string) => void;
+  clearSelectedActorTypes: () => void;
 
-  // Filter visibility by relation types (edgeTypeId -> visible)
-  visibleRelationTypes: Record<string, boolean>;
-  setRelationTypeVisible: (typeId: string, visible: boolean) => void;
-  toggleRelationType: (typeId: string) => void;
-  setAllRelationTypesVisible: (visible: boolean) => void;
+  // POSITIVE relation type filter: selected type IDs to show (empty = show all)
+  selectedRelationTypes: string[];
+  toggleSelectedRelationType: (typeId: string) => void;
+  clearSelectedRelationTypes: () => void;
+
+  // POSITIVE label filter: selected label IDs to show (empty = show all)
+  selectedLabels: string[];
+  toggleSelectedLabel: (labelId: string) => void;
+  clearSelectedLabels: () => void;
 
   // Clear all filters
   clearFilters: () => void;
@@ -36,81 +41,58 @@ interface SearchStore {
 
 export const useSearchStore = create<SearchStore>((set, get) => ({
   searchText: '',
-  visibleActorTypes: {},
-  visibleRelationTypes: {},
+  selectedActorTypes: [],
+  selectedRelationTypes: [],
+  selectedLabels: [],
 
   setSearchText: (text: string) =>
     set({ searchText: text }),
 
-  setActorTypeVisible: (typeId: string, visible: boolean) =>
-    set((state) => ({
-      visibleActorTypes: {
-        ...state.visibleActorTypes,
-        [typeId]: visible,
-      },
-    })),
-
-  toggleActorType: (typeId: string) =>
-    set((state) => ({
-      visibleActorTypes: {
-        ...state.visibleActorTypes,
-        [typeId]: !state.visibleActorTypes[typeId],
-      },
-    })),
-
-  setAllActorTypesVisible: (visible: boolean) =>
+  toggleSelectedActorType: (typeId: string) =>
     set((state) => {
-      const updated: Record<string, boolean> = {};
-      Object.keys(state.visibleActorTypes).forEach((typeId) => {
-        updated[typeId] = visible;
-      });
-      return { visibleActorTypes: updated };
+      const isSelected = state.selectedActorTypes.includes(typeId);
+      return {
+        selectedActorTypes: isSelected
+          ? state.selectedActorTypes.filter((id) => id !== typeId)
+          : [...state.selectedActorTypes, typeId],
+      };
     }),
 
-  setRelationTypeVisible: (typeId: string, visible: boolean) =>
-    set((state) => ({
-      visibleRelationTypes: {
-        ...state.visibleRelationTypes,
-        [typeId]: visible,
-      },
-    })),
+  clearSelectedActorTypes: () =>
+    set({ selectedActorTypes: [] }),
 
-  toggleRelationType: (typeId: string) =>
-    set((state) => ({
-      visibleRelationTypes: {
-        ...state.visibleRelationTypes,
-        [typeId]: !state.visibleRelationTypes[typeId],
-      },
-    })),
-
-  setAllRelationTypesVisible: (visible: boolean) =>
+  toggleSelectedRelationType: (typeId: string) =>
     set((state) => {
-      const updated: Record<string, boolean> = {};
-      Object.keys(state.visibleRelationTypes).forEach((typeId) => {
-        updated[typeId] = visible;
-      });
-      return { visibleRelationTypes: updated };
+      const isSelected = state.selectedRelationTypes.includes(typeId);
+      return {
+        selectedRelationTypes: isSelected
+          ? state.selectedRelationTypes.filter((id) => id !== typeId)
+          : [...state.selectedRelationTypes, typeId],
+      };
     }),
+
+  clearSelectedRelationTypes: () =>
+    set({ selectedRelationTypes: [] }),
+
+  toggleSelectedLabel: (labelId: string) =>
+    set((state) => {
+      const isSelected = state.selectedLabels.includes(labelId);
+      return {
+        selectedLabels: isSelected
+          ? state.selectedLabels.filter((id) => id !== labelId)
+          : [...state.selectedLabels, labelId],
+      };
+    }),
+
+  clearSelectedLabels: () =>
+    set({ selectedLabels: [] }),
 
   clearFilters: () =>
-    set((state) => {
-      // Reset all actor types to visible
-      const resetActorTypes: Record<string, boolean> = {};
-      Object.keys(state.visibleActorTypes).forEach((typeId) => {
-        resetActorTypes[typeId] = true;
-      });
-
-      // Reset all relation types to visible
-      const resetRelationTypes: Record<string, boolean> = {};
-      Object.keys(state.visibleRelationTypes).forEach((typeId) => {
-        resetRelationTypes[typeId] = true;
-      });
-
-      return {
-        searchText: '',
-        visibleActorTypes: resetActorTypes,
-        visibleRelationTypes: resetRelationTypes,
-      };
+    set({
+      searchText: '',
+      selectedActorTypes: [],
+      selectedRelationTypes: [],
+      selectedLabels: [],
     }),
 
   hasActiveFilters: () => {
@@ -121,19 +103,18 @@ export const useSearchStore = create<SearchStore>((set, get) => ({
       return true;
     }
 
-    // Check if any actor type is hidden
-    const hasHiddenActorType = Object.values(state.visibleActorTypes).some(
-      (visible) => !visible
-    );
-    if (hasHiddenActorType) {
+    // Check if any actor types are selected (positive filter)
+    if (state.selectedActorTypes.length > 0) {
       return true;
     }
 
-    // Check if any relation type is hidden
-    const hasHiddenRelationType = Object.values(state.visibleRelationTypes).some(
-      (visible) => !visible
-    );
-    if (hasHiddenRelationType) {
+    // Check if any relation types are selected (positive filter)
+    if (state.selectedRelationTypes.length > 0) {
+      return true;
+    }
+
+    // Check if any labels are selected (positive filter)
+    if (state.selectedLabels.length > 0) {
       return true;
     }
 

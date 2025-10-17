@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { ConstellationDocument } from './persistence/types';
 import type { Workspace, WorkspaceActions, DocumentMetadata, WorkspaceSettings } from './workspace/types';
+import type { Actor, Relation } from '../types';
 import { createDocument as createDocumentHelper } from './persistence/saver';
 import { selectFileForImport, exportDocumentToFile } from './persistence/fileIO';
 import {
@@ -142,6 +143,7 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
     );
     newDoc.metadata.documentId = documentId;
     newDoc.metadata.title = title;
+    newDoc.labels = [];  // Initialize with empty labels
 
     const metadata: DocumentMetadata = {
       id: documentId,
@@ -220,6 +222,7 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
     );
     newDoc.metadata.documentId = documentId;
     newDoc.metadata.title = title;
+    newDoc.labels = sourceDoc.labels || [];  // Copy labels from source document
 
     const metadata: DocumentMetadata = {
       id: documentId,
@@ -1028,6 +1031,136 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
     // If this is the active document, sync to graphStore
     if (documentId === state.activeDocumentId) {
       useGraphStore.getState().setEdgeTypes(doc.edgeTypes);
+    }
+  },
+
+  // Label management - document-level operations
+  addLabelToDocument: (documentId: string, label) => {
+    const state = get();
+    const doc = state.documents.get(documentId);
+
+    if (!doc) {
+      console.error(`Document ${documentId} not found`);
+      return;
+    }
+
+    // Initialize labels array if it doesn't exist (backward compatibility)
+    if (!doc.labels) {
+      doc.labels = [];
+    }
+
+    // Add to document's labels
+    doc.labels = [...doc.labels, label];
+
+    // Save document
+    saveDocumentToStorage(documentId, doc);
+
+    // Mark as dirty
+    get().markDocumentDirty(documentId);
+
+    // If this is the active document, sync to graphStore
+    if (documentId === state.activeDocumentId) {
+      useGraphStore.getState().setLabels(doc.labels);
+    }
+  },
+
+  updateLabelInDocument: (documentId: string, labelId: string, updates) => {
+    const state = get();
+    const doc = state.documents.get(documentId);
+
+    if (!doc) {
+      console.error(`Document ${documentId} not found`);
+      return;
+    }
+
+    // Initialize labels array if it doesn't exist (backward compatibility)
+    if (!doc.labels) {
+      doc.labels = [];
+    }
+
+    // Update in document's labels
+    doc.labels = doc.labels.map((label) =>
+      label.id === labelId ? { ...label, ...updates } : label
+    );
+
+    // Save document
+    saveDocumentToStorage(documentId, doc);
+
+    // Mark as dirty
+    get().markDocumentDirty(documentId);
+
+    // If this is the active document, sync to graphStore
+    if (documentId === state.activeDocumentId) {
+      useGraphStore.getState().setLabels(doc.labels);
+    }
+  },
+
+  deleteLabelFromDocument: (documentId: string, labelId: string) => {
+    const state = get();
+    const doc = state.documents.get(documentId);
+
+    if (!doc) {
+      console.error(`Document ${documentId} not found`);
+      return;
+    }
+
+    // Initialize labels array if it doesn't exist (backward compatibility)
+    if (!doc.labels) {
+      doc.labels = [];
+    }
+
+    // Remove from document's labels
+    doc.labels = doc.labels.filter((label) => label.id !== labelId);
+
+    // Remove label from all nodes and edges in all timeline states
+    const timelineStore = useTimelineStore.getState();
+    const timeline = timelineStore.timelines.get(documentId);
+
+    if (timeline) {
+      let hasChanges = false;
+
+      // Iterate through all timeline states and clean up label references
+      timeline.states.forEach((constellationState) => {
+        // Clean up nodes
+        constellationState.graph.nodes.forEach((node) => {
+          const nodeData = node.data as { labels?: string[] };
+          if (nodeData?.labels && nodeData.labels.includes(labelId)) {
+            nodeData.labels = nodeData.labels.filter((id: string) => id !== labelId);
+            hasChanges = true;
+          }
+        });
+
+        // Clean up edges
+        constellationState.graph.edges.forEach((edge) => {
+          const edgeData = edge.data as { labels?: string[] };
+          if (edgeData?.labels && edgeData.labels.includes(labelId)) {
+            edgeData.labels = edgeData.labels.filter((id: string) => id !== labelId);
+            hasChanges = true;
+          }
+        });
+      });
+
+      // If this is the active document and changes were made, sync to graphStore
+      if (hasChanges && documentId === state.activeDocumentId) {
+        const currentState = timeline.states.get(timeline.currentStateId);
+        if (currentState) {
+          useGraphStore.setState({
+            nodes: currentState.graph.nodes as Actor[],
+            edges: currentState.graph.edges as Relation[],
+          });
+        }
+      }
+    }
+
+    // Save document
+    saveDocumentToStorage(documentId, doc);
+
+    // Mark as dirty
+    get().markDocumentDirty(documentId);
+
+    // If this is the active document, sync to graphStore
+    if (documentId === state.activeDocumentId) {
+      useGraphStore.getState().setLabels(doc.labels);
     }
   },
 }));

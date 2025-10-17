@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { NodeTypeConfig, EdgeTypeConfig } from "../types";
+import type { NodeTypeConfig, EdgeTypeConfig, LabelConfig } from "../types";
 import type { ConstellationState, StateId } from "../types/timeline";
 
 /**
@@ -25,6 +25,8 @@ export interface DocumentSnapshot {
   // Global types (shared across all timeline states)
   nodeTypes: NodeTypeConfig[];
   edgeTypes: EdgeTypeConfig[];
+  // Labels (shared across all timeline states)
+  labels: LabelConfig[];
 }
 
 export interface HistoryAction {

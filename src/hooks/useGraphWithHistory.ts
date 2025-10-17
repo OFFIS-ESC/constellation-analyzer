@@ -2,7 +2,7 @@ import { useCallback, useRef, useEffect } from 'react';
 import { useGraphStore } from '../stores/graphStore';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useDocumentHistory } from './useDocumentHistory';
-import type { Actor, Relation, NodeTypeConfig, EdgeTypeConfig, RelationData } from '../types';
+import type { Actor, Relation, NodeTypeConfig, EdgeTypeConfig, LabelConfig, RelationData } from '../types';
 
 /**
  * useGraphWithHistory Hook
@@ -20,11 +20,12 @@ import type { Actor, Relation, NodeTypeConfig, EdgeTypeConfig, RelationData } fr
  * - Node operations: addNode, updateNode, deleteNode
  * - Edge operations: addEdge, updateEdge, deleteEdge
  * - Type operations: addNodeType, updateNodeType, deleteNodeType, addEdgeType, updateEdgeType, deleteEdgeType
+ * - Label operations: addLabel, updateLabel, deleteLabel
  * - Utility: clearGraph
  *
  * Read-only pass-through operations (no history):
- * - setNodes, setEdges (used for bulk updates during undo/redo/document loading)
- * - nodes, edges, nodeTypes, edgeTypes (state access)
+ * - setNodes, setEdges, setLabels (used for bulk updates during undo/redo/document loading)
+ * - nodes, edges, nodeTypes, edgeTypes, labels (state access)
  * - loadGraphState
  *
  * Usage:
@@ -46,6 +47,9 @@ export function useGraphWithHistory() {
   const addEdgeTypeToDocument = useWorkspaceStore((state) => state.addEdgeTypeToDocument);
   const updateEdgeTypeInDocument = useWorkspaceStore((state) => state.updateEdgeTypeInDocument);
   const deleteEdgeTypeFromDocument = useWorkspaceStore((state) => state.deleteEdgeTypeFromDocument);
+  const addLabelToDocument = useWorkspaceStore((state) => state.addLabelToDocument);
+  const updateLabelInDocument = useWorkspaceStore((state) => state.updateLabelInDocument);
+  const deleteLabelFromDocument = useWorkspaceStore((state) => state.deleteLabelFromDocument);
   const { pushToHistory } = useDocumentHistory();
 
   // Track if we're currently restoring from history to prevent recursive history pushes
@@ -285,6 +289,55 @@ export function useGraphWithHistory() {
     [graphStore, pushToHistory]
   );
 
+  const addLabel = useCallback(
+    (label: LabelConfig) => {
+      if (!activeDocumentId) {
+        console.warn('No active document');
+        return;
+      }
+      if (isRestoringRef.current) {
+        graphStore.addLabel(label);
+        return;
+      }
+      pushToHistory(`Add Label: ${label.name}`); // Synchronous push BEFORE mutation
+      addLabelToDocument(activeDocumentId, label);
+    },
+    [activeDocumentId, graphStore, pushToHistory, addLabelToDocument]
+  );
+
+  const updateLabel = useCallback(
+    (id: string, updates: Partial<Omit<LabelConfig, 'id'>>) => {
+      if (!activeDocumentId) {
+        console.warn('No active document');
+        return;
+      }
+      if (isRestoringRef.current) {
+        graphStore.updateLabel(id, updates);
+        return;
+      }
+      pushToHistory('Update Label'); // Synchronous push BEFORE mutation
+      updateLabelInDocument(activeDocumentId, id, updates);
+    },
+    [activeDocumentId, graphStore, pushToHistory, updateLabelInDocument]
+  );
+
+  const deleteLabel = useCallback(
+    (id: string) => {
+      if (!activeDocumentId) {
+        console.warn('No active document');
+        return;
+      }
+      if (isRestoringRef.current) {
+        graphStore.deleteLabel(id);
+        return;
+      }
+      const label = graphStore.labels.find((l) => l.id === id);
+      pushToHistory(`Delete Label: ${label?.name || id}`); // Synchronous push BEFORE mutation
+      deleteLabelFromDocument(activeDocumentId, id);
+    },
+    [activeDocumentId, graphStore, pushToHistory, deleteLabelFromDocument]
+  );
+
   return {
     // Wrapped operations with history
     addNode,
@@ -299,6 +352,9 @@ export function useGraphWithHistory() {
     addEdgeType,
     updateEdgeType,
     deleteEdgeType,
+    addLabel,
+    updateLabel,
+    deleteLabel,
     clearGraph,
 
     // Pass through read-only operations
@@ -306,10 +362,12 @@ export function useGraphWithHistory() {
     edges: graphStore.edges,
     nodeTypes: graphStore.nodeTypes,
     edgeTypes: graphStore.edgeTypes,
+    labels: graphStore.labels,
     setNodes: graphStore.setNodes,
     setEdges: graphStore.setEdges,
     setNodeTypes: graphStore.setNodeTypes,
     setEdgeTypes: graphStore.setEdgeTypes,
+    setLabels: graphStore.setLabels,
     loadGraphState: graphStore.loadGraphState,
 
     // NOTE: exportToFile and importFromFile have been removed

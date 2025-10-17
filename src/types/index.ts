@@ -5,6 +5,7 @@ export interface ActorData {
   label: string;
   type: string;
   description?: string;
+  labels?: string[];  // Array of LabelConfig IDs
   metadata?: Record<string, unknown>;
 }
 
@@ -18,6 +19,7 @@ export interface RelationData {
   type: string;
   directionality?: EdgeDirectionality;
   strength?: number;
+  labels?: string[];  // Array of LabelConfig IDs
   metadata?: Record<string, unknown>;
 }
 
@@ -51,12 +53,24 @@ export interface EdgeTypeConfig {
   defaultDirectionality?: EdgeDirectionality;
 }
 
+// Label Configuration
+export type LabelScope = 'actors' | 'relations' | 'both';
+
+export interface LabelConfig {
+  id: string;
+  name: string;
+  color: string;
+  appliesTo: LabelScope;
+  description?: string;
+}
+
 // Graph State
 export interface GraphState {
   nodes: Actor[];
   edges: Relation[];
   nodeTypes: NodeTypeConfig[];
   edgeTypes: EdgeTypeConfig[];
+  labels: LabelConfig[];
 }
 
 // Editor Settings
@@ -82,14 +96,18 @@ export interface GraphActions {
   addEdgeType: (edgeType: EdgeTypeConfig) => void;
   updateEdgeType: (id: string, updates: Partial<Omit<EdgeTypeConfig, 'id'>>) => void;
   deleteEdgeType: (id: string) => void;
+  addLabel: (label: LabelConfig) => void;
+  updateLabel: (id: string, updates: Partial<Omit<LabelConfig, 'id'>>) => void;
+  deleteLabel: (id: string) => void;
   clearGraph: () => void;
   setNodes: (nodes: Actor[]) => void;
   setEdges: (edges: Relation[]) => void;
   setNodeTypes: (nodeTypes: NodeTypeConfig[]) => void;
   setEdgeTypes: (edgeTypes: EdgeTypeConfig[]) => void;
+  setLabels: (labels: LabelConfig[]) => void;
   // NOTE: exportToFile and importFromFile have been removed
   // Import/export is now handled by the workspace-level system (workspaceStore)
-  loadGraphState: (data: { nodes: Actor[]; edges: Relation[]; nodeTypes: NodeTypeConfig[]; edgeTypes: EdgeTypeConfig[] }) => void;
+  loadGraphState: (data: { nodes: Actor[]; edges: Relation[]; nodeTypes: NodeTypeConfig[]; edgeTypes: EdgeTypeConfig[]; labels?: LabelConfig[] }) => void;
 }
 
 export interface EditorActions {

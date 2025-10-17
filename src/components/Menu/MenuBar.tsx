@@ -6,6 +6,7 @@ import { useDocumentHistory } from '../../hooks/useDocumentHistory';
 import DocumentManager from '../Workspace/DocumentManager';
 import NodeTypeConfigModal from '../Config/NodeTypeConfig';
 import EdgeTypeConfigModal from '../Config/EdgeTypeConfig';
+import LabelConfigModal from '../Config/LabelConfig';
 import InputDialog from '../Common/InputDialog';
 import { useConfirm } from '../../hooks/useConfirm';
 import { useShortcutLabels } from '../../hooks/useShortcutLabels';
@@ -32,6 +33,7 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) =>
   const [showDocumentManager, setShowDocumentManager] = useState(false);
   const [showNodeConfig, setShowNodeConfig] = useState(false);
   const [showEdgeConfig, setShowEdgeConfig] = useState(false);
+  const [showLabelConfig, setShowLabelConfig] = useState(false);
   const [showNewDocDialog, setShowNewDocDialog] = useState(false);
   const [showNewFromTemplateDialog, setShowNewFromTemplateDialog] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -170,6 +172,11 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) =>
 
   const handleConfigureRelations = useCallback(() => {
     setShowEdgeConfig(true);
+    closeMenu();
+  }, [closeMenu]);
+
+  const handleConfigureLabels = useCallback(() => {
+    setShowLabelConfig(true);
     closeMenu();
   }, [closeMenu]);
 
@@ -373,6 +380,12 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) =>
                 >
                   Configure Relation Types
                 </button>
+                <button
+                  onClick={handleConfigureLabels}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  Configure Labels
+                </button>
 
                 <hr className="my-1 border-gray-200" />
 
@@ -464,6 +477,10 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) =>
       <EdgeTypeConfigModal
         isOpen={showEdgeConfig}
         onClose={() => setShowEdgeConfig(false)}
+      />
+      <LabelConfigModal
+        isOpen={showLabelConfig}
+        onClose={() => setShowLabelConfig(false)}
       />
 
       {/* Input Dialogs */}

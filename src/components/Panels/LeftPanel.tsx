@@ -1,4 +1,4 @@
-import { useCallback, useState, useMemo, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
+import { useCallback, useState, useMemo, useRef, useImperativeHandle, forwardRef } from 'react';
 import { IconButton, Tooltip, Checkbox } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -19,6 +19,7 @@ import { getIconComponent } from '../../utils/iconUtils';
 import { getContrastColor } from '../../utils/colorUtils';
 import NodeTypeConfigModal from '../Config/NodeTypeConfig';
 import EdgeTypeConfigModal from '../Config/EdgeTypeConfig';
+import LabelBadge from '../Common/LabelBadge';
 import type { Actor } from '../../types';
 
 /**
@@ -52,7 +53,7 @@ const LeftPanel = forwardRef<LeftPanelRef, LeftPanelProps>(({ onDeselectAll, onA
     expandLeftPanel,
   } = usePanelStore();
 
-  const { nodeTypes, edgeTypes, addNode, nodes, edges } = useGraphWithHistory();
+  const { nodeTypes, edgeTypes, labels, addNode, nodes, edges } = useGraphWithHistory();
   const { selectedRelationType, setSelectedRelationType } = useEditorStore();
   const [showNodeConfig, setShowNodeConfig] = useState(false);
   const [showEdgeConfig, setShowEdgeConfig] = useState(false);
@@ -84,10 +85,12 @@ const LeftPanel = forwardRef<LeftPanelRef, LeftPanelProps>(({ onDeselectAll, onA
   const {
     searchText,
     setSearchText,
-    visibleActorTypes,
-    setActorTypeVisible,
-    visibleRelationTypes,
-    setRelationTypeVisible,
+    selectedActorTypes,
+    toggleSelectedActorType,
+    selectedRelationTypes,
+    toggleSelectedRelationType,
+    selectedLabels,
+    toggleSelectedLabel,
     clearFilters,
     hasActiveFilters,
   } = useSearchStore();
@@ -95,22 +98,7 @@ const LeftPanel = forwardRef<LeftPanelRef, LeftPanelProps>(({ onDeselectAll, onA
   // Settings
   const { autoZoomEnabled, setAutoZoomEnabled } = useSettingsStore();
 
-  // Initialize filter state when node/edge types change
-  useEffect(() => {
-    nodeTypes.forEach((nodeType) => {
-      if (!(nodeType.id in visibleActorTypes)) {
-        setActorTypeVisible(nodeType.id, true);
-      }
-    });
-  }, [nodeTypes, visibleActorTypes, setActorTypeVisible]);
-
-  useEffect(() => {
-    edgeTypes.forEach((edgeType) => {
-      if (!(edgeType.id in visibleRelationTypes)) {
-        setRelationTypeVisible(edgeType.id, true);
-      }
-    });
-  }, [edgeTypes, visibleRelationTypes, setRelationTypeVisible]);
+  // No need to initialize filter state - all filters are positive (empty = show all)
 
   // Calculate matching nodes based on search and filters
   const matchingNodes = useMemo(() => {
@@ -120,10 +108,22 @@ const LeftPanel = forwardRef<LeftPanelRef, LeftPanelProps>(({ onDeselectAll, onA
       const actor = node as Actor;
       const actorType = actor.data?.type || '';
 
-      // Filter by actor type visibility
-      const isTypeVisible = visibleActorTypes[actorType] !== false;
-      if (!isTypeVisible) {
-        return false;
+      // Filter by actor type (POSITIVE: if types selected, node must be one of them)
+      if (selectedActorTypes.length > 0) {
+        if (!selectedActorTypes.includes(actorType)) {
+          return false;
+        }
+      }
+
+      // Filter by label (POSITIVE: if labels selected, node must have at least one)
+      if (selectedLabels.length > 0) {
+        const nodeLabels = actor.data?.labels || [];
+        const hasSelectedLabel = nodeLabels.some((labelId) =>
+          selectedLabels.includes(labelId)
+        );
+        if (!hasSelectedLabel) {
+          return false;
+        }
       }
 
       // Filter by search text
@@ -145,7 +145,7 @@ const LeftPanel = forwardRef<LeftPanelRef, LeftPanelProps>(({ onDeselectAll, onA
 
       return true;
     });
-  }, [nodes, searchText, visibleActorTypes, nodeTypes]);
+  }, [nodes, searchText, selectedActorTypes, selectedLabels, nodeTypes]);
 
   // Calculate matching edges based on search and filters
   const matchingEdges = useMemo(() => {
@@ -154,10 +154,22 @@ const LeftPanel = forwardRef<LeftPanelRef, LeftPanelProps>(({ onDeselectAll, onA
     return edges.filter((edge) => {
       const edgeType = edge.data?.type || '';
 
-      // Filter by edge type visibility
-      const isTypeVisible = visibleRelationTypes[edgeType] !== false;
-      if (!isTypeVisible) {
-        return false;
+      // Filter by relation type (POSITIVE: if types selected, edge must be one of them)
+      if (selectedRelationTypes.length > 0) {
+        if (!selectedRelationTypes.includes(edgeType)) {
+          return false;
+        }
+      }
+
+      // Filter by label (POSITIVE: if labels selected, edge must have at least one)
+      if (selectedLabels.length > 0) {
+        const edgeLabels = edge.data?.labels || [];
+        const hasSelectedLabel = edgeLabels.some((labelId) =>
+          selectedLabels.includes(labelId)
+        );
+        if (!hasSelectedLabel) {
+          return false;
+        }
       }
 
       // Filter by search text
@@ -177,7 +189,7 @@ const LeftPanel = forwardRef<LeftPanelRef, LeftPanelProps>(({ onDeselectAll, onA
 
       return true;
     });
-  }, [edges, searchText, visibleRelationTypes, edgeTypes]);
+  }, [edges, searchText, selectedRelationTypes, selectedLabels, edgeTypes]);
 
 
   const handleAddNode = useCallback(
@@ -464,10 +476,13 @@ const LeftPanel = forwardRef<LeftPanelRef, LeftPanelProps>(({ onDeselectAll, onA
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-2">
                   Filter by Actor Type
+                  {selectedActorTypes.length > 0 && (
+                    <span className="ml-1 text-blue-600">({selectedActorTypes.length} selected)</span>
+                  )}
                 </label>
                 <div className="space-y-1.5">
                   {nodeTypes.map((nodeType) => {
-                    const isVisible = visibleActorTypes[nodeType.id] !== false;
+                    const isSelected = selectedActorTypes.includes(nodeType.id);
                     const IconComponent = getIconComponent(nodeType.icon);
 
                     return (
@@ -476,8 +491,8 @@ const LeftPanel = forwardRef<LeftPanelRef, LeftPanelProps>(({ onDeselectAll, onA
                         className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 px-2 py-1 rounded transition-colors"
                       >
                         <Checkbox
-                          checked={isVisible}
-                          onChange={() => setActorTypeVisible(nodeType.id, !isVisible)}
+                          checked={isSelected}
+                          onChange={() => toggleSelectedActorType(nodeType.id)}
                           size="small"
                           sx={{ padding: '2px' }}
                         />
@@ -501,16 +516,29 @@ const LeftPanel = forwardRef<LeftPanelRef, LeftPanelProps>(({ onDeselectAll, onA
                     );
                   })}
                 </div>
+                {selectedActorTypes.length === 0 && (
+                  <p className="text-xs text-gray-500 italic mt-2">
+                    No types selected - showing all actors
+                  </p>
+                )}
+                {selectedActorTypes.length > 0 && (
+                  <p className="text-xs text-gray-500 italic mt-2">
+                    Showing only selected actor types
+                  </p>
+                )}
               </div>
 
               {/* Filter by Relation */}
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-2">
                   Filter by Relation
+                  {selectedRelationTypes.length > 0 && (
+                    <span className="ml-1 text-blue-600">({selectedRelationTypes.length} selected)</span>
+                  )}
                 </label>
                 <div className="space-y-1.5">
                   {edgeTypes.map((edgeType) => {
-                    const isVisible = visibleRelationTypes[edgeType.id] !== false;
+                    const isSelected = selectedRelationTypes.includes(edgeType.id);
 
                     return (
                       <label
@@ -518,8 +546,8 @@ const LeftPanel = forwardRef<LeftPanelRef, LeftPanelProps>(({ onDeselectAll, onA
                         className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 px-2 py-1 rounded transition-colors"
                       >
                         <Checkbox
-                          checked={isVisible}
-                          onChange={() => setRelationTypeVisible(edgeType.id, !isVisible)}
+                          checked={isSelected}
+                          onChange={() => toggleSelectedRelationType(edgeType.id)}
                           size="small"
                           sx={{ padding: '2px' }}
                         />
@@ -540,7 +568,65 @@ const LeftPanel = forwardRef<LeftPanelRef, LeftPanelProps>(({ onDeselectAll, onA
                     );
                   })}
                 </div>
+                {selectedRelationTypes.length === 0 && (
+                  <p className="text-xs text-gray-500 italic mt-2">
+                    No types selected - showing all relations
+                  </p>
+                )}
+                {selectedRelationTypes.length > 0 && (
+                  <p className="text-xs text-gray-500 italic mt-2">
+                    Showing only selected relation types
+                  </p>
+                )}
               </div>
+
+              {/* Filter by Label */}
+              {labels.length > 0 && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-2">
+                    Filter by Label
+                    {selectedLabels.length > 0 && (
+                      <span className="ml-1 text-blue-600">({selectedLabels.length} selected)</span>
+                    )}
+                  </label>
+                  <div className="space-y-1.5">
+                    {labels.map((label) => {
+                      const isSelected = selectedLabels.includes(label.id);
+
+                      return (
+                        <label
+                          key={label.id}
+                          className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 px-2 py-1 rounded transition-colors"
+                        >
+                          <Checkbox
+                            checked={isSelected}
+                            onChange={() => toggleSelectedLabel(label.id)}
+                            size="small"
+                            sx={{ padding: '2px' }}
+                          />
+                          <div className="flex items-center flex-1">
+                            <LabelBadge
+                              name={label.name}
+                              color={label.color}
+                              size="sm"
+                            />
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  {selectedLabels.length === 0 && (
+                    <p className="text-xs text-gray-500 italic mt-2">
+                      No labels selected - showing all items
+                    </p>
+                  )}
+                  {selectedLabels.length > 0 && (
+                    <p className="text-xs text-gray-500 italic mt-2">
+                      Showing only items with selected labels
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Results Summary */}
               <div className="pt-2 border-t border-gray-100">

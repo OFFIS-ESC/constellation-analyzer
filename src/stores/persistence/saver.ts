@@ -1,5 +1,5 @@
 import type { ConstellationDocument, SerializedActor, SerializedRelation } from './types';
-import type { Actor, Relation, NodeTypeConfig, EdgeTypeConfig } from '../../types';
+import type { Actor, Relation, NodeTypeConfig, EdgeTypeConfig, LabelConfig } from '../../types';
 import { STORAGE_KEYS, SCHEMA_VERSION, APP_NAME } from './constants';
 
 /**
@@ -41,6 +41,7 @@ export function createDocument(
   edges: SerializedRelation[],
   nodeTypes: NodeTypeConfig[],
   edgeTypes: EdgeTypeConfig[],
+  labels?: LabelConfig[],
   existingDocument?: ConstellationDocument
 ): ConstellationDocument {
   const now = new Date().toISOString();
@@ -59,7 +60,7 @@ export function createDocument(
     updatedAt: now,
   };
 
-  // Create document with global types and timeline containing the initial state
+  // Create document with global types, labels, and timeline containing the initial state
   return {
     metadata: {
       version: SCHEMA_VERSION,
@@ -70,6 +71,7 @@ export function createDocument(
     },
     nodeTypes,
     edgeTypes,
+    labels: labels || [],
     timeline: {
       states: {
         [rootStateId]: initialState,

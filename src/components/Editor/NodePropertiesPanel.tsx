@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useGraphWithHistory } from '../../hooks/useGraphWithHistory';
 import PropertyPanel from '../Common/PropertyPanel';
+import LabelSelector from '../Common/LabelSelector';
 import type { Actor } from '../../types';
 
 /**
@@ -24,6 +25,7 @@ const NodePropertiesPanel = ({ selectedNode, onClose }: Props) => {
   const [actorType, setActorType] = useState('');
   const [actorLabel, setActorLabel] = useState('');
   const [actorDescription, setActorDescription] = useState('');
+  const [actorLabels, setActorLabels] = useState<string[]>([]);
   const labelInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -31,6 +33,7 @@ const NodePropertiesPanel = ({ selectedNode, onClose }: Props) => {
       setActorType(selectedNode.data?.type || '');
       setActorLabel(selectedNode.data?.label || '');
       setActorDescription(selectedNode.data?.description || '');
+      setActorLabels(selectedNode.data?.labels || []);
 
       // Focus and select the label input when panel opens
       setTimeout(() => {
@@ -49,6 +52,7 @@ const NodePropertiesPanel = ({ selectedNode, onClose }: Props) => {
         type: actorType,
         label: actorLabel,
         description: actorDescription || undefined,
+        labels: actorLabels.length > 0 ? actorLabels : undefined,
       },
     });
     onClose();
@@ -127,6 +131,18 @@ const NodePropertiesPanel = ({ selectedNode, onClose }: Props) => {
           placeholder="Add a description"
           rows={3}
           className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+        />
+      </div>
+
+      {/* Labels */}
+      <div>
+        <label className="block text-xs font-medium text-gray-700 mb-1">
+          Labels (optional)
+        </label>
+        <LabelSelector
+          value={actorLabels}
+          onChange={setActorLabels}
+          scope="actors"
         />
       </div>
 

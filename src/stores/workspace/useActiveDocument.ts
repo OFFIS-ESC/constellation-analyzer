@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useWorkspaceStore } from '../workspaceStore';
 import { useGraphStore } from '../graphStore';
 import { useTimelineStore } from '../timelineStore';
-import type { Actor, Relation, NodeTypeConfig, EdgeTypeConfig } from '../../types';
+import type { Actor, Relation, NodeTypeConfig, EdgeTypeConfig, LabelConfig } from '../../types';
 import { getCurrentGraphFromDocument } from '../persistence/loader';
 
 /**
@@ -29,10 +29,12 @@ export function useActiveDocument() {
   const setEdges = useGraphStore((state) => state.setEdges);
   const setNodeTypes = useGraphStore((state) => state.setNodeTypes);
   const setEdgeTypes = useGraphStore((state) => state.setEdgeTypes);
+  const setLabels = useGraphStore((state) => state.setLabels);
   const graphNodes = useGraphStore((state) => state.nodes);
   const graphEdges = useGraphStore((state) => state.edges);
   const graphNodeTypes = useGraphStore((state) => state.nodeTypes);
   const graphEdgeTypes = useGraphStore((state) => state.edgeTypes);
+  const graphLabels = useGraphStore((state) => state.labels);
 
   // Track unload timers for inactive documents
   const unloadTimersRef = useRef<Map<string, number>>(new Map());
@@ -48,12 +50,14 @@ export function useActiveDocument() {
     edges: Relation[];
     nodeTypes: NodeTypeConfig[];
     edgeTypes: EdgeTypeConfig[];
+    labels: LabelConfig[];
   }>({
     documentId: null,
     nodes: [],
     edges: [],
     nodeTypes: [],
     edgeTypes: [],
+    labels: [],
   });
 
   // Load active document into graphStore when it changes
@@ -76,6 +80,7 @@ export function useActiveDocument() {
       setEdges(currentGraph.edges as never[]);
       setNodeTypes(currentGraph.nodeTypes as never[]);
       setEdgeTypes(currentGraph.edgeTypes as never[]);
+      setLabels(activeDocument.labels || []);
 
       // Update the last synced state to match what we just loaded
       lastSyncedStateRef.current = {
@@ -84,6 +89,7 @@ export function useActiveDocument() {
         edges: currentGraph.edges as Relation[],
         nodeTypes: currentGraph.nodeTypes as NodeTypeConfig[],
         edgeTypes: currentGraph.edgeTypes as EdgeTypeConfig[],
+        labels: activeDocument.labels || [],
       };
 
       // Clear loading flag after a brief delay to allow state to settle
@@ -100,6 +106,7 @@ export function useActiveDocument() {
 
       setNodes([]);
       setEdges([]);
+      setLabels([]);
       // Note: We keep nodeTypes and edgeTypes so they're available for new documents
 
       // Clear the last synced state
@@ -109,6 +116,7 @@ export function useActiveDocument() {
         edges: [],
         nodeTypes: [],
         edgeTypes: [],
+        labels: [],
       };
 
       // Clear loading flag after a brief delay
@@ -116,7 +124,7 @@ export function useActiveDocument() {
         isLoadingRef.current = false;
       }, 100);
     }
-  }, [activeDocumentId, activeDocument, documents, setNodes, setEdges, setNodeTypes, setEdgeTypes]);
+  }, [activeDocumentId, activeDocument, documents, setNodes, setEdges, setNodeTypes, setEdgeTypes, setLabels]);
 
   // Save graphStore changes back to workspace (debounced via workspace)
   useEffect(() => {
@@ -153,13 +161,14 @@ export function useActiveDocument() {
       console.log(`Document ${activeDocumentId} has changes, marking as dirty`);
       markDocumentDirty(activeDocumentId);
 
-      // Update the last synced state (keep types for reference, but don't track them for changes)
+      // Update the last synced state (keep types and labels for reference, but don't track them for changes)
       lastSyncedStateRef.current = {
         documentId: activeDocumentId,
         nodes: graphNodes as Actor[],
         edges: graphEdges as Relation[],
         nodeTypes: graphNodeTypes as NodeTypeConfig[],
         edgeTypes: graphEdgeTypes as EdgeTypeConfig[],
+        labels: graphLabels as LabelConfig[],
       };
 
       // Update the timeline's current state with the new graph data (nodes and edges only)
@@ -175,7 +184,7 @@ export function useActiveDocument() {
 
       return () => clearTimeout(timeoutId);
     }
-  }, [graphNodes, graphEdges, graphNodeTypes, graphEdgeTypes, activeDocumentId, activeDocument, documents, markDocumentDirty, saveDocument]);
+  }, [graphNodes, graphEdges, graphNodeTypes, graphEdgeTypes, graphLabels, activeDocumentId, activeDocument, documents, markDocumentDirty, saveDocument]);
 
   // Memory management: Unload inactive documents after timeout
   useEffect(() => {

@@ -9,6 +9,7 @@ import {
 import { getIconComponent } from "../../utils/iconUtils";
 import type { ActorData } from "../../types";
 import NodeShapeRenderer from "./Shapes/NodeShapeRenderer";
+import LabelBadge from "../Common/LabelBadge";
 
 /**
  * CustomNode - Represents an actor in the constellation graph
@@ -23,7 +24,8 @@ import NodeShapeRenderer from "./Shapes/NodeShapeRenderer";
  */
 const CustomNode = ({ data, selected }: NodeProps<ActorData>) => {
   const nodeTypes = useGraphStore((state) => state.nodeTypes);
-  const { searchText, visibleActorTypes } = useSearchStore();
+  const labels = useGraphStore((state) => state.labels);
+  const { searchText, selectedActorTypes, selectedLabels } = useSearchStore();
 
   // Check if any connection is being made (to show handles)
   const connectionNodeId = useStore((state) => state.connectionNodeId);
@@ -47,10 +49,22 @@ const CustomNode = ({ data, selected }: NodeProps<ActorData>) => {
 
   // Check if this node matches the search and filter criteria
   const isMatch = useMemo(() => {
-    // Check type visibility
-    const isTypeVisible = visibleActorTypes[data.type] !== false;
-    if (!isTypeVisible) {
-      return false;
+    // Check actor type filter (POSITIVE: if types selected, node must be one of them)
+    if (selectedActorTypes.length > 0) {
+      if (!selectedActorTypes.includes(data.type)) {
+        return false;
+      }
+    }
+
+    // Check label filter (POSITIVE: if labels selected, node must have at least one)
+    if (selectedLabels.length > 0) {
+      const nodeLabels = data.labels || [];
+      const hasSelectedLabel = nodeLabels.some((labelId) =>
+        selectedLabels.includes(labelId)
+      );
+      if (!hasSelectedLabel) {
+        return false;
+      }
     }
 
     // Check search text match
@@ -70,9 +84,11 @@ const CustomNode = ({ data, selected }: NodeProps<ActorData>) => {
     return true;
   }, [
     searchText,
-    visibleActorTypes,
+    selectedActorTypes,
+    selectedLabels,
     data.type,
     data.label,
+    data.labels,
     data.description,
     nodeLabel,
   ]);
@@ -80,7 +96,8 @@ const CustomNode = ({ data, selected }: NodeProps<ActorData>) => {
   // Determine if filters are active
   const hasActiveFilters =
     searchText.trim() !== "" ||
-    Object.values(visibleActorTypes).some((v) => v === false);
+    selectedActorTypes.length > 0 ||
+    selectedLabels.length > 0;
 
   // Calculate opacity based on match status
   const nodeOpacity = hasActiveFilters && !isMatch ? 0.2 : 1.0;
@@ -189,6 +206,25 @@ const CustomNode = ({ data, selected }: NodeProps<ActorData>) => {
           >
             {nodeLabel}
           </div>
+
+          {/* Labels */}
+          {data.labels && data.labels.length > 0 && (
+            <div className="flex flex-wrap gap-1 justify-center mt-2">
+              {data.labels.map((labelId) => {
+                const labelConfig = labels.find((l) => l.id === labelId);
+                if (!labelConfig) return null;
+                return (
+                  <LabelBadge
+                    key={labelId}
+                    name={labelConfig.name}
+                    color={labelConfig.color}
+                    maxWidth="80px"
+                    size="sm"
+                  />
+                );
+              })}
+            </div>
+          )}
         </div>
       </NodeShapeRenderer>
     </div>

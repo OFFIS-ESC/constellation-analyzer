@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useGraphWithHistory } from '../../hooks/useGraphWithHistory';
 import PropertyPanel from '../Common/PropertyPanel';
+import LabelSelector from '../Common/LabelSelector';
 import type { Relation } from '../../types';
 
 /**
@@ -22,6 +23,7 @@ const EdgePropertiesPanel = ({ selectedEdge, onClose }: Props) => {
   const { edgeTypes, updateEdge, deleteEdge } = useGraphWithHistory();
   const [relationType, setRelationType] = useState('');
   const [relationLabel, setRelationLabel] = useState('');
+  const [relationLabels, setRelationLabels] = useState<string[]>([]);
 
   useEffect(() => {
     if (selectedEdge && selectedEdge.data) {
@@ -30,6 +32,7 @@ const EdgePropertiesPanel = ({ selectedEdge, onClose }: Props) => {
       const typeLabel = edgeTypes.find((et) => et.id === selectedEdge.data?.type)?.label;
       const hasCustomLabel = selectedEdge.data.label && selectedEdge.data.label !== typeLabel;
       setRelationLabel((hasCustomLabel && selectedEdge.data.label) || '');
+      setRelationLabels(selectedEdge.data.labels || []);
     }
   }, [selectedEdge, edgeTypes]);
 
@@ -39,6 +42,7 @@ const EdgePropertiesPanel = ({ selectedEdge, onClose }: Props) => {
       type: relationType,
       // Only set label if user provided a custom one (not empty)
       label: relationLabel.trim() || undefined,
+      labels: relationLabels.length > 0 ? relationLabels : undefined,
     });
     onClose();
   };
@@ -119,6 +123,18 @@ const EdgePropertiesPanel = ({ selectedEdge, onClose }: Props) => {
         <p className="text-xs text-gray-500 mt-1">
           Leave empty to use default type label
         </p>
+      </div>
+
+      {/* Labels */}
+      <div>
+        <label className="block text-xs font-medium text-gray-700 mb-1">
+          Labels (optional)
+        </label>
+        <LabelSelector
+          value={relationLabels}
+          onChange={setRelationLabels}
+          scope="relations"
+        />
       </div>
 
       {/* Connection Info */}

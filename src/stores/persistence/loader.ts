@@ -1,4 +1,4 @@
-import type { Actor, Relation, NodeTypeConfig, EdgeTypeConfig } from '../../types';
+import type { Actor, Relation, NodeTypeConfig, EdgeTypeConfig, LabelConfig } from '../../types';
 import type { ConstellationDocument, SerializedActor, SerializedRelation } from './types';
 import { STORAGE_KEYS, SCHEMA_VERSION, APP_NAME } from './constants';
 
@@ -117,9 +117,10 @@ export function getCurrentGraphFromDocument(document: ConstellationDocument): {
   edges: SerializedRelation[];
   nodeTypes: NodeTypeConfig[];
   edgeTypes: EdgeTypeConfig[];
+  labels: LabelConfig[];
 } | null {
   try {
-    const { timeline, nodeTypes, edgeTypes } = document;
+    const { timeline, nodeTypes, edgeTypes, labels } = document;
     const currentState = timeline.states[timeline.currentStateId];
 
     if (!currentState || !currentState.graph) {
@@ -127,12 +128,13 @@ export function getCurrentGraphFromDocument(document: ConstellationDocument): {
       return null;
     }
 
-    // Combine state graph with document types
+    // Combine state graph with document types and labels
     return {
       nodes: currentState.graph.nodes,
       edges: currentState.graph.edges,
       nodeTypes,
       edgeTypes,
+      labels: labels || [],  // Default to empty array for backward compatibility
     };
   } catch (error) {
     console.error('Failed to get current graph from document:', error);
@@ -163,6 +165,7 @@ export function deserializeGraphState(document: ConstellationDocument): {
   edges: Relation[];
   nodeTypes: NodeTypeConfig[];
   edgeTypes: EdgeTypeConfig[];
+  labels: LabelConfig[];
 } | null {
   try {
     const currentGraph = getCurrentGraphFromDocument(document);
@@ -181,6 +184,7 @@ export function deserializeGraphState(document: ConstellationDocument): {
       edges,
       nodeTypes: migratedNodeTypes,
       edgeTypes: currentGraph.edgeTypes,
+      labels: currentGraph.labels || [],  // Default to empty array for backward compatibility
     };
   } catch (error) {
     console.error('Failed to deserialize graph state:', error);
@@ -194,6 +198,7 @@ export function loadGraphState(): {
   edges: Relation[];
   nodeTypes: NodeTypeConfig[];
   edgeTypes: EdgeTypeConfig[];
+  labels: LabelConfig[];
 } | null {
   const document = loadDocument();
 

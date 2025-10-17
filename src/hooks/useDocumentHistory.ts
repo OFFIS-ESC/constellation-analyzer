@@ -23,6 +23,7 @@ export function useDocumentHistory() {
 
   const setNodeTypes = useGraphStore((state) => state.setNodeTypes);
   const setEdgeTypes = useGraphStore((state) => state.setEdgeTypes);
+  const setLabels = useGraphStore((state) => state.setLabels);
 
   const historyStore = useHistoryStore();
 
@@ -63,7 +64,7 @@ export function useDocumentHistory() {
       }
 
       // Create a snapshot of the complete document state
-      // NOTE: Read types from the document, not from graphStore
+      // NOTE: Read types and labels from the document, not from graphStore
       const snapshot: DocumentSnapshot = {
         timeline: {
           states: new Map(timeline.states), // Clone the Map
@@ -72,6 +73,7 @@ export function useDocumentHistory() {
         },
         nodeTypes: activeDoc.nodeTypes,
         edgeTypes: activeDoc.edgeTypes,
+        labels: activeDoc.labels || [],
       };
 
       // Push to history
@@ -109,7 +111,7 @@ export function useDocumentHistory() {
       return;
     }
 
-    // NOTE: Read types from the document, not from graphStore
+    // NOTE: Read types and labels from the document, not from graphStore
     const currentSnapshot: DocumentSnapshot = {
       timeline: {
         states: new Map(timeline.states),
@@ -118,21 +120,24 @@ export function useDocumentHistory() {
       },
       nodeTypes: activeDoc.nodeTypes,
       edgeTypes: activeDoc.edgeTypes,
+      labels: activeDoc.labels || [],
     };
 
     const restoredState = historyStore.undo(activeDocumentId, currentSnapshot);
     if (restoredState) {
 
-      // Restore complete document state (timeline + types)
+      // Restore complete document state (timeline + types + labels)
       timelineStore.loadTimeline(activeDocumentId, restoredState.timeline);
 
-      // Update document's types (which will sync to graphStore via workspaceStore)
+      // Update document's types and labels (which will sync to graphStore via workspaceStore)
       activeDoc.nodeTypes = restoredState.nodeTypes;
       activeDoc.edgeTypes = restoredState.edgeTypes;
+      activeDoc.labels = restoredState.labels || [];
 
       // Sync to graph store
       setNodeTypes(restoredState.nodeTypes);
       setEdgeTypes(restoredState.edgeTypes);
+      setLabels(restoredState.labels || []);
 
       // Load the current state's graph from the restored timeline
       const currentState = restoredState.timeline.states.get(restoredState.timeline.currentStateId);
@@ -152,7 +157,7 @@ export function useDocumentHistory() {
         saveDocument(activeDocumentId);
       }, 1000);
     }
-  }, [activeDocumentId, historyStore, setNodeTypes, setEdgeTypes, markDocumentDirty]);
+  }, [activeDocumentId, historyStore, setNodeTypes, setEdgeTypes, setLabels, markDocumentDirty]);
 
   /**
    * Redo the last undone action for the active document
@@ -179,7 +184,7 @@ export function useDocumentHistory() {
       return;
     }
 
-    // NOTE: Read types from the document, not from graphStore
+    // NOTE: Read types and labels from the document, not from graphStore
     const currentSnapshot: DocumentSnapshot = {
       timeline: {
         states: new Map(timeline.states),
@@ -188,21 +193,24 @@ export function useDocumentHistory() {
       },
       nodeTypes: activeDoc.nodeTypes,
       edgeTypes: activeDoc.edgeTypes,
+      labels: activeDoc.labels || [],
     };
 
     const restoredState = historyStore.redo(activeDocumentId, currentSnapshot);
     if (restoredState) {
 
-      // Restore complete document state (timeline + types)
+      // Restore complete document state (timeline + types + labels)
       timelineStore.loadTimeline(activeDocumentId, restoredState.timeline);
 
-      // Update document's types (which will sync to graphStore via workspaceStore)
+      // Update document's types and labels (which will sync to graphStore via workspaceStore)
       activeDoc.nodeTypes = restoredState.nodeTypes;
       activeDoc.edgeTypes = restoredState.edgeTypes;
+      activeDoc.labels = restoredState.labels || [];
 
       // Sync to graph store
       setNodeTypes(restoredState.nodeTypes);
       setEdgeTypes(restoredState.edgeTypes);
+      setLabels(restoredState.labels || []);
 
       // Load the current state's graph from the restored timeline
       const currentState = restoredState.timeline.states.get(restoredState.timeline.currentStateId);
@@ -222,7 +230,7 @@ export function useDocumentHistory() {
         saveDocument(activeDocumentId);
       }, 1000);
     }
-  }, [activeDocumentId, historyStore, setNodeTypes, setEdgeTypes, markDocumentDirty]);
+  }, [activeDocumentId, historyStore, setNodeTypes, setEdgeTypes, setLabels, markDocumentDirty]);
 
   /**
    * Check if undo is available for the active document

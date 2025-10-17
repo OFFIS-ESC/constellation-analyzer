@@ -53,6 +53,7 @@ function pushDocumentHistory(documentId: string, description: string) {
     },
     nodeTypes: graphStore.nodeTypes,
     edgeTypes: graphStore.edgeTypes,
+    labels: graphStore.labels,
   };
 
   historyStore.pushAction(documentId, {

@@ -20,6 +20,7 @@ interface PanelState {
     history: boolean;
     addActors: boolean;
     relations: boolean;
+    labels: boolean;
     layout: boolean;
     view: boolean;
     search: boolean;
@@ -73,6 +74,7 @@ export const usePanelStore = create<PanelState>()(
         history: true,
         addActors: true,
         relations: true,
+        labels: false,
         layout: false,
         view: false,
         search: false,

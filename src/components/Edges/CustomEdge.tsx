@@ -8,6 +8,7 @@ import {
 import { useGraphStore } from '../../stores/graphStore';
 import { useSearchStore } from '../../stores/searchStore';
 import type { RelationData } from '../../types';
+import LabelBadge from '../Common/LabelBadge';
 
 /**
  * CustomEdge - Represents a relation between actors in the constellation graph
@@ -33,7 +34,8 @@ const CustomEdge = ({
   selected,
 }: EdgeProps<RelationData>) => {
   const edgeTypes = useGraphStore((state) => state.edgeTypes);
-  const { searchText, visibleRelationTypes } = useSearchStore();
+  const labels = useGraphStore((state) => state.labels);
+  const { searchText, selectedRelationTypes, selectedLabels } = useSearchStore();
 
   // Calculate the bezier path
   const [edgePath, labelX, labelY] = getBezierPath({
@@ -65,11 +67,23 @@ const CustomEdge = ({
 
   // Check if this edge matches the filter criteria
   const isMatch = useMemo(() => {
-    // Check type visibility
+    // Check relation type filter (POSITIVE: if types selected, edge must be one of them)
     const edgeType = data?.type || '';
-    const isTypeVisible = visibleRelationTypes[edgeType] !== false;
-    if (!isTypeVisible) {
-      return false;
+    if (selectedRelationTypes.length > 0) {
+      if (!selectedRelationTypes.includes(edgeType)) {
+        return false;
+      }
+    }
+
+    // Check label filter (POSITIVE: if labels selected, edge must have at least one)
+    if (selectedLabels.length > 0) {
+      const edgeLabels = data?.labels || [];
+      const hasSelectedLabel = edgeLabels.some((labelId) =>
+        selectedLabels.includes(labelId)
+      );
+      if (!hasSelectedLabel) {
+        return false;
+      }
     }
 
     // Check search text match
@@ -82,12 +96,13 @@ const CustomEdge = ({
     }
 
     return true;
-  }, [searchText, visibleRelationTypes, data?.type, data?.label, edgeTypeConfig?.label]);
+  }, [searchText, selectedRelationTypes, selectedLabels, data?.type, data?.label, data?.labels, edgeTypeConfig?.label]);
 
   // Determine if filters are active
   const hasActiveFilters =
     searchText.trim() !== '' ||
-    Object.values(visibleRelationTypes).some(v => v === false);
+    selectedRelationTypes.length > 0 ||
+    selectedLabels.length > 0;
 
   // Calculate opacity based on visibility
   const edgeOpacity = hasActiveFilters && !isMatch ? 0.2 : 1.0;
@@ -151,8 +166,8 @@ const CustomEdge = ({
         markerStart={markerStart}
       />
 
-      {/* Edge label - show custom or type default */}
-      {displayLabel && (
+      {/* Edge label - show custom or type default, plus labels */}
+      {(displayLabel || (data?.labels && data.labels.length > 0)) && (
         <EdgeLabelRenderer>
           <div
             style={{
@@ -163,7 +178,28 @@ const CustomEdge = ({
             }}
             className="bg-white px-2 py-1 rounded border border-gray-300 text-xs font-medium shadow-sm"
           >
-            <div style={{ color: edgeColor }}>{displayLabel}</div>
+            {displayLabel && (
+              <div style={{ color: edgeColor }} className="mb-1">
+                {displayLabel}
+              </div>
+            )}
+            {data?.labels && data.labels.length > 0 && (
+              <div className="flex flex-wrap gap-1 justify-center">
+                {data.labels.map((labelId) => {
+                  const labelConfig = labels.find((l) => l.id === labelId);
+                  if (!labelConfig) return null;
+                  return (
+                    <LabelBadge
+                      key={labelId}
+                      name={labelConfig.name}
+                      color={labelConfig.color}
+                      maxWidth="80px"
+                      size="sm"
+                    />
+                  );
+                })}
+              </div>
+            )}
           </div>
         </EdgeLabelRenderer>
       )}

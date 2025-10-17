@@ -1,5 +1,5 @@
 import type { ConstellationDocument } from '../persistence/types';
-import type { NodeTypeConfig, EdgeTypeConfig } from '../../types';
+import type { NodeTypeConfig, EdgeTypeConfig, LabelConfig } from '../../types';
 
 /**
  * Workspace Types
@@ -94,6 +94,11 @@ export interface WorkspaceActions {
   addEdgeTypeToDocument: (documentId: string, edgeType: EdgeTypeConfig) => void;
   updateEdgeTypeInDocument: (documentId: string, typeId: string, updates: Partial<Omit<EdgeTypeConfig, 'id'>>) => void;
   deleteEdgeTypeFromDocument: (documentId: string, typeId: string) => void;
+
+  // Label management (document-level)
+  addLabelToDocument: (documentId: string, label: LabelConfig) => void;
+  updateLabelInDocument: (documentId: string, labelId: string, updates: Partial<Omit<LabelConfig, 'id'>>) => void;
+  deleteLabelFromDocument: (documentId: string, labelId: string) => void;
 
   // Viewport operations
   saveViewport: (documentId: string, viewport: { x: number; y: number; zoom: number }) => void;

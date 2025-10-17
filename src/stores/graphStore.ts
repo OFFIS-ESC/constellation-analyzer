@@ -5,6 +5,7 @@ import type {
   Relation,
   NodeTypeConfig,
   EdgeTypeConfig,
+  LabelConfig,
   RelationData,
   GraphActions
 } from '../types';
@@ -29,6 +30,7 @@ interface GraphStore {
   edges: Relation[];
   nodeTypes: NodeTypeConfig[];
   edgeTypes: EdgeTypeConfig[];
+  labels: LabelConfig[];
 }
 
 // Default node types with semantic shape assignments
@@ -57,6 +59,7 @@ const loadInitialState = (): GraphStore => {
       edges: savedState.edges,
       nodeTypes: savedState.nodeTypes,
       edgeTypes: savedState.edgeTypes,
+      labels: savedState.labels || [],
     };
   }
 
@@ -65,6 +68,7 @@ const loadInitialState = (): GraphStore => {
     edges: [],
     nodeTypes: defaultNodeTypes,
     edgeTypes: defaultEdgeTypes,
+    labels: [],
   };
 };
 
@@ -75,6 +79,7 @@ export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
   edges: initialState.edges,
   nodeTypes: initialState.nodeTypes,
   edgeTypes: initialState.edgeTypes,
+  labels: initialState.labels,
 
   // Node operations
   addNode: (node: Actor) =>
@@ -83,17 +88,32 @@ export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
     })),
 
   updateNode: (id: string, updates: Partial<Actor>) =>
-    set((state) => ({
-      nodes: state.nodes.map((node) =>
-        node.id === id
-          ? {
-              ...node,
-              ...updates,
-              data: updates.data ? { ...node.data, ...updates.data } : node.data,
-            }
-          : node
-      ),
-    })),
+    set((state) => {
+      // Validate and filter labels if present
+      let validatedData = updates.data;
+      if (updates.data?.labels) {
+        const validLabelIds = new Set(state.labels.map((l) => l.id));
+        const filteredLabels = updates.data.labels.filter((labelId) =>
+          validLabelIds.has(labelId)
+        );
+        validatedData = {
+          ...updates.data,
+          labels: filteredLabels.length > 0 ? filteredLabels : undefined,
+        };
+      }
+
+      return {
+        nodes: state.nodes.map((node) =>
+          node.id === id
+            ? {
+                ...node,
+                ...updates,
+                data: validatedData ? { ...node.data, ...validatedData } : node.data,
+              }
+            : node
+        ),
+      };
+    }),
 
   deleteNode: (id: string) =>
     set((state) => ({
@@ -110,13 +130,28 @@ export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
     })),
 
   updateEdge: (id: string, data: Partial<RelationData>) =>
-    set((state) => ({
-      edges: state.edges.map((edge) =>
-        edge.id === id
-          ? { ...edge, data: { ...edge.data, ...data } as RelationData }
-          : edge
-      ),
-    })),
+    set((state) => {
+      // Validate and filter labels if present
+      let validatedData = data;
+      if (data.labels) {
+        const validLabelIds = new Set(state.labels.map((l) => l.id));
+        const filteredLabels = data.labels.filter((labelId) =>
+          validLabelIds.has(labelId)
+        );
+        validatedData = {
+          ...data,
+          labels: filteredLabels.length > 0 ? filteredLabels : undefined,
+        };
+      }
+
+      return {
+        edges: state.edges.map((edge) =>
+          edge.id === id
+            ? { ...edge, data: { ...edge.data, ...validatedData } as RelationData }
+            : edge
+        ),
+      };
+    }),
 
   deleteEdge: (id: string) =>
     set((state) => ({
@@ -159,6 +194,47 @@ export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
       edgeTypes: state.edgeTypes.filter((type) => type.id !== id),
     })),
 
+  // Label operations
+  addLabel: (label: LabelConfig) =>
+    set((state) => ({
+      labels: [...state.labels, label],
+    })),
+
+  updateLabel: (id: string, updates: Partial<Omit<LabelConfig, 'id'>>) =>
+    set((state) => ({
+      labels: state.labels.map((label) =>
+        label.id === id ? { ...label, ...updates } : label
+      ),
+    })),
+
+  deleteLabel: (id: string) =>
+    set((state) => {
+      // Remove label from all nodes and edges
+      const updatedNodes = state.nodes.map((node) => ({
+        ...node,
+        data: {
+          ...node.data,
+          labels: node.data.labels?.filter((labelId) => labelId !== id),
+        },
+      }));
+
+      const updatedEdges = state.edges.map((edge) => ({
+        ...edge,
+        data: edge.data
+          ? {
+              ...edge.data,
+              labels: edge.data.labels?.filter((labelId) => labelId !== id),
+            }
+          : edge.data,
+      }));
+
+      return {
+        labels: state.labels.filter((label) => label.id !== id),
+        nodes: updatedNodes,
+        edges: updatedEdges,
+      };
+    }),
+
   // Utility operations
   clearGraph: () =>
     set({
@@ -186,6 +262,11 @@ export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
       edgeTypes,
     }),
 
+  setLabels: (labels: LabelConfig[]) =>
+    set({
+      labels,
+    }),
+
   // NOTE: exportToFile and importFromFile have been removed
   // Import/export is now handled by the workspace-level system
   // See: workspaceStore.importDocumentFromFile() and workspaceStore.exportDocument()
@@ -196,5 +277,6 @@ export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
       edges: data.edges,
       nodeTypes: data.nodeTypes,
       edgeTypes: data.edgeTypes,
+      labels: data.labels || [],
     }),
 }));

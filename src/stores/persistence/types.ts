@@ -1,4 +1,4 @@
-import type { ActorData, RelationData, NodeTypeConfig, EdgeTypeConfig } from '../../types';
+import type { ActorData, RelationData, NodeTypeConfig, EdgeTypeConfig, LabelConfig } from '../../types';
 import type { ConstellationState } from '../../types/timeline';
 
 /**
@@ -42,6 +42,8 @@ export interface ConstellationDocument {
   // Global node and edge types for the entire document
   nodeTypes: NodeTypeConfig[];
   edgeTypes: EdgeTypeConfig[];
+  // Global labels for the entire document (optional for backward compatibility)
+  labels?: LabelConfig[];
   // Timeline with multiple states - every document has this
   // The graph is stored within each state (nodes and edges only, not types)
   timeline: {

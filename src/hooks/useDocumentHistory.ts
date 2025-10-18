@@ -1,4 +1,5 @@
 import { useCallback, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useHistoryStore } from '../stores/historyStore';
 import { useGraphStore } from '../stores/graphStore';
@@ -21,9 +22,7 @@ export function useDocumentHistory() {
   const activeDocumentId = useWorkspaceStore((state) => state.activeDocumentId);
   const markDocumentDirty = useWorkspaceStore((state) => state.markDocumentDirty);
 
-  const setNodeTypes = useGraphStore((state) => state.setNodeTypes);
-  const setEdgeTypes = useGraphStore((state) => state.setEdgeTypes);
-  const setLabels = useGraphStore((state) => state.setLabels);
+  const loadGraphState = useGraphStore((state) => state.loadGraphState);
 
   const historyStore = useHistoryStore();
 
@@ -61,6 +60,18 @@ export function useDocumentHistory() {
       if (!activeDoc) {
         console.warn('Active document not found');
         return;
+      }
+
+      // IMPORTANT: Update timeline's current state with graphStore BEFORE capturing snapshot
+      // This ensures the snapshot includes the current groups, nodes, and edges
+      const currentState = timeline.states.get(timeline.currentStateId);
+      if (currentState) {
+        const graphStore = useGraphStore.getState();
+        currentState.graph = {
+          nodes: graphStore.nodes as any,
+          edges: graphStore.edges as any,
+          groups: graphStore.groups as any,
+        };
       }
 
       // Create a snapshot of the complete document state
@@ -111,6 +122,18 @@ export function useDocumentHistory() {
       return;
     }
 
+    // IMPORTANT: Update timeline's current state with graphStore BEFORE capturing snapshot
+    // This ensures the snapshot includes the current groups
+    const currentState = timeline.states.get(timeline.currentStateId);
+    if (currentState) {
+      const graphStore = useGraphStore.getState();
+      currentState.graph = {
+        nodes: graphStore.nodes as any,
+        edges: graphStore.edges as any,
+        groups: graphStore.groups as any,
+      };
+    }
+
     // NOTE: Read types and labels from the document, not from graphStore
     const currentSnapshot: DocumentSnapshot = {
       timeline: {
@@ -134,17 +157,23 @@ export function useDocumentHistory() {
       activeDoc.edgeTypes = restoredState.edgeTypes;
       activeDoc.labels = restoredState.labels || [];
 
-      // Sync to graph store
-      setNodeTypes(restoredState.nodeTypes);
-      setEdgeTypes(restoredState.edgeTypes);
-      setLabels(restoredState.labels || []);
-
       // Load the current state's graph from the restored timeline
       const currentState = restoredState.timeline.states.get(restoredState.timeline.currentStateId);
       if (currentState) {
-        useGraphStore.setState({
-          nodes: currentState.graph.nodes,
-          edges: currentState.graph.edges,
+        // IMPORTANT: Use flushSync to force React to process the Zustand update immediately
+        // This prevents React Flow from processing stale state before the new state arrives
+        flushSync(() => {
+          // Use loadGraphState to update ALL graph state atomically in a single Zustand transaction
+          // This prevents React Flow from receiving intermediate state where nodes have
+          // parentId references but groups don't exist yet (which causes "Parent node not found")
+          loadGraphState({
+            nodes: currentState.graph.nodes,
+            edges: currentState.graph.edges,
+            groups: currentState.graph.groups || [],
+            nodeTypes: restoredState.nodeTypes,
+            edgeTypes: restoredState.edgeTypes,
+            labels: restoredState.labels || [],
+          });
         });
       }
 
@@ -157,7 +186,7 @@ export function useDocumentHistory() {
         saveDocument(activeDocumentId);
       }, 1000);
     }
-  }, [activeDocumentId, historyStore, setNodeTypes, setEdgeTypes, setLabels, markDocumentDirty]);
+  }, [activeDocumentId, historyStore, loadGraphState, markDocumentDirty]);
 
   /**
    * Redo the last undone action for the active document
@@ -184,6 +213,18 @@ export function useDocumentHistory() {
       return;
     }
 
+    // IMPORTANT: Update timeline's current state with graphStore BEFORE capturing snapshot
+    // This ensures the snapshot includes the current groups
+    const currentState = timeline.states.get(timeline.currentStateId);
+    if (currentState) {
+      const graphStore = useGraphStore.getState();
+      currentState.graph = {
+        nodes: graphStore.nodes as any,
+        edges: graphStore.edges as any,
+        groups: graphStore.groups as any,
+      };
+    }
+
     // NOTE: Read types and labels from the document, not from graphStore
     const currentSnapshot: DocumentSnapshot = {
       timeline: {
@@ -207,17 +248,23 @@ export function useDocumentHistory() {
       activeDoc.edgeTypes = restoredState.edgeTypes;
       activeDoc.labels = restoredState.labels || [];
 
-      // Sync to graph store
-      setNodeTypes(restoredState.nodeTypes);
-      setEdgeTypes(restoredState.edgeTypes);
-      setLabels(restoredState.labels || []);
-
       // Load the current state's graph from the restored timeline
       const currentState = restoredState.timeline.states.get(restoredState.timeline.currentStateId);
       if (currentState) {
-        useGraphStore.setState({
-          nodes: currentState.graph.nodes,
-          edges: currentState.graph.edges,
+        // IMPORTANT: Use flushSync to force React to process the Zustand update immediately
+        // This prevents React Flow from processing stale state before the new state arrives
+        flushSync(() => {
+          // Use loadGraphState to update ALL graph state atomically in a single Zustand transaction
+          // This prevents React Flow from receiving intermediate state where nodes have
+          // parentId references but groups don't exist yet (which causes "Parent node not found")
+          loadGraphState({
+            nodes: currentState.graph.nodes,
+            edges: currentState.graph.edges,
+            groups: currentState.graph.groups || [],
+            nodeTypes: restoredState.nodeTypes,
+            edgeTypes: restoredState.edgeTypes,
+            labels: restoredState.labels || [],
+          });
         });
       }
 
@@ -230,7 +277,7 @@ export function useDocumentHistory() {
         saveDocument(activeDocumentId);
       }, 1000);
     }
-  }, [activeDocumentId, historyStore, setNodeTypes, setEdgeTypes, setLabels, markDocumentDirty]);
+  }, [activeDocumentId, historyStore, loadGraphState, markDocumentDirty]);
 
   /**
    * Check if undo is available for the active document

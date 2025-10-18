@@ -1,4 +1,4 @@
-import type { SerializedActor, SerializedRelation } from '../stores/persistence/types';
+import type { SerializedActor, SerializedRelation, SerializedGroup } from '../stores/persistence/types';
 
 /**
  * Timeline Types
@@ -18,10 +18,11 @@ export interface ConstellationState {
   description?: string;       // Optional detailed description
   parentStateId?: string;     // Parent state (null/undefined = root state)
 
-  // Graph snapshot (nodes and edges only, types are global per document)
+  // Graph snapshot (nodes, edges, and groups - types are global per document)
   graph: {
     nodes: SerializedActor[];
     edges: SerializedRelation[];
+    groups?: SerializedGroup[];  // Optional for backward compatibility
   };
 
   // Optional metadata - users can use these or ignore them

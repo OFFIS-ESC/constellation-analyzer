@@ -1,6 +1,7 @@
-import type { Actor, Relation, NodeTypeConfig, EdgeTypeConfig, LabelConfig } from '../../types';
-import type { ConstellationDocument, SerializedActor, SerializedRelation } from './types';
+import type { Actor, Relation, Group, NodeTypeConfig, EdgeTypeConfig, LabelConfig } from '../../types';
+import type { ConstellationDocument, SerializedActor, SerializedRelation, SerializedGroup } from './types';
 import { STORAGE_KEYS, SCHEMA_VERSION, APP_NAME } from './constants';
+import { safeParse } from '../../utils/safeStringify';
 
 /**
  * Loader - Handles loading and validating data from localStorage
@@ -80,6 +81,16 @@ function deserializeRelations(serializedRelations: SerializedRelation[]): Relati
   })) as Relation[];
 }
 
+// Deserialize groups (add back React Flow properties and initialize transient UI state)
+function deserializeGroups(serializedGroups: SerializedGroup[]): Group[] {
+  return serializedGroups.map(group => ({
+    ...group,
+    // Initialize transient UI state (not persisted)
+    selected: false,
+    dragging: false,
+  })) as Group[];
+}
+
 // Load document from localStorage
 export function loadDocument(): ConstellationDocument | null {
   try {
@@ -90,7 +101,7 @@ export function loadDocument(): ConstellationDocument | null {
       return null;
     }
 
-    const parsed = JSON.parse(json);
+    const parsed = safeParse(json);
 
     if (!validateDocument(parsed)) {
       console.error('Invalid document structure');
@@ -115,6 +126,7 @@ export function loadDocument(): ConstellationDocument | null {
 export function getCurrentGraphFromDocument(document: ConstellationDocument): {
   nodes: SerializedActor[];
   edges: SerializedRelation[];
+  groups: SerializedGroup[];
   nodeTypes: NodeTypeConfig[];
   edgeTypes: EdgeTypeConfig[];
   labels: LabelConfig[];
@@ -132,6 +144,7 @@ export function getCurrentGraphFromDocument(document: ConstellationDocument): {
     return {
       nodes: currentState.graph.nodes,
       edges: currentState.graph.edges,
+      groups: currentState.graph.groups || [],  // Default to empty array for backward compatibility
       nodeTypes,
       edgeTypes,
       labels: labels || [],  // Default to empty array for backward compatibility
@@ -163,6 +176,7 @@ function migrateNodeTypes(nodeTypes: NodeTypeConfig[]): NodeTypeConfig[] {
 export function deserializeGraphState(document: ConstellationDocument): {
   nodes: Actor[];
   edges: Relation[];
+  groups: Group[];
   nodeTypes: NodeTypeConfig[];
   edgeTypes: EdgeTypeConfig[];
   labels: LabelConfig[];
@@ -175,6 +189,7 @@ export function deserializeGraphState(document: ConstellationDocument): {
 
     const nodes = deserializeActors(currentGraph.nodes);
     const edges = deserializeRelations(currentGraph.edges);
+    const groups = deserializeGroups(currentGraph.groups);
 
     // Migrate node types to include shape property
     const migratedNodeTypes = migrateNodeTypes(currentGraph.nodeTypes);
@@ -182,6 +197,7 @@ export function deserializeGraphState(document: ConstellationDocument): {
     return {
       nodes,
       edges,
+      groups,
       nodeTypes: migratedNodeTypes,
       edgeTypes: currentGraph.edgeTypes,
       labels: currentGraph.labels || [],  // Default to empty array for backward compatibility
@@ -196,6 +212,7 @@ export function deserializeGraphState(document: ConstellationDocument): {
 export function loadGraphState(): {
   nodes: Actor[];
   edges: Relation[];
+  groups: Group[];
   nodeTypes: NodeTypeConfig[];
   edgeTypes: EdgeTypeConfig[];
   labels: LabelConfig[];

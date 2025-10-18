@@ -5,8 +5,8 @@ import type {
   StateId,
   TimelineActions,
 } from "../types/timeline";
-import type { Actor, Relation } from "../types";
-import type { SerializedActor, SerializedRelation } from "./persistence/types";
+import type { Actor, Relation, Group } from "../types";
+import type { SerializedActor, SerializedRelation, SerializedGroup } from "./persistence/types";
 import { useGraphStore } from "./graphStore";
 import { useWorkspaceStore } from "./workspaceStore";
 import { useToastStore } from "./toastStore";
@@ -164,20 +164,22 @@ export const useTimelineStore = create<TimelineStore & TimelineActions>(
       const newStateId = generateStateId();
       const now = new Date().toISOString();
 
-      // Get graph to clone (nodes and edges only, types are global)
+      // Get graph to clone (nodes, edges, and groups - types are global)
       let graphToClone: ConstellationState["graph"];
       if (cloneFromCurrent) {
-        // Clone from current graph state (nodes and edges only)
+        // Clone from current graph state (nodes, edges, and groups)
         const graphStore = useGraphStore.getState();
         graphToClone = {
           nodes: graphStore.nodes as unknown as SerializedActor[],
           edges: graphStore.edges as unknown as SerializedRelation[],
+          groups: graphStore.groups as unknown as SerializedGroup[],
         };
       } else {
         // Empty graph
         graphToClone = {
           nodes: [],
           edges: [],
+          groups: [],
         };
       }
 
@@ -209,10 +211,15 @@ export const useTimelineStore = create<TimelineStore & TimelineActions>(
 
       // Load new state's graph into graph store
       // Types come from the document and are already in the graph store
-      useGraphStore.setState({
-        nodes: newState.graph.nodes,
-        edges: newState.graph.edges,
-        // nodeTypes and edgeTypes remain unchanged (they're global per document)
+      // IMPORTANT: Use loadGraphState for atomic update to prevent React Flow errors
+      const graphStore = useGraphStore.getState();
+      graphStore.loadGraphState({
+        nodes: newState.graph.nodes as unknown as Actor[],
+        edges: newState.graph.edges as unknown as Relation[],
+        groups: (newState.graph.groups || []) as unknown as Group[],
+        nodeTypes: graphStore.nodeTypes,
+        edgeTypes: graphStore.edgeTypes,
+        labels: graphStore.labels,
       });
 
       // Mark document as dirty
@@ -251,13 +258,14 @@ export const useTimelineStore = create<TimelineStore & TimelineActions>(
         pushDocumentHistory(activeDocumentId, `Switch to State: ${targetState.label}`);
       }
 
-      // Save current graph state to current state before switching (nodes and edges only)
+      // Save current graph state to current state before switching (nodes, edges, and groups)
       const currentState = timeline.states.get(timeline.currentStateId);
       if (currentState) {
         const graphStore = useGraphStore.getState();
         currentState.graph = {
           nodes: graphStore.nodes as unknown as SerializedActor[],
           edges: graphStore.edges as unknown as SerializedRelation[],
+          groups: graphStore.groups as unknown as SerializedGroup[],
         };
         currentState.updatedAt = new Date().toISOString();
       }
@@ -275,11 +283,16 @@ export const useTimelineStore = create<TimelineStore & TimelineActions>(
         return { timelines: newTimelines };
       });
 
-      // Load target state's graph (nodes and edges only, types are global)
-      useGraphStore.setState({
+      // Load target state's graph (nodes, edges, and groups - types are global)
+      // IMPORTANT: Use loadGraphState for atomic update to prevent React Flow errors
+      const graphStore = useGraphStore.getState();
+      graphStore.loadGraphState({
         nodes: targetState.graph.nodes as unknown as Actor[],
         edges: targetState.graph.edges as unknown as Relation[],
-        // nodeTypes and edgeTypes remain unchanged (they're global per document)
+        groups: (targetState.graph.groups || []) as unknown as Group[],
+        nodeTypes: graphStore.nodeTypes,
+        edgeTypes: graphStore.edgeTypes,
+        labels: graphStore.labels,
       });
     },
 

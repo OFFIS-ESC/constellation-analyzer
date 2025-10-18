@@ -5,8 +5,9 @@ import { usePanelStore } from '../../stores/panelStore';
 import { useGraphWithHistory } from '../../hooks/useGraphWithHistory';
 import NodeEditorPanel from './NodeEditorPanel';
 import EdgeEditorPanel from './EdgeEditorPanel';
+import GroupEditorPanel from './GroupEditorPanel';
 import GraphAnalysisPanel from './GraphAnalysisPanel';
-import type { Actor, Relation } from '../../types';
+import type { Actor, Relation, Group } from '../../types';
 
 /**
  * RightPanel - Context-aware properties panel on the right side
@@ -23,6 +24,7 @@ import type { Actor, Relation } from '../../types';
 interface Props {
   selectedNode: Actor | null;
   selectedEdge: Relation | null;
+  selectedGroup: Group | null;
   onClose: () => void;
 }
 
@@ -45,7 +47,7 @@ const PanelHeader = ({ title, onCollapse }: PanelHeaderProps) => (
   </div>
 );
 
-const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
+const RightPanel = ({ selectedNode, selectedEdge, selectedGroup, onClose }: Props) => {
   const {
     rightPanelCollapsed,
     rightPanelWidth,
@@ -68,15 +70,15 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
     );
   }
 
-  // No selection state - show graph metrics
-  if (!selectedNode && !selectedEdge) {
+  // Group properties view (priority over node/edge if group selected)
+  if (selectedGroup) {
     return (
       <div
         className="h-full bg-white border-l border-gray-200 flex flex-col"
         style={{ width: `${rightPanelWidth}px` }}
       >
-        <PanelHeader title="Graph Analysis" onCollapse={collapseRightPanel} />
-        <GraphAnalysisPanel nodes={nodes} edges={edges} />
+        <PanelHeader title="Group Properties" onCollapse={collapseRightPanel} />
+        <GroupEditorPanel selectedGroup={selectedGroup} onClose={onClose} />
       </div>
     );
   }
@@ -107,7 +109,16 @@ const RightPanel = ({ selectedNode, selectedEdge, onClose }: Props) => {
     );
   }
 
-  return null;
+  // No selection state - show graph metrics
+  return (
+    <div
+      className="h-full bg-white border-l border-gray-200 flex flex-col"
+      style={{ width: `${rightPanelWidth}px` }}
+    >
+      <PanelHeader title="Graph Analysis" onCollapse={collapseRightPanel} />
+      <GraphAnalysisPanel nodes={nodes} edges={edges} />
+    </div>
+  );
 };
 
 export default RightPanel;

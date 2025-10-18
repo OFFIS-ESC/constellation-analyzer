@@ -66,10 +66,22 @@ export interface LabelConfig {
   description?: string;
 }
 
+// Group Types
+export interface GroupData {
+  label: string;
+  description?: string;
+  color: string;
+  actorIds: string[];
+  metadata?: Record<string, unknown>;
+}
+
+export type Group = Node<GroupData>;
+
 // Graph State
 export interface GraphState {
   nodes: Actor[];
   edges: Relation[];
+  groups: Group[];
   nodeTypes: NodeTypeConfig[];
   edgeTypes: EdgeTypeConfig[];
   labels: LabelConfig[];
@@ -101,15 +113,21 @@ export interface GraphActions {
   addLabel: (label: LabelConfig) => void;
   updateLabel: (id: string, updates: Partial<Omit<LabelConfig, 'id'>>) => void;
   deleteLabel: (id: string) => void;
+  addGroup: (group: Group) => void;
+  updateGroup: (id: string, updates: Partial<GroupData>) => void;
+  deleteGroup: (id: string, ungroupActors?: boolean) => void;
+  addActorToGroup: (actorId: string, groupId: string) => void;
+  removeActorFromGroup: (actorId: string, groupId: string) => void;
   clearGraph: () => void;
   setNodes: (nodes: Actor[]) => void;
   setEdges: (edges: Relation[]) => void;
+  setGroups: (groups: Group[]) => void;
   setNodeTypes: (nodeTypes: NodeTypeConfig[]) => void;
   setEdgeTypes: (edgeTypes: EdgeTypeConfig[]) => void;
   setLabels: (labels: LabelConfig[]) => void;
   // NOTE: exportToFile and importFromFile have been removed
   // Import/export is now handled by the workspace-level system (workspaceStore)
-  loadGraphState: (data: { nodes: Actor[]; edges: Relation[]; nodeTypes: NodeTypeConfig[]; edgeTypes: EdgeTypeConfig[]; labels?: LabelConfig[] }) => void;
+  loadGraphState: (data: { nodes: Actor[]; edges: Relation[]; groups?: Group[]; nodeTypes: NodeTypeConfig[]; edgeTypes: EdgeTypeConfig[]; labels?: LabelConfig[] }) => void;
 }
 
 export interface EditorActions {

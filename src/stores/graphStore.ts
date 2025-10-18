@@ -3,10 +3,12 @@ import { addEdge as rfAddEdge } from 'reactflow';
 import type {
   Actor,
   Relation,
+  Group,
   NodeTypeConfig,
   EdgeTypeConfig,
   LabelConfig,
   RelationData,
+  GroupData,
   GraphActions
 } from '../types';
 import { loadGraphState } from './persistence/loader';
@@ -28,6 +30,7 @@ import { loadGraphState } from './persistence/loader';
 interface GraphStore {
   nodes: Actor[];
   edges: Relation[];
+  groups: Group[];
   nodeTypes: NodeTypeConfig[];
   edgeTypes: EdgeTypeConfig[];
   labels: LabelConfig[];
@@ -57,6 +60,7 @@ const loadInitialState = (): GraphStore => {
     return {
       nodes: savedState.nodes,
       edges: savedState.edges,
+      groups: savedState.groups || [],
       nodeTypes: savedState.nodeTypes,
       edgeTypes: savedState.edgeTypes,
       labels: savedState.labels || [],
@@ -66,6 +70,7 @@ const loadInitialState = (): GraphStore => {
   return {
     nodes: [],
     edges: [],
+    groups: [],
     nodeTypes: defaultNodeTypes,
     edgeTypes: defaultEdgeTypes,
     labels: [],
@@ -77,6 +82,7 @@ const initialState = loadInitialState();
 export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
   nodes: initialState.nodes,
   edges: initialState.edges,
+  groups: initialState.groups,
   nodeTypes: initialState.nodeTypes,
   edgeTypes: initialState.edgeTypes,
   labels: initialState.labels,
@@ -235,11 +241,134 @@ export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
       };
     }),
 
+  // Group operations
+  addGroup: (group: Group) =>
+    set((state) => ({
+      groups: [...state.groups, group],
+    })),
+
+  updateGroup: (id: string, updates: Partial<GroupData>) =>
+    set((state) => ({
+      groups: state.groups.map((group) =>
+        group.id === id
+          ? { ...group, data: { ...group.data, ...updates } }
+          : group
+      ),
+    })),
+
+  deleteGroup: (id: string, ungroupActors = true) =>
+    set((state) => {
+      if (ungroupActors) {
+        // Remove group and unparent actors (move them back to canvas)
+        // Note: parentId is a React Flow v11+ property for parent-child relationships
+        const updatedNodes = state.nodes.map((node) => {
+          const nodeWithParent = node as Actor & { parentId?: string; extent?: 'parent' };
+          return nodeWithParent.parentId === id
+            ? { ...node, parentId: undefined, extent: undefined }
+            : node;
+        });
+
+        return {
+          groups: state.groups.filter((group) => group.id !== id),
+          nodes: updatedNodes,
+        };
+      } else {
+        // Delete group AND all actors inside
+        const nodeWithParent = (node: Actor) => node as Actor & { parentId?: string };
+        const updatedNodes = state.nodes.filter((node) => nodeWithParent(node).parentId !== id);
+
+        // Delete all edges connected to deleted actors
+        const deletedNodeIds = new Set(
+          state.nodes.filter((node) => nodeWithParent(node).parentId === id).map((node) => node.id)
+        );
+        const updatedEdges = state.edges.filter(
+          (edge) => !deletedNodeIds.has(edge.source) && !deletedNodeIds.has(edge.target)
+        );
+
+        return {
+          groups: state.groups.filter((group) => group.id !== id),
+          nodes: updatedNodes,
+          edges: updatedEdges,
+        };
+      }
+    }),
+
+  addActorToGroup: (actorId: string, groupId: string) =>
+    set((state) => {
+      const group = state.groups.find((g) => g.id === groupId);
+      if (!group) return state;
+
+      // Update actor to be child of group
+      const updatedNodes = state.nodes.map((node) =>
+        node.id === actorId
+          ? {
+              ...node,
+              parentId: groupId,
+              extent: 'parent' as const,
+              // Convert to relative position (will be adjusted in component)
+              position: node.position,
+            }
+          : node
+      );
+
+      // Update group's actorIds
+      const updatedGroups = state.groups.map((g) =>
+        g.id === groupId
+          ? {
+              ...g,
+              data: {
+                ...g.data,
+                actorIds: [...g.data.actorIds, actorId],
+              },
+            }
+          : g
+      );
+
+      return {
+        nodes: updatedNodes,
+        groups: updatedGroups,
+      };
+    }),
+
+  removeActorFromGroup: (actorId: string, groupId: string) =>
+    set((state) => {
+      // Update actor to remove parent
+      const updatedNodes = state.nodes.map((node) =>
+        node.id === actorId
+          ? {
+              ...node,
+              parentId: undefined,
+              extent: undefined,
+              // Keep current position (will be adjusted in component)
+            }
+          : node
+      );
+
+      // Update group's actorIds
+      const updatedGroups = state.groups.map((g) =>
+        g.id === groupId
+          ? {
+              ...g,
+              data: {
+                ...g.data,
+                actorIds: g.data.actorIds.filter((id) => id !== actorId),
+              },
+            }
+          : g
+      );
+
+      return {
+        nodes: updatedNodes,
+        groups: updatedGroups,
+      };
+    }),
+
   // Utility operations
   clearGraph: () =>
     set({
       nodes: [],
       edges: [],
+      groups: [],
     }),
 
   setNodes: (nodes: Actor[]) =>
@@ -250,6 +379,11 @@ export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
   setEdges: (edges: Relation[]) =>
     set({
       edges,
+    }),
+
+  setGroups: (groups: Group[]) =>
+    set({
+      groups,
     }),
 
   setNodeTypes: (nodeTypes: NodeTypeConfig[]) =>
@@ -271,12 +405,30 @@ export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
   // Import/export is now handled by the workspace-level system
   // See: workspaceStore.importDocumentFromFile() and workspaceStore.exportDocument()
 
-  loadGraphState: (data) =>
+  loadGraphState: (data) => {
+    // Build set of valid group IDs to check for orphaned parentId references
+    const validGroupIds = new Set((data.groups || []).map((g) => g.id));
+
+    // Sanitize nodes - remove parentId if the referenced group doesn't exist
+    // This handles timeline states created before groups feature was implemented
+    const sanitizedNodes = data.nodes.map((node) => {
+      const nodeWithParent = node as Actor & { parentId?: string; extent?: 'parent' };
+      if (nodeWithParent.parentId && !validGroupIds.has(nodeWithParent.parentId)) {
+        // Remove orphaned parent reference
+        const { parentId, extent, ...cleanNode } = nodeWithParent;
+        return cleanNode as Actor;
+      }
+      return node;
+    });
+
+    // Atomic update: all state changes happen in a single set() call
     set({
-      nodes: data.nodes,
+      nodes: sanitizedNodes,
       edges: data.edges,
+      groups: data.groups || [],
       nodeTypes: data.nodeTypes,
       edgeTypes: data.edgeTypes,
       labels: data.labels || [],
-    }),
+    });
+  },
 }));

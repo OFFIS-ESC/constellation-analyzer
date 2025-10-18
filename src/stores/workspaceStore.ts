@@ -32,6 +32,7 @@ import { getCurrentGraphFromDocument } from './persistence/loader';
 // @ts-expect-error - citation.js doesn't have TypeScript definitions
 import { Cite } from '@citation-js/core';
 import type { CSLReference } from '../types/bibliography';
+import { needsStorageCleanup, cleanupAllStorage } from '../utils/cleanupStorage';
 
 /**
  * Workspace Store
@@ -60,6 +61,18 @@ const defaultSettings: WorkspaceSettings = {
 
 // Initialize workspace
 function initializeWorkspace(): Workspace {
+  // Check if storage cleanup is needed (remove __proto__ attributes)
+  if (needsStorageCleanup()) {
+    console.log('[Security] Cleaning up localStorage to remove __proto__ attributes...');
+    const { cleaned, errors } = cleanupAllStorage();
+    if (cleaned > 0) {
+      console.log(`[Security] ✓ Cleaned ${cleaned} items in localStorage`);
+    }
+    if (errors > 0) {
+      console.error(`[Security] ✗ ${errors} errors during cleanup`);
+    }
+  }
+
   // Check if migration is needed
   if (needsMigration()) {
     console.log('Migration needed, migrating legacy data...');

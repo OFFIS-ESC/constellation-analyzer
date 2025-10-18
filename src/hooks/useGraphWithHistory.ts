@@ -2,7 +2,7 @@ import { useCallback, useRef, useEffect } from 'react';
 import { useGraphStore } from '../stores/graphStore';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useDocumentHistory } from './useDocumentHistory';
-import type { Actor, Relation, NodeTypeConfig, EdgeTypeConfig, LabelConfig, RelationData } from '../types';
+import type { Actor, Relation, Group, NodeTypeConfig, EdgeTypeConfig, LabelConfig, RelationData, GroupData } from '../types';
 
 /**
  * useGraphWithHistory Hook
@@ -19,13 +19,14 @@ import type { Actor, Relation, NodeTypeConfig, EdgeTypeConfig, LabelConfig, Rela
  * History-tracked operations (saved to document-level history):
  * - Node operations: addNode, updateNode, deleteNode
  * - Edge operations: addEdge, updateEdge, deleteEdge
+ * - Group operations: addGroup, updateGroup, deleteGroup, addActorToGroup, removeActorFromGroup
  * - Type operations: addNodeType, updateNodeType, deleteNodeType, addEdgeType, updateEdgeType, deleteEdgeType
  * - Label operations: addLabel, updateLabel, deleteLabel
  * - Utility: clearGraph
  *
  * Read-only pass-through operations (no history):
- * - setNodes, setEdges, setLabels (used for bulk updates during undo/redo/document loading)
- * - nodes, edges, nodeTypes, edgeTypes, labels (state access)
+ * - setNodes, setEdges, setGroups, setLabels (used for bulk updates during undo/redo/document loading)
+ * - nodes, edges, groups, nodeTypes, edgeTypes, labels (state access)
  * - loadGraphState
  *
  * Usage:
@@ -338,6 +339,124 @@ export function useGraphWithHistory() {
     [activeDocumentId, graphStore, pushToHistory, deleteLabelFromDocument]
   );
 
+  // Group operations
+  const addGroup = useCallback(
+    (group: Group) => {
+      if (isRestoringRef.current) {
+        graphStore.addGroup(group);
+        return;
+      }
+      pushToHistory(`Create Group: ${group.data.label}`); // Synchronous push BEFORE mutation
+      graphStore.addGroup(group);
+    },
+    [graphStore, pushToHistory]
+  );
+
+  const updateGroup = useCallback(
+    (id: string, updates: Partial<GroupData>) => {
+      if (isRestoringRef.current) {
+        graphStore.updateGroup(id, updates);
+        return;
+      }
+      // Check if this is a position update (group move)
+      if ('collapsed' in updates) {
+        const group = graphStore.groups.find((g) => g.id === id);
+        pushToHistory(updates.collapsed ? `Collapse Group: ${group?.data.label}` : `Expand Group: ${group?.data.label}`);
+      } else if ('label' in updates) {
+        pushToHistory('Rename Group');
+      } else {
+        pushToHistory('Update Group');
+      }
+      graphStore.updateGroup(id, updates);
+    },
+    [graphStore, pushToHistory]
+  );
+
+  const deleteGroup = useCallback(
+    (id: string, ungroupActors = true) => {
+      if (isRestoringRef.current) {
+        graphStore.deleteGroup(id, ungroupActors);
+        return;
+      }
+      const group = graphStore.groups.find((g) => g.id === id);
+      pushToHistory(ungroupActors ? `Ungroup: ${group?.data.label}` : `Delete Group: ${group?.data.label}`);
+      graphStore.deleteGroup(id, ungroupActors);
+    },
+    [graphStore, pushToHistory]
+  );
+
+  const addActorToGroup = useCallback(
+    (actorId: string, groupId: string) => {
+      if (isRestoringRef.current) {
+        graphStore.addActorToGroup(actorId, groupId);
+        return;
+      }
+      const group = graphStore.groups.find((g) => g.id === groupId);
+      pushToHistory(`Add Actor to Group: ${group?.data.label}`);
+      graphStore.addActorToGroup(actorId, groupId);
+    },
+    [graphStore, pushToHistory]
+  );
+
+  const removeActorFromGroup = useCallback(
+    (actorId: string, groupId: string) => {
+      if (isRestoringRef.current) {
+        graphStore.removeActorFromGroup(actorId, groupId);
+        return;
+      }
+      const group = graphStore.groups.find((g) => g.id === groupId);
+      pushToHistory(`Remove Actor from Group: ${group?.data.label}`);
+      graphStore.removeActorFromGroup(actorId, groupId);
+    },
+    [graphStore, pushToHistory]
+  );
+
+  /**
+   * createGroupWithActors - Atomic operation to create a group and add actors to it
+   *
+   * This operation ensures that both the group creation and the actor parent relationship
+   * updates are captured in a single history snapshot. This prevents the "Parent node not found"
+   * error that occurs when these are tracked as separate operations.
+   *
+   * @param group - The group node to create
+   * @param actorIds - Array of actor IDs to add to the group
+   * @param actorUpdates - Map of actorId -> position/parentId updates for each actor
+   */
+  const createGroupWithActors = useCallback(
+    (
+      group: Group,
+      _actorIds: string[],
+      actorUpdates: Record<string, { position: { x: number; y: number }; parentId: string; extent: 'parent' }>
+    ) => {
+      if (isRestoringRef.current) {
+        graphStore.addGroup(group);
+        const updatedNodes = graphStore.nodes.map((node) => {
+          const update = actorUpdates[node.id];
+          return update ? { ...node, ...update } : node;
+        });
+        graphStore.setNodes(updatedNodes as Actor[]);
+        return;
+      }
+
+      // Add the group first
+      graphStore.addGroup(group);
+
+      // Update actors to be children of the group
+      const updatedNodes = graphStore.nodes.map((node) => {
+        const update = actorUpdates[node.id];
+        return update ? { ...node, ...update } : node;
+      });
+
+      // Update nodes in store
+      graphStore.setNodes(updatedNodes as Actor[]);
+
+      // Push history AFTER all changes are complete
+      // This ensures the timeline state snapshot includes the new group
+      pushToHistory(`Create Group: ${group.data.label}`);
+    },
+    [graphStore, pushToHistory]
+  );
+
   return {
     // Wrapped operations with history
     addNode,
@@ -346,6 +465,12 @@ export function useGraphWithHistory() {
     addEdge,
     updateEdge,
     deleteEdge,
+    addGroup,
+    updateGroup,
+    deleteGroup,
+    addActorToGroup,
+    removeActorFromGroup,
+    createGroupWithActors,
     addNodeType,
     updateNodeType,
     deleteNodeType,
@@ -360,11 +485,13 @@ export function useGraphWithHistory() {
     // Pass through read-only operations
     nodes: graphStore.nodes,
     edges: graphStore.edges,
+    groups: graphStore.groups,
     nodeTypes: graphStore.nodeTypes,
     edgeTypes: graphStore.edgeTypes,
     labels: graphStore.labels,
     setNodes: graphStore.setNodes,
     setEdges: graphStore.setEdges,
+    setGroups: graphStore.setGroups,
     setNodeTypes: graphStore.setNodeTypes,
     setEdgeTypes: graphStore.setEdgeTypes,
     setLabels: graphStore.setLabels,

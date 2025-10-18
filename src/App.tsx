@@ -15,7 +15,7 @@ import { useDocumentHistory } from "./hooks/useDocumentHistory";
 import { useWorkspaceStore } from "./stores/workspaceStore";
 import { usePanelStore } from "./stores/panelStore";
 import { useCreateDocument } from "./hooks/useCreateDocument";
-import type { Actor, Relation } from "./types";
+import type { Actor, Relation, Group } from "./types";
 import type { ExportOptions } from "./utils/graphExport";
 
 /**
@@ -49,6 +49,7 @@ function AppContent() {
   const leftPanelRef = useRef<LeftPanelRef>(null);
   const [selectedNode, setSelectedNode] = useState<Actor | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<Relation | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   // Use refs for callbacks to avoid triggering re-renders
   const addNodeCallbackRef = useRef<
     ((nodeTypeId: string, position?: { x: number; y: number }) => void) | null
@@ -91,17 +92,18 @@ function AppContent() {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Escape: Close property panels
       if (e.key === "Escape") {
-        if (selectedNode || selectedEdge) {
+        if (selectedNode || selectedEdge || selectedGroup) {
           e.preventDefault();
           setSelectedNode(null);
           setSelectedEdge(null);
+          setSelectedGroup(null);
         }
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedNode, selectedEdge]);
+  }, [selectedNode, selectedEdge, selectedGroup]);
 
   return (
     <div className="flex flex-col h-screen bg-gray-100">
@@ -143,6 +145,7 @@ function AppContent() {
               onDeselectAll={() => {
                 setSelectedNode(null);
                 setSelectedEdge(null);
+                setSelectedGroup(null);
               }}
               onAddNode={addNodeCallbackRef.current || undefined}
             />
@@ -153,18 +156,29 @@ function AppContent() {
             <GraphEditor
               selectedNode={selectedNode}
               selectedEdge={selectedEdge}
+              selectedGroup={selectedGroup}
               onNodeSelect={(node) => {
                 setSelectedNode(node);
-                // Only clear edge if we're setting a node (not clearing)
+                // Only clear others if we're setting a node (not clearing)
                 if (node) {
                   setSelectedEdge(null);
+                  setSelectedGroup(null);
                 }
               }}
               onEdgeSelect={(edge) => {
                 setSelectedEdge(edge);
-                // Only clear node if we're setting an edge (not clearing)
+                // Only clear others if we're setting an edge (not clearing)
                 if (edge) {
                   setSelectedNode(null);
+                  setSelectedGroup(null);
+                }
+              }}
+              onGroupSelect={(group) => {
+                setSelectedGroup(group);
+                // Only clear others if we're setting a group (not clearing)
+                if (group) {
+                  setSelectedNode(null);
+                  setSelectedEdge(null);
                 }
               }}
               onAddNodeRequest={(
@@ -191,9 +205,11 @@ function AppContent() {
             <RightPanel
               selectedNode={selectedNode}
               selectedEdge={selectedEdge}
+              selectedGroup={selectedGroup}
               onClose={() => {
                 setSelectedNode(null);
                 setSelectedEdge(null);
+                setSelectedGroup(null);
               }}
             />
           )}

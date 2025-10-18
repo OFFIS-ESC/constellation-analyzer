@@ -1,6 +1,7 @@
 import type { ConstellationDocument } from '../persistence/types';
 import type { WorkspaceState, DocumentMetadata } from './types';
 import { validateDocument } from '../persistence/loader';
+import { safeStringify, safeParse } from '../../utils/safeStringify';
 
 /**
  * Workspace Persistence
@@ -34,7 +35,7 @@ export function saveWorkspaceState(state: WorkspaceState): boolean {
   try {
     localStorage.setItem(
       WORKSPACE_STORAGE_KEYS.WORKSPACE_STATE,
-      JSON.stringify(state)
+      safeStringify(state)
     );
     return true;
   } catch (error) {
@@ -49,7 +50,7 @@ export function loadWorkspaceState(): WorkspaceState | null {
     const json = localStorage.getItem(WORKSPACE_STORAGE_KEYS.WORKSPACE_STATE);
     if (!json) return null;
 
-    const state = JSON.parse(json) as WorkspaceState;
+    const state = safeParse<WorkspaceState>(json);
     return state;
   } catch (error) {
     console.error('Failed to load workspace state:', error);
@@ -64,7 +65,7 @@ export function saveDocumentToStorage(
 ): boolean {
   try {
     const key = `${WORKSPACE_STORAGE_KEYS.DOCUMENT_PREFIX}${documentId}`;
-    localStorage.setItem(key, JSON.stringify(document));
+    localStorage.setItem(key, safeStringify(document));
     return true;
   } catch (error) {
     console.error(`Failed to save document ${documentId}:`, error);
@@ -79,7 +80,7 @@ export function loadDocumentFromStorage(documentId: string): ConstellationDocume
     const json = localStorage.getItem(key);
     if (!json) return null;
 
-    const doc = JSON.parse(json);
+    const doc = safeParse(json);
 
     // Validate document structure
     if (!validateDocument(doc)) {
@@ -116,7 +117,7 @@ export function saveDocumentMetadata(
 ): boolean {
   try {
     const key = `${WORKSPACE_STORAGE_KEYS.DOCUMENT_METADATA_PREFIX}${documentId}`;
-    localStorage.setItem(key, JSON.stringify(metadata));
+    localStorage.setItem(key, safeStringify(metadata));
     return true;
   } catch (error) {
     console.error(`Failed to save metadata for ${documentId}:`, error);
@@ -131,7 +132,7 @@ export function loadDocumentMetadata(documentId: string): DocumentMetadata | nul
     const json = localStorage.getItem(key);
     if (!json) return null;
 
-    return JSON.parse(json) as DocumentMetadata;
+    return safeParse<DocumentMetadata>(json);
   } catch (error) {
     console.error(`Failed to load metadata for ${documentId}:`, error);
     return null;

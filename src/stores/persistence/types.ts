@@ -1,4 +1,4 @@
-import type { ActorData, RelationData, NodeTypeConfig, EdgeTypeConfig, LabelConfig } from '../../types';
+import type { ActorData, RelationData, GroupData, NodeTypeConfig, EdgeTypeConfig, LabelConfig } from '../../types';
 import type { ConstellationState } from '../../types/timeline';
 import type { Bibliography } from '../../types/bibliography';
 
@@ -14,6 +14,8 @@ export interface SerializedActor {
   type: string;  // React Flow node type (e.g., "custom")
   position: { x: number; y: number };
   data: ActorData;
+  parentNode?: string;  // Group ID if actor belongs to a group
+  extent?: 'parent';
 }
 
 // Simplified edge structure for storage (without React Flow internals)
@@ -25,6 +27,16 @@ export interface SerializedRelation {
   data?: RelationData;
   sourceHandle?: string | null;
   targetHandle?: string | null;
+}
+
+// Simplified group structure for storage (without React Flow internals)
+export interface SerializedGroup {
+  id: string;
+  type: 'group';  // React Flow node type
+  position: { x: number; y: number };
+  data: GroupData;
+  width?: number;
+  height?: number;
 }
 
 // Complete document structure for storage

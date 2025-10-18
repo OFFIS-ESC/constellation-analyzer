@@ -30,22 +30,27 @@ import { useActiveDocument } from "../../stores/workspace/useActiveDocument";
 import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { useCreateDocument } from "../../hooks/useCreateDocument";
 import CustomNode from "../Nodes/CustomNode";
+import GroupNode from "../Nodes/GroupNode";
 import CustomEdge from "../Edges/CustomEdge";
 import ContextMenu from "./ContextMenu";
 import EmptyState from "../Common/EmptyState";
 import { createNode } from "../../utils/nodeUtils";
 import DeleteIcon from "@mui/icons-material/Delete";
+import GroupWorkIcon from "@mui/icons-material/GroupWork";
+import UngroupIcon from "@mui/icons-material/CallSplit";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useGraphExport } from "../../hooks/useGraphExport";
 import type { ExportOptions } from "../../utils/graphExport";
 
-import type { Actor, Relation } from "../../types";
+import type { Actor, Relation, Group, GroupData } from "../../types";
 
 interface GraphEditorProps {
   selectedNode: Actor | null;
   selectedEdge: Relation | null;
+  selectedGroup: Group | null;
   onNodeSelect: (node: Actor | null) => void;
   onEdgeSelect: (edge: Relation | null) => void;
+  onGroupSelect: (group: Group | null) => void;
   onAddNodeRequest?: (callback: (nodeTypeId: string, position?: { x: number; y: number }) => void) => void;
   onExportRequest?: (callback: (format: 'png' | 'svg', options?: ExportOptions) => Promise<void>) => void;
 }
@@ -63,7 +68,7 @@ interface GraphEditorProps {
  *
  * Usage: Core component that wraps React Flow with custom nodes and edges
  */
-const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest, onExportRequest }: GraphEditorProps) => {
+const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onAddNodeRequest, onExportRequest }: GraphEditorProps) => {
   // Sync with workspace active document
   const { activeDocumentId } = useActiveDocument();
   const { saveViewport, getViewport } = useWorkspaceStore();
@@ -75,14 +80,18 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest, onExportReq
   const {
     nodes: storeNodes,
     edges: storeEdges,
+    groups: storeGroups,
     nodeTypes: nodeTypeConfigs,
     edgeTypes: edgeTypeConfigs,
     setNodes,
     setEdges,
+    setGroups,
     addEdge: addEdgeWithHistory,
     addNode: addNodeWithHistory,
+    createGroupWithActors,
     deleteNode,
     deleteEdge,
+    deleteGroup,
   } = useGraphWithHistory();
 
   const { pushToHistory } = useDocumentHistory();
@@ -122,9 +131,13 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest, onExportReq
   const { confirm, ConfirmDialogComponent } = useConfirm();
 
   // React Flow state (synchronized with store)
-  const [nodes, setNodesState, onNodesChange] = useNodesState(
-    storeNodes as Node[],
-  );
+  // Combine regular nodes and group nodes for ReactFlow
+  // IMPORTANT: Parent nodes (groups) MUST appear BEFORE child nodes for React Flow to process correctly
+  const allNodes = useMemo(() => {
+    return [...(storeGroups as Node[]), ...(storeNodes as Node[])];
+  }, [storeNodes, storeGroups]);
+
+  const [nodes, setNodesState, onNodesChange] = useNodesState(allNodes);
   const [edges, setEdgesState, onEdgesChange] = useEdgesState(
     storeEdges as Edge[],
   );
@@ -132,8 +145,11 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest, onExportReq
   // Track if a drag is in progress to capture state before drag
   const dragInProgressRef = useRef(false);
 
+  // Track if a resize is in progress to avoid sync loops
+  const resizeInProgressRef = useRef(false);
+
   // Track pending selection (ID of item to select after next sync)
-  const pendingSelectionRef = useRef<{ type: 'node' | 'edge', id: string } | null>(null);
+  const pendingSelectionRef = useRef<{ type: 'node' | 'edge' | 'group', id: string } | null>(null);
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
@@ -150,27 +166,28 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest, onExportReq
     const pendingType = pendingSelectionRef.current?.type;
     const pendingId = pendingSelectionRef.current?.id;
 
-    setNodesState((currentNodes) => {
-      // If we have a pending selection, deselect all nodes (or select the new node)
-      if (hasPendingSelection) {
-        const pendingNodeId = pendingType === 'node' ? pendingId : null;
+    // IMPORTANT: Directly set the nodes array to avoid React Flow processing intermediate states
+    // Using setNodesState with a callback can cause React Flow to process stale state
+    if (hasPendingSelection) {
+      const pendingNodeId = pendingType === 'node' || pendingType === 'group' ? pendingId : null;
 
-        return (storeNodes as Node[]).map((node) => ({
-          ...node,
-          selected: node.id === pendingNodeId,
-        }));
-      }
-
-      // Otherwise, preserve existing selection state
-      const selectionMap = new Map(
-        currentNodes.map((node) => [node.id, node.selected])
-      );
-
-      return (storeNodes as Node[]).map((node) => ({
+      setNodesState(allNodes.map((node) => ({
         ...node,
-        selected: selectionMap.get(node.id) || false,
-      }));
-    });
+        selected: node.id === pendingNodeId,
+      })));
+    } else {
+      // Preserve existing selection state
+      setNodesState((currentNodes) => {
+        const selectionMap = new Map(
+          currentNodes.map((node) => [node.id, node.selected])
+        );
+
+        return allNodes.map((node) => ({
+          ...node,
+          selected: selectionMap.get(node.id) || false,
+        }));
+      });
+    }
 
     setEdgesState((currentEdges) => {
       // If we have a pending selection, deselect all edges (or select the new edge)
@@ -198,7 +215,7 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest, onExportReq
         selected: selectionMap.get(edge.id) || false,
       }));
     });
-  }, [storeNodes, storeEdges, setNodesState, setEdgesState]);
+  }, [allNodes, storeEdges, setNodesState, setEdgesState]);
 
   // Save viewport when switching documents and restore viewport for new document
   useEffect(() => {
@@ -364,25 +381,36 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest, onExportReq
       nodes: Node[];
       edges: Edge[];
     }) => {
-      // If a node is selected, notify parent
+      // If a single node is selected
       if (selectedNodes.length == 1) {
-        const selectedNode = selectedNodes[0] as Actor;
-        onNodeSelect(selectedNode);
-        // Don't call onEdgeSelect - parent will handle clearing edge selection
+        const selectedItem = selectedNodes[0];
+
+        // Check if it's a group (type === 'group')
+        if (selectedItem.type === 'group') {
+          const selectedGroup = selectedItem as Group;
+          onGroupSelect(selectedGroup);
+          // Don't call others - parent will handle clearing
+        } else {
+          // It's a regular actor node
+          const selectedNode = selectedItem as Actor;
+          onNodeSelect(selectedNode);
+          // Don't call others - parent will handle clearing
+        }
       }
       // If an edge is selected, notify parent
       else if (selectedEdges.length == 1) {
         const selectedEdge = selectedEdges[0] as Relation;
         onEdgeSelect(selectedEdge);
-        // Don't call onNodeSelect - parent will handle clearing node selection
+        // Don't call others - parent will handle clearing
       }
       // Nothing selected
       else {
         onNodeSelect(null);
         onEdgeSelect(null);
+        onGroupSelect(null);
       }
     },
-    [onNodeSelect, onEdgeSelect],
+    [onNodeSelect, onEdgeSelect, onGroupSelect],
   );
 
   // Register the selection change handler with ReactFlow
@@ -410,6 +438,20 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest, onExportReq
         pushToHistory("Move Actor");
       }
 
+      // Check if a resize operation just started (resizing: true)
+      const resizeStartChanges = changes.filter(
+        (change) =>
+          change.type === "dimensions" &&
+          "resizing" in change &&
+          change.resizing === true,
+      );
+
+      // Capture state BEFORE the resize operation begins
+      if (resizeStartChanges.length > 0 && !resizeInProgressRef.current) {
+        resizeInProgressRef.current = true;
+        pushToHistory("Resize Group");
+      }
+
       // Apply the changes
       onNodesChange(changes);
 
@@ -421,6 +463,14 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest, onExportReq
           change.dragging === false,
       );
 
+      // Check if any resize operation just completed (resizing: false)
+      const resizeEndChanges = changes.filter(
+        (change) =>
+          change.type === "dimensions" &&
+          "resizing" in change &&
+          change.resizing === false,
+      );
+
       // If a drag just ended, sync to store
       if (dragEndChanges.length > 0) {
         dragInProgressRef.current = false;
@@ -428,29 +478,54 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest, onExportReq
         setTimeout(() => {
           // Sync to store - use callback to get fresh state
           setNodesState((currentNodes) => {
-            setNodes(currentNodes as Actor[]);
+            // Filter out groups - they're stored separately
+            const actorNodes = currentNodes.filter((node) => node.type !== 'group');
+            setNodes(actorNodes as Actor[]);
             return currentNodes;
           });
         }, 0);
-      } else {
-        // For non-drag changes (dimension, etc), just sync to store
+      }
+
+      // If a resize just ended, sync to store
+      if (resizeEndChanges.length > 0) {
+        resizeInProgressRef.current = false;
+        setTimeout(() => {
+          setNodesState((currentNodes) => {
+            // Sync groups (which can be resized) to store
+            const groupNodes = currentNodes.filter((node) => node.type === 'group');
+            const actorNodes = currentNodes.filter((node) => node.type !== 'group');
+
+            // Update groups in store with new dimensions
+            setGroups(groupNodes as Group[]);
+            setNodes(actorNodes as Actor[]);
+
+            return currentNodes;
+          });
+        }, 0);
+      }
+
+      // For other non-drag, non-resize changes, DON'T sync during drag/resize
+      if (!dragInProgressRef.current && !resizeInProgressRef.current) {
         const hasNonSelectionChanges = changes.some(
           (change) =>
             change.type !== "select" &&
             change.type !== "remove" &&
-            change.type !== "position",
+            change.type !== "position" &&
+            change.type !== "dimensions",
         );
         if (hasNonSelectionChanges) {
           setTimeout(() => {
             setNodesState((currentNodes) => {
-              setNodes(currentNodes as Actor[]);
+              // Filter out groups - they're stored separately
+              const actorNodes = currentNodes.filter((node) => node.type !== 'group');
+              setNodes(actorNodes as Actor[]);
               return currentNodes;
             });
           }, 0);
         }
       }
     },
-    [onNodesChange, setNodesState, setNodes, pushToHistory],
+    [onNodesChange, setNodesState, setNodes, setGroups, pushToHistory],
   );
 
   const handleEdgesChange = useCallback(
@@ -542,6 +617,7 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest, onExportReq
   const nodeTypes: NodeTypes = useMemo(
     () => ({
       custom: CustomNode,
+      group: GroupNode,
     }),
     [],
   );
@@ -693,6 +769,73 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest, onExportReq
     [contextMenu, screenToFlowPosition, handleAddNode],
   );
 
+  // Create group from selected nodes
+  const handleCreateGroupFromSelection = useCallback(() => {
+    const selectedActorNodes = nodes.filter((node) => node.selected && node.type !== 'group') as Actor[];
+
+    if (selectedActorNodes.length < 2) {
+      return; // Need at least 2 nodes to create a group
+    }
+
+    // Calculate bounding box of selected nodes
+    const minX = Math.min(...selectedActorNodes.map((n) => n.position.x));
+    const minY = Math.min(...selectedActorNodes.map((n) => n.position.y));
+    const maxX = Math.max(...selectedActorNodes.map((n) => n.position.x + (n.width || 150)));
+    const maxY = Math.max(...selectedActorNodes.map((n) => n.position.y + (n.height || 100)));
+
+    // Add padding
+    const padding = 40;
+    const groupPosition = {
+      x: minX - padding,
+      y: minY - padding,
+    };
+    const groupWidth = maxX - minX + padding * 2;
+    const groupHeight = maxY - minY + padding * 2;
+
+    // Create group ID
+    const groupId = `group_${Date.now()}`;
+
+    // Create group data
+    const groupData: GroupData = {
+      label: `Group ${storeGroups.length + 1}`,
+      color: 'rgba(240, 242, 245, 0.5)', // Default gray - matches CSS
+      actorIds: selectedActorNodes.map((n) => n.id),
+    };
+
+    // Create group node
+    const newGroup: Group = {
+      id: groupId,
+      type: 'group',
+      position: groupPosition,
+      data: groupData,
+      style: {
+        width: groupWidth,
+        height: groupHeight,
+      },
+    };
+
+    // Build actor updates map (relative positions and parent relationship)
+    const actorUpdates: Record<string, { position: { x: number; y: number }; parentId: string; extent: 'parent' }> = {};
+    selectedActorNodes.forEach((node) => {
+      actorUpdates[node.id] = {
+        position: {
+          x: node.position.x - groupPosition.x,
+          y: node.position.y - groupPosition.y,
+        },
+        parentId: groupId,
+        extent: 'parent' as const,
+      };
+    });
+
+    // Use atomic operation to create group and update actors in a single history snapshot
+    createGroupWithActors(newGroup, selectedActorNodes.map((n) => n.id), actorUpdates);
+
+    // Select the new group
+    pendingSelectionRef.current = { type: 'group', id: groupId };
+
+    setContextMenu(null);
+  }, [nodes, storeGroups, createGroupWithActors]);
+
   // Show empty state when no document is active
   if (!activeDocumentId) {
     return (
@@ -786,36 +929,100 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onAddNodeRequest, onExportReq
       )}
 
       {/* Context Menu - Node */}
-      {contextMenu && contextMenu.type === "node" && contextMenu.target && (
-        <ContextMenu
-          x={contextMenu.x}
-          y={contextMenu.y}
-          sections={[
-            {
+      {contextMenu && contextMenu.type === "node" && contextMenu.target && (() => {
+        const targetNode = contextMenu.target as Node;
+        const isGroup = targetNode.type === 'group';
+
+        // Calculate how many actor nodes are selected (exclude groups)
+        const selectedActorNodes = nodes.filter((node) => node.selected && node.type !== 'group');
+        const canCreateGroup = selectedActorNodes.length >= 2;
+
+        const sections = [];
+
+        // If it's a group node, show "Ungroup" option
+        if (isGroup) {
+          const groupNode = targetNode as Group;
+          sections.push({
+            actions: [
+              {
+                label: "Ungroup",
+                icon: <UngroupIcon fontSize="small" />,
+                onClick: async () => {
+                  const confirmed = await confirm({
+                    title: "Ungroup Actors",
+                    message: `Ungroup "${groupNode.data.label}"? All ${groupNode.data.actorIds.length} actors will be moved back to the canvas.`,
+                    confirmLabel: "Ungroup",
+                    severity: "info",
+                  });
+                  if (confirmed) {
+                    deleteGroup(groupNode.id, true); // true = ungroup (non-destructive)
+                    setContextMenu(null);
+                  }
+                },
+              },
+            ],
+          });
+        } else {
+          // For regular actor nodes, add "Create Group" option if multiple nodes are selected
+          if (canCreateGroup) {
+            sections.push({
               actions: [
                 {
-                  label: "Delete",
-                  icon: <DeleteIcon fontSize="small" />,
-                  onClick: async () => {
-                    const confirmed = await confirm({
-                      title: "Delete Actor",
-                      message:
-                        "Are you sure you want to delete this actor? All connected relations will also be deleted.",
-                      confirmLabel: "Delete",
-                      severity: "danger",
-                    });
-                    if (confirmed) {
-                      deleteNode(contextMenu.target!.id);
-                      setContextMenu(null);
-                    }
-                  },
+                  label: `Create Group (${selectedActorNodes.length} actors)`,
+                  icon: <GroupWorkIcon fontSize="small" />,
+                  onClick: handleCreateGroupFromSelection,
                 },
               ],
+            });
+          }
+        }
+
+        // Add "Delete" option (for both groups and actors)
+        sections.push({
+          actions: [
+            {
+              label: isGroup ? "Delete Group & Actors" : "Delete",
+              icon: <DeleteIcon fontSize="small" />,
+              onClick: async () => {
+                if (isGroup) {
+                  const groupNode = targetNode as Group;
+                  const confirmed = await confirm({
+                    title: "Delete Group and Actors",
+                    message: `Delete "${groupNode.data.label}" AND all ${groupNode.data.actorIds.length} actors inside? This will also delete all connected relations. This action cannot be undone.`,
+                    confirmLabel: "Delete",
+                    severity: "danger",
+                  });
+                  if (confirmed) {
+                    deleteGroup(groupNode.id, false); // false = destructive delete
+                    setContextMenu(null);
+                  }
+                } else {
+                  const confirmed = await confirm({
+                    title: "Delete Actor",
+                    message:
+                      "Are you sure you want to delete this actor? All connected relations will also be deleted.",
+                    confirmLabel: "Delete",
+                    severity: "danger",
+                  });
+                  if (confirmed) {
+                    deleteNode(contextMenu.target!.id);
+                    setContextMenu(null);
+                  }
+                }
+              },
             },
-          ]}
-          onClose={() => setContextMenu(null)}
-        />
-      )}
+          ],
+        });
+
+        return (
+          <ContextMenu
+            x={contextMenu.x}
+            y={contextMenu.y}
+            sections={sections}
+            onClose={() => setContextMenu(null)}
+          />
+        );
+      })()}
 
       {/* Context Menu - Edge */}
       {contextMenu && contextMenu.type === "edge" && contextMenu.target && (

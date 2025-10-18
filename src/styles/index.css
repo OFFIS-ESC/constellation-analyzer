@@ -44,6 +44,18 @@ code {
   outline: none;
 }
 
+/* Group node styling - React Flow native */
+.react-flow__node-group {
+  background-color: rgba(240, 242, 245, 0.5);
+  border: 2px dashed rgba(100, 116, 139, 0.4);
+  border-radius: 8px;
+}
+
+.react-flow__node-group.selected {
+  background-color: rgba(219, 234, 254, 0.5);
+  border: 2px solid rgba(59, 130, 246, 0.6);
+}
+
 /* Smooth transitions for interactive elements */
 button {
   transition: all 0.2s ease-in-out;

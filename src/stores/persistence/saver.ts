@@ -1,6 +1,7 @@
 import type { ConstellationDocument, SerializedActor, SerializedRelation } from './types';
 import type { Actor, Relation, NodeTypeConfig, EdgeTypeConfig, LabelConfig } from '../../types';
 import { STORAGE_KEYS, SCHEMA_VERSION, APP_NAME } from './constants';
+import { safeStringify } from '../../utils/safeStringify';
 
 /**
  * Saver - Handles serialization and saving to localStorage
@@ -87,7 +88,7 @@ export function createDocument(
 // via workspace/persistence.ts
 export function saveDocument(document: ConstellationDocument): boolean {
   try {
-    const json = JSON.stringify(document);
+    const json = safeStringify(document);
     localStorage.setItem(STORAGE_KEYS.GRAPH_STATE, json);
     localStorage.setItem(STORAGE_KEYS.LAST_SAVED, document.metadata.updatedAt);
     return true;

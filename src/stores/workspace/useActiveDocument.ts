@@ -64,7 +64,20 @@ export function useActiveDocument() {
     labels: [],
   });
 
-  // Load active document into graphStore when it changes
+  /**
+   * ═══════════════════════════════════════════════════════════════════════════
+   * SYNC POINT 1: Document → graphStore
+   * ═══════════════════════════════════════════════════════════════════════════
+   *
+   * When: Active document switches (document tab change)
+   * What: Loads nodes, edges, groups, types, labels from document into graphStore
+   * Source of Truth: ConstellationDocument (persistent storage)
+   * Direction: document.timeline.currentState → graphStore (working copy)
+   *
+   * This is the entry point for loading a document's data into the editor.
+   * It deserializes the document's current timeline state and populates the
+   * graphStore with the working copy that React Flow will render.
+   */
   useEffect(() => {
     if (activeDocument && activeDocumentId) {
       console.log(`Loading document into graph editor: ${activeDocumentId}`, activeDocument.metadata.title);
@@ -181,7 +194,19 @@ export function useActiveDocument() {
         labels: graphLabels as LabelConfig[],
       };
 
-      // Update the timeline's current state with the new graph data (nodes, edges, and groups)
+      /**
+       * ═══════════════════════════════════════════════════════════════════════════
+       * SYNC POINT 2: graphStore → timeline current state
+       * ═══════════════════════════════════════════════════════════════════════════
+       *
+       * When: Graph changes detected (node/edge/group add/delete/move)
+       * What: Updates timeline.states[currentStateId].graph with latest graphStore data
+       * Source of Truth: graphStore (working copy)
+       * Direction: graphStore → timeline.states[currentStateId].graph
+       *
+       * This keeps the timeline's current state in sync with the editor's working copy.
+       * When the document is saved, this updated timeline will be serialized to storage.
+       */
       useTimelineStore.getState().saveCurrentGraph({
         nodes: graphNodes as never[],
         edges: graphEdges as never[],

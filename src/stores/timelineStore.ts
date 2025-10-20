@@ -283,8 +283,23 @@ export const useTimelineStore = create<TimelineStore & TimelineActions>(
         return { timelines: newTimelines };
       });
 
-      // Load target state's graph (nodes, edges, and groups - types are global)
-      // IMPORTANT: Use loadGraphState for atomic update to prevent React Flow errors
+      /**
+       * ═══════════════════════════════════════════════════════════════════════════
+       * SYNC POINT 5: timeline → graphStore
+       * ═══════════════════════════════════════════════════════════════════════════
+       *
+       * When: Timeline state switch (user navigates to different state in timeline)
+       * What: Loads target state's graph (nodes, edges, groups) into graphStore
+       * Source of Truth: timelineStore (targetState.graph)
+       * Direction: timeline.states[targetStateId].graph → graphStore
+       *
+       * When switching between timeline states, we load the target state's graph
+       * into the editor. Types and labels remain the same (document-level config),
+       * only nodes/edges/groups change between states.
+       *
+       * IMPORTANT: Uses loadGraphState for atomic update to prevent React Flow
+       * "Parent node not found" errors when groups and their children load.
+       */
       const graphStore = useGraphStore.getState();
       graphStore.loadGraphState({
         nodes: targetState.graph.nodes as unknown as Actor[],

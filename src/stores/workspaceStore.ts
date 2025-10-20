@@ -786,7 +786,20 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
       // and are managed via workspaceStore's type management actions.
       // We do NOT copy them from graphStore because the document is the source of truth.
 
-      // Save timeline data if exists
+      /**
+       * ═══════════════════════════════════════════════════════════════════════════
+       * SYNC POINT 3: timeline → document
+       * ═══════════════════════════════════════════════════════════════════════════
+       *
+       * When: Document save (auto-save or manual)
+       * What: Serializes entire timeline (all states) to document.timeline
+       * Source of Truth: timelineStore (transient working copy)
+       * Direction: timelineStore → document.timeline → localStorage
+       *
+       * This persists the complete timeline structure to storage. The timeline's
+       * current state has already been updated by SYNC POINT 2, so we're saving
+       * the latest graph data along with all historical timeline branches.
+       */
       const timelineState = useTimelineStore.getState();
       const timeline = timelineState.timelines.get(documentId);
 
@@ -1002,6 +1015,23 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
     }
   },
 
+  /**
+   * ═══════════════════════════════════════════════════════════════════════════
+   * SYNC POINT 4: document types → graphStore
+   * ═══════════════════════════════════════════════════════════════════════════
+   *
+   * When: Type management operations (add/update/delete node/edge types, labels)
+   * What: Updates document types/labels and syncs to graphStore if document is active
+   * Source of Truth: ConstellationDocument (document.nodeTypes, document.edgeTypes, document.labels)
+   * Direction: document → graphStore (if active document)
+   *
+   * Type configurations are document-level properties. When modified, changes
+   * are persisted to the document first, then synced to graphStore if this is
+   * the currently active document. This ensures the editor always displays the
+   * correct types for the current document.
+   *
+   * All type operations use atomic transactions with rollback (Phase 3.1).
+   */
   addNodeTypeToDocument: (documentId: string, nodeType) => {
     const state = get();
     const doc = state.documents.get(documentId);

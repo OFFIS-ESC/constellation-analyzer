@@ -2,6 +2,21 @@ import { memo, useState, useMemo } from 'react';
 import { NodeProps, NodeResizer, useStore, Handle, Position } from '@xyflow/react';
 import type { Group } from '../../types';
 import type { Actor } from '../../types';
+import { getContrastColor } from '../../utils/colorUtils';
+
+/**
+ * Helper function to convert rgb/rgba color string to hex
+ */
+const rgbToHex = (rgb: string): string => {
+  const match = rgb.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/);
+  if (!match) return '#000000';
+
+  const r = parseInt(match[1]).toString(16).padStart(2, '0');
+  const g = parseInt(match[2]).toString(16).padStart(2, '0');
+  const b = parseInt(match[3]).toString(16).padStart(2, '0');
+
+  return `#${r}${g}${b}`;
+};
 
 /**
  * GroupNode - Simple label overlay for React Flow's native group nodes
@@ -91,6 +106,10 @@ const GroupNode = ({ id, data, selected }: NodeProps<Group>) => {
       ? data.color.replace(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/, 'rgb($1, $2, $3)')
       : '#f0f2f5';
 
+    // Calculate contrast color for text based on background
+    const hexColor = rgbToHex(solidColor);
+    const textColor = getContrastColor(hexColor);
+
     return (
       <div
         className="group-minimized"
@@ -175,10 +194,16 @@ const GroupNode = ({ id, data, selected }: NodeProps<Group>) => {
             textAlign: 'center',
           }}
         >
-          <div className="text-sm font-semibold text-gray-800 leading-tight">
+          <div
+            className="text-base font-bold leading-tight"
+            style={{ color: textColor }}
+          >
             {data.label}
           </div>
-          <div className="text-xs text-gray-600 mt-1.5">
+          <div
+            className="text-xs font-medium leading-tight mt-1.5"
+            style={{ color: textColor, opacity: 0.7 }}
+          >
             {data.actorIds.length} actor{data.actorIds.length !== 1 ? 's' : ''}
           </div>
         </div>

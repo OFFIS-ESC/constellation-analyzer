@@ -11,7 +11,7 @@ import { useGraphStore } from "./graphStore";
 import { useWorkspaceStore } from "./workspaceStore";
 import { useToastStore } from "./toastStore";
 import { useHistoryStore } from "./historyStore";
-import type { DocumentSnapshot } from "./historyStore";
+import { createDocumentSnapshot } from "./workspace/documentUtils";
 
 /**
  * Timeline Store
@@ -38,23 +38,28 @@ function pushDocumentHistory(documentId: string, description: string) {
   const historyStore = useHistoryStore.getState();
   const timelineStore = useTimelineStore.getState();
   const graphStore = useGraphStore.getState();
+  const workspaceStore = useWorkspaceStore.getState();
 
   const timeline = timelineStore.timelines.get(documentId);
-  if (!timeline) {
-    console.warn('No timeline found for document');
+  const document = workspaceStore.documents.get(documentId);
+
+  if (!timeline || !document) {
+    console.warn('Cannot push to history: missing timeline or document');
     return;
   }
 
-  const snapshot: DocumentSnapshot = {
-    timeline: {
-      states: new Map(timeline.states), // Clone the Map
-      currentStateId: timeline.currentStateId,
-      rootStateId: timeline.rootStateId,
-    },
-    nodeTypes: graphStore.nodeTypes,
-    edgeTypes: graphStore.edgeTypes,
-    labels: graphStore.labels,
-  };
+  // ✅ Use centralized snapshot creation (single source of truth)
+  const snapshot = createDocumentSnapshot(
+    documentId,
+    document,
+    timeline,
+    graphStore
+  );
+
+  if (!snapshot) {
+    console.warn('Failed to create snapshot');
+    return;
+  }
 
   historyStore.pushAction(documentId, {
     description,

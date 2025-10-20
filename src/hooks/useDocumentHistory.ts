@@ -4,6 +4,7 @@ import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useHistoryStore } from '../stores/historyStore';
 import { useGraphStore } from '../stores/graphStore';
 import { useTimelineStore } from '../stores/timelineStore';
+import { createDocumentSnapshot } from '../stores/workspace/documentUtils';
 import type { DocumentSnapshot } from '../stores/historyStore';
 
 /**
@@ -51,41 +52,25 @@ export function useDocumentHistory() {
       const activeDoc = workspaceStore.getActiveDocument();
       const timelineStore = useTimelineStore.getState();
       const timeline = timelineStore.timelines.get(activeDocumentId);
+      const graphStore = useGraphStore.getState();
 
-      if (!timeline) {
-        console.warn('No timeline found for active document');
+      if (!timeline || !activeDoc) {
+        console.warn('Cannot push to history: missing timeline or document');
         return;
       }
 
-      if (!activeDoc) {
-        console.warn('Active document not found');
+      // ✅ Use centralized snapshot creation (single source of truth)
+      const snapshot = createDocumentSnapshot(
+        activeDocumentId,
+        activeDoc,
+        timeline,
+        graphStore
+      );
+
+      if (!snapshot) {
+        console.warn('Failed to create snapshot');
         return;
       }
-
-      // IMPORTANT: Update timeline's current state with graphStore BEFORE capturing snapshot
-      // This ensures the snapshot includes the current groups, nodes, and edges
-      const currentState = timeline.states.get(timeline.currentStateId);
-      if (currentState) {
-        const graphStore = useGraphStore.getState();
-        currentState.graph = {
-          nodes: graphStore.nodes as unknown as typeof currentState.graph.nodes,
-          edges: graphStore.edges as unknown as typeof currentState.graph.edges,
-          groups: graphStore.groups as unknown as typeof currentState.graph.groups,
-        };
-      }
-
-      // Create a snapshot of the complete document state
-      // NOTE: Read types and labels from the document, not from graphStore
-      const snapshot: DocumentSnapshot = {
-        timeline: {
-          states: new Map(timeline.states), // Clone the Map
-          currentStateId: timeline.currentStateId,
-          rootStateId: timeline.rootStateId,
-        },
-        nodeTypes: activeDoc.nodeTypes,
-        edgeTypes: activeDoc.edgeTypes,
-        labels: activeDoc.labels || [],
-      };
 
       // Push to history
       historyStore.pushAction(activeDocumentId, {

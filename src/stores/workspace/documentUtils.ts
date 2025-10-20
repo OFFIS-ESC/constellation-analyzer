@@ -1,5 +1,7 @@
 import type { Actor, Relation, Group, NodeTypeConfig, EdgeTypeConfig, LabelConfig } from '../../types';
 import type { ConstellationDocument, SerializedActor, SerializedRelation, SerializedGroup } from '../persistence/types';
+import type { DocumentSnapshot } from '../historyStore';
+import type { Timeline } from '../../types/timeline';
 import { SCHEMA_VERSION, APP_NAME } from '../persistence/constants';
 
 /**
@@ -315,5 +317,61 @@ export function createDocument(
       currentStateId: rootStateId,
       rootStateId: rootStateId,
     },
+  };
+}
+
+// ============================================================================
+// HISTORY SNAPSHOT CREATION
+// ============================================================================
+
+/**
+ * Create a snapshot of the complete document state for history tracking
+ *
+ * This is the single source of truth for snapshot creation. Both useDocumentHistory
+ * and timelineStore use this function to ensure consistent snapshot behavior.
+ *
+ * IMPORTANT: This function syncs the timeline's current state with graphStore BEFORE
+ * creating the snapshot. This ensures the timeline is up-to-date with any pending
+ * graph changes.
+ *
+ * @param documentId - ID of the document to snapshot
+ * @param document - The document to snapshot (source of truth for types/labels)
+ * @param timeline - The timeline to snapshot
+ * @param graphStore - The graph store (for syncing current state)
+ * @returns DocumentSnapshot or null if prerequisites not met
+ */
+export function createDocumentSnapshot(
+  _documentId: string,
+  document: ConstellationDocument,
+  timeline: Timeline,
+  graphStore: { nodes: Actor[]; edges: Relation[]; groups: Group[] }
+): DocumentSnapshot | null {
+  if (!timeline || !document) {
+    console.warn('Cannot create snapshot: missing timeline or document');
+    return null;
+  }
+
+  // CRITICAL: Sync timeline's current state with graphStore FIRST
+  // This ensures the snapshot includes the latest graph changes
+  const currentState = timeline.states.get(timeline.currentStateId);
+  if (currentState) {
+    currentState.graph = {
+      nodes: graphStore.nodes as unknown as SerializedActor[],
+      edges: graphStore.edges as unknown as SerializedRelation[],
+      groups: graphStore.groups as unknown as SerializedGroup[],
+    };
+  }
+
+  // Create snapshot with document as source of truth for types/labels
+  return {
+    timeline: {
+      states: new Map(timeline.states), // Deep clone the Map
+      currentStateId: timeline.currentStateId,
+      rootStateId: timeline.rootStateId,
+    },
+    // ✅ Read from document (source of truth), NOT from graphStore
+    nodeTypes: document.nodeTypes,
+    edgeTypes: document.edgeTypes,
+    labels: document.labels || [],
   };
 }

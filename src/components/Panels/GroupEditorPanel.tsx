@@ -39,6 +39,9 @@ const GroupEditorPanel = ({ selectedGroup, onClose }: Props) => {
   const { confirm, ConfirmDialogComponent } = useConfirm();
   const reactFlowNodes = useNodes();
 
+  // Get the current group from store to ensure we have the latest state
+  const currentGroup = groups.find(g => g.id === selectedGroup.id) || selectedGroup;
+
   const [label, setLabel] = useState(selectedGroup.data.label);
   const [description, setDescription] = useState(selectedGroup.data.description || '');
   const [color, setColor] = useState(selectedGroup.data.color);
@@ -245,12 +248,12 @@ const GroupEditorPanel = ({ selectedGroup, onClose }: Props) => {
         <button
           onClick={() => {
             // Sync current React Flow dimensions before toggling
-            if (!selectedGroup.data.minimized) {
+            if (!currentGroup.data.minimized) {
               // When minimizing, update the store with current dimensions first
-              const currentNode = reactFlowNodes.find((n) => n.id === selectedGroup.id);
+              const currentNode = reactFlowNodes.find((n) => n.id === currentGroup.id);
               if (currentNode && currentNode.width && currentNode.height) {
                 setGroups(groups.map((g) =>
-                  g.id === selectedGroup.id
+                  g.id === currentGroup.id
                     ? { ...g, width: currentNode.width, height: currentNode.height }
                     : g
                 ));
@@ -258,12 +261,12 @@ const GroupEditorPanel = ({ selectedGroup, onClose }: Props) => {
             }
             // Use setTimeout to ensure store update completes before toggle
             setTimeout(() => {
-              toggleGroupMinimized(selectedGroup.id);
+              toggleGroupMinimized(currentGroup.id);
             }, 0);
           }}
           className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 rounded hover:bg-gray-100 transition-colors flex items-center justify-center space-x-2"
         >
-          {selectedGroup.data.minimized ? (
+          {currentGroup.data.minimized ? (
             <>
               <MaximizeIcon fontSize="small" />
               <span>Maximize Group</span>

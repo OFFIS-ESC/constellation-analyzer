@@ -452,6 +452,10 @@ export function useGraphWithHistory() {
         return;
       }
 
+      // ✅ Push history BEFORE making changes (consistent with other operations)
+      // This captures the state WITHOUT the group, so undo will correctly restore it
+      pushToHistory(`Create Group: ${group.data.label}`);
+
       // Add the group first
       graphStore.addGroup(group);
 
@@ -463,10 +467,6 @@ export function useGraphWithHistory() {
 
       // Update nodes in store
       graphStore.setNodes(updatedNodes as Actor[]);
-
-      // Push history AFTER all changes are complete
-      // This ensures the timeline state snapshot includes the new group
-      pushToHistory(`Create Group: ${group.data.label}`);
     },
     [graphStore, pushToHistory]
   );

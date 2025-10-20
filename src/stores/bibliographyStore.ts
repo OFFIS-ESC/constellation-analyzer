@@ -6,7 +6,6 @@ import "@citation-js/plugin-csl";
 import "@citation-js/plugin-doi";
 import "@citation-js/plugin-bibtex";
 import "@citation-js/plugin-ris";
-import "@citation-js/plugin-pubmed";
 import "@citation-js/plugin-software-formats";
 
 import type {

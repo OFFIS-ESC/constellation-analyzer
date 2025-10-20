@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useEffect, useState, useRef } from "react";
-import ReactFlow, {
+import {
+  ReactFlow,
   Background,
   Controls,
   MiniMap,
@@ -18,8 +19,8 @@ import ReactFlow, {
   useReactFlow,
   Viewport,
   useOnSelectionChange,
-} from "reactflow";
-import "reactflow/dist/style.css";
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
 
 import { useGraphWithHistory } from "../../hooks/useGraphWithHistory";
 import { useDocumentHistory } from "../../hooks/useDocumentHistory";
@@ -38,6 +39,8 @@ import { createNode } from "../../utils/nodeUtils";
 import DeleteIcon from "@mui/icons-material/Delete";
 import GroupWorkIcon from "@mui/icons-material/GroupWork";
 import UngroupIcon from "@mui/icons-material/CallSplit";
+import MinimizeIcon from "@mui/icons-material/UnfoldLess";
+import MaximizeIcon from "@mui/icons-material/UnfoldMore";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useGraphExport } from "../../hooks/useGraphExport";
 import type { ExportOptions } from "../../utils/graphExport";
@@ -92,6 +95,7 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onAddNodeReque
     deleteNode,
     deleteEdge,
     deleteGroup,
+    toggleGroupMinimized,
   } = useGraphWithHistory();
 
   const { pushToHistory } = useDocumentHistory();
@@ -134,12 +138,92 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onAddNodeReque
   // Combine regular nodes and group nodes for ReactFlow
   // IMPORTANT: Parent nodes (groups) MUST appear BEFORE child nodes for React Flow to process correctly
   const allNodes = useMemo(() => {
-    return [...(storeGroups as Node[]), ...(storeNodes as Node[])];
+    // Get IDs of minimized groups
+    const minimizedGroupIds = new Set(
+      storeGroups.filter((group) => group.data.minimized).map((group) => group.id)
+    );
+
+    // Mark actors in minimized groups as hidden instead of filtering them out
+    // This prevents React Flow from losing track of them
+    const visibleNodes = storeNodes.map((node) => {
+      const nodeWithParent = node as Actor & { parentId?: string };
+      const shouldHide = !!(nodeWithParent.parentId && minimizedGroupIds.has(nodeWithParent.parentId));
+
+      // Always explicitly set hidden (true or false) to ensure state is cleared when maximizing
+      return {
+        ...node,
+        hidden: shouldHide,
+      };
+    });
+
+    return [...(storeGroups as Node[]), ...(visibleNodes as Node[])];
   }, [storeNodes, storeGroups]);
 
   const [nodes, setNodesState, onNodesChange] = useNodesState(allNodes);
+
+  // Track the latest selection state to avoid stale closures
+  const latestNodesRef = useRef(nodes);
+  useEffect(() => {
+    latestNodesRef.current = nodes;
+  }, [nodes]);
+
+  // Reroute edges to minimized groups and filter internal edges
+  const visibleEdges = useMemo(() => {
+    // Build a map of actor -> group for actors in minimized groups
+    const actorToMinimizedGroup = new Map<string, string>();
+    storeGroups.forEach((group) => {
+      if (group.data.minimized) {
+        group.data.actorIds.forEach((actorId) => {
+          actorToMinimizedGroup.set(actorId, group.id);
+        });
+      }
+    });
+
+    // Reroute edges: if source or target is in a minimized group, redirect to the group
+    // Filter out edges that are internal to a minimized group (both source and target in same group)
+    return (storeEdges as Edge[])
+      .map((edge) => {
+        const newSource = actorToMinimizedGroup.get(edge.source) || edge.source;
+        const newTarget = actorToMinimizedGroup.get(edge.target) || edge.target;
+
+        const sourceChanged = newSource !== edge.source;
+        const targetChanged = newTarget !== edge.target;
+
+        // Filter: if both source and target are rerouted to the SAME group, hide this edge
+        // (it's an internal edge within a minimized group)
+        if (sourceChanged && targetChanged && newSource === newTarget) {
+          return null; // Mark for filtering
+        }
+
+        // Only update if source or target changed
+        if (sourceChanged || targetChanged) {
+          // Destructure to separate handle properties from the rest
+          const { sourceHandle, targetHandle, ...edgeWithoutHandles } = edge;
+
+          // Create new edge object, omitting handle properties when rerouting to groups
+          const newEdge: Edge = {
+            ...edgeWithoutHandles,
+            source: newSource,
+            target: newTarget,
+          };
+
+          // Only include handle IDs if not rerouted to a group
+          if (!sourceChanged && sourceHandle) {
+            newEdge.sourceHandle = sourceHandle;
+          }
+          if (!targetChanged && targetHandle) {
+            newEdge.targetHandle = targetHandle;
+          }
+
+          return newEdge;
+        }
+        return edge;
+      })
+      .filter((edge): edge is Edge => edge !== null); // Remove null entries
+  }, [storeEdges, storeGroups]);
+
   const [edges, setEdgesState, onEdgesChange] = useEdgesState(
-    storeEdges as Edge[],
+    visibleEdges,
   );
 
   // Track if a drag is in progress to capture state before drag
@@ -168,6 +252,12 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onAddNodeReque
 
     // IMPORTANT: Directly set the nodes array to avoid React Flow processing intermediate states
     // Using setNodesState with a callback can cause React Flow to process stale state
+
+    // Build selection map from the latest React Flow state using ref
+    const selectionMap = new Map(
+      latestNodesRef.current.map((node) => [node.id, node.selected])
+    );
+
     if (hasPendingSelection) {
       const pendingNodeId = pendingType === 'node' || pendingType === 'group' ? pendingId : null;
 
@@ -177,16 +267,15 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onAddNodeReque
       })));
     } else {
       // Preserve existing selection state
-      setNodesState((currentNodes) => {
-        const selectionMap = new Map(
-          currentNodes.map((node) => [node.id, node.selected])
-        );
-
-        return allNodes.map((node) => ({
+      // IMPORTANT: Don't spread the entire node - only copy specific properties
+      // This ensures hidden state from allNodes is properly applied
+      setNodesState(allNodes.map((node) => {
+        const currentSelected = selectionMap.get(node.id) || false;
+        return {
           ...node,
-          selected: selectionMap.get(node.id) || false,
-        }));
-      });
+          selected: currentSelected,
+        };
+      }));
     }
 
     setEdgesState((currentEdges) => {
@@ -194,7 +283,7 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onAddNodeReque
       if (hasPendingSelection) {
         const pendingEdgeId = pendingType === 'edge' ? pendingId : null;
 
-        const newEdges = (storeEdges as Edge[]).map((edge) => ({
+        const newEdges = visibleEdges.map((edge) => ({
           ...edge,
           selected: edge.id === pendingEdgeId,
         }));
@@ -210,12 +299,12 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onAddNodeReque
         currentEdges.map((edge) => [edge.id, edge.selected])
       );
 
-      return (storeEdges as Edge[]).map((edge) => ({
+      return visibleEdges.map((edge) => ({
         ...edge,
         selected: selectionMap.get(edge.id) || false,
       }));
     });
-  }, [allNodes, storeEdges, setNodesState, setEdgesState]);
+  }, [allNodes, visibleEdges, setNodesState, setEdgesState]);
 
   // Save viewport when switching documents and restore viewport for new document
   useEffect(() => {
@@ -435,7 +524,7 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onAddNodeReque
       if (dragStartChanges.length > 0 && !dragInProgressRef.current) {
         dragInProgressRef.current = true;
         // Capture the state before any changes are applied
-        pushToHistory("Move Actor");
+        pushToHistory("Move Node");
       }
 
       // Check if a resize operation just started (resizing: true)
@@ -478,8 +567,11 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onAddNodeReque
         setTimeout(() => {
           // Sync to store - use callback to get fresh state
           setNodesState((currentNodes) => {
-            // Filter out groups - they're stored separately
+            // Sync both groups and actors (groups can be dragged too!)
+            const groupNodes = currentNodes.filter((node) => node.type === 'group');
             const actorNodes = currentNodes.filter((node) => node.type !== 'group');
+
+            setGroups(groupNodes as Group[]);
             setNodes(actorNodes as Actor[]);
             return currentNodes;
           });
@@ -641,7 +733,7 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onAddNodeReque
   }, []);
 
   // Handle right-click on pane (empty space)
-  const handlePaneContextMenu = useCallback((event: React.MouseEvent) => {
+  const handlePaneContextMenu = useCallback((event: React.MouseEvent | MouseEvent) => {
     event.preventDefault();
     setContextMenu({
       x: event.clientX,
@@ -939,11 +1031,36 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onAddNodeReque
 
         const sections = [];
 
-        // If it's a group node, show "Ungroup" option
+        // If it's a group node, show "Minimize/Maximize" and "Ungroup" options
         if (isGroup) {
           const groupNode = targetNode as Group;
+          const isMinimized = groupNode.data.minimized;
+
           sections.push({
             actions: [
+              {
+                label: isMinimized ? "Maximize Group" : "Minimize Group",
+                icon: isMinimized ? <MaximizeIcon fontSize="small" /> : <MinimizeIcon fontSize="small" />,
+                onClick: () => {
+                  // Sync current React Flow dimensions before toggling
+                  if (!isMinimized) {
+                    // When minimizing, update the store with current dimensions first
+                    const currentNode = nodes.find((n) => n.id === groupNode.id);
+                    if (currentNode && currentNode.width && currentNode.height) {
+                      setGroups(storeGroups.map((g) =>
+                        g.id === groupNode.id
+                          ? { ...g, width: currentNode.width, height: currentNode.height }
+                          : g
+                      ));
+                    }
+                  }
+                  // Use setTimeout to ensure store update completes before toggle
+                  setTimeout(() => {
+                    toggleGroupMinimized(groupNode.id);
+                  }, 0);
+                  setContextMenu(null);
+                },
+              },
               {
                 label: "Ungroup",
                 icon: <UngroupIcon fontSize="small" />,

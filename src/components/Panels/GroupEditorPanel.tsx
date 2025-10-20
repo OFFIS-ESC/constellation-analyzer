@@ -2,6 +2,9 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { IconButton, Tooltip } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
+import MinimizeIcon from '@mui/icons-material/UnfoldLess';
+import MaximizeIcon from '@mui/icons-material/UnfoldMore';
+import { useNodes } from '@xyflow/react';
 import { useGraphWithHistory } from '../../hooks/useGraphWithHistory';
 import { useConfirm } from '../../hooks/useConfirm';
 import type { Group } from '../../types';
@@ -32,8 +35,9 @@ const DEFAULT_GROUP_COLORS = [
 ];
 
 const GroupEditorPanel = ({ selectedGroup, onClose }: Props) => {
-  const { updateGroup, deleteGroup, removeActorFromGroup, nodes, nodeTypes } = useGraphWithHistory();
+  const { updateGroup, deleteGroup, removeActorFromGroup, toggleGroupMinimized, nodes, nodeTypes, setGroups, groups } = useGraphWithHistory();
   const { confirm, ConfirmDialogComponent } = useConfirm();
+  const reactFlowNodes = useNodes();
 
   const [label, setLabel] = useState(selectedGroup.data.label);
   const [description, setDescription] = useState(selectedGroup.data.description || '');
@@ -238,6 +242,39 @@ const GroupEditorPanel = ({ selectedGroup, onClose }: Props) => {
 
       {/* Actions */}
       <div className="pt-4 border-t border-gray-200 space-y-2">
+        <button
+          onClick={() => {
+            // Sync current React Flow dimensions before toggling
+            if (!selectedGroup.data.minimized) {
+              // When minimizing, update the store with current dimensions first
+              const currentNode = reactFlowNodes.find((n) => n.id === selectedGroup.id);
+              if (currentNode && currentNode.width && currentNode.height) {
+                setGroups(groups.map((g) =>
+                  g.id === selectedGroup.id
+                    ? { ...g, width: currentNode.width, height: currentNode.height }
+                    : g
+                ));
+              }
+            }
+            // Use setTimeout to ensure store update completes before toggle
+            setTimeout(() => {
+              toggleGroupMinimized(selectedGroup.id);
+            }, 0);
+          }}
+          className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 rounded hover:bg-gray-100 transition-colors flex items-center justify-center space-x-2"
+        >
+          {selectedGroup.data.minimized ? (
+            <>
+              <MaximizeIcon fontSize="small" />
+              <span>Maximize Group</span>
+            </>
+          ) : (
+            <>
+              <MinimizeIcon fontSize="small" />
+              <span>Minimize Group</span>
+            </>
+          )}
+        </button>
         <button
           onClick={handleUngroup}
           className="w-full px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 rounded hover:bg-blue-100 transition-colors"

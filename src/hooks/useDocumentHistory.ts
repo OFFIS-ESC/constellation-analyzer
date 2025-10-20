@@ -68,9 +68,9 @@ export function useDocumentHistory() {
       if (currentState) {
         const graphStore = useGraphStore.getState();
         currentState.graph = {
-          nodes: graphStore.nodes as any,
-          edges: graphStore.edges as any,
-          groups: graphStore.groups as any,
+          nodes: graphStore.nodes as unknown as typeof currentState.graph.nodes,
+          edges: graphStore.edges as unknown as typeof currentState.graph.edges,
+          groups: graphStore.groups as unknown as typeof currentState.graph.groups,
         };
       }
 
@@ -128,9 +128,9 @@ export function useDocumentHistory() {
     if (currentState) {
       const graphStore = useGraphStore.getState();
       currentState.graph = {
-        nodes: graphStore.nodes as any,
-        edges: graphStore.edges as any,
-        groups: graphStore.groups as any,
+        nodes: graphStore.nodes as unknown as typeof currentState.graph.nodes,
+        edges: graphStore.edges as unknown as typeof currentState.graph.edges,
+        groups: graphStore.groups as unknown as typeof currentState.graph.groups,
       };
     }
 
@@ -219,9 +219,9 @@ export function useDocumentHistory() {
     if (currentState) {
       const graphStore = useGraphStore.getState();
       currentState.graph = {
-        nodes: graphStore.nodes as any,
-        edges: graphStore.edges as any,
-        groups: graphStore.groups as any,
+        nodes: graphStore.nodes as unknown as typeof currentState.graph.nodes,
+        edges: graphStore.edges as unknown as typeof currentState.graph.edges,
+        groups: graphStore.groups as unknown as typeof currentState.graph.groups,
       };
     }
 

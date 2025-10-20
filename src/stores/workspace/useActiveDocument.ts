@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useWorkspaceStore } from '../workspaceStore';
 import { useGraphStore } from '../graphStore';
 import { useTimelineStore } from '../timelineStore';
-import type { Actor, Relation, NodeTypeConfig, EdgeTypeConfig, LabelConfig } from '../../types';
+import type { Actor, Relation, Group, NodeTypeConfig, EdgeTypeConfig, LabelConfig } from '../../types';
 import { getCurrentGraphFromDocument } from '../persistence/loader';
 
 /**
@@ -27,11 +27,13 @@ export function useActiveDocument() {
 
   const setNodes = useGraphStore((state) => state.setNodes);
   const setEdges = useGraphStore((state) => state.setEdges);
+  const setGroups = useGraphStore((state) => state.setGroups);
   const setNodeTypes = useGraphStore((state) => state.setNodeTypes);
   const setEdgeTypes = useGraphStore((state) => state.setEdgeTypes);
   const setLabels = useGraphStore((state) => state.setLabels);
   const graphNodes = useGraphStore((state) => state.nodes);
   const graphEdges = useGraphStore((state) => state.edges);
+  const graphGroups = useGraphStore((state) => state.groups);
   const graphNodeTypes = useGraphStore((state) => state.nodeTypes);
   const graphEdgeTypes = useGraphStore((state) => state.edgeTypes);
   const graphLabels = useGraphStore((state) => state.labels);
@@ -48,6 +50,7 @@ export function useActiveDocument() {
     documentId: string | null;
     nodes: Actor[];
     edges: Relation[];
+    groups: Group[];
     nodeTypes: NodeTypeConfig[];
     edgeTypes: EdgeTypeConfig[];
     labels: LabelConfig[];
@@ -55,6 +58,7 @@ export function useActiveDocument() {
     documentId: null,
     nodes: [],
     edges: [],
+    groups: [],
     nodeTypes: [],
     edgeTypes: [],
     labels: [],
@@ -78,6 +82,7 @@ export function useActiveDocument() {
 
       setNodes(currentGraph.nodes as never[]);
       setEdges(currentGraph.edges as never[]);
+      setGroups(currentGraph.groups as never[]);
       setNodeTypes(currentGraph.nodeTypes as never[]);
       setEdgeTypes(currentGraph.edgeTypes as never[]);
       setLabels(activeDocument.labels || []);
@@ -87,6 +92,7 @@ export function useActiveDocument() {
         documentId: activeDocumentId,
         nodes: currentGraph.nodes as Actor[],
         edges: currentGraph.edges as Relation[],
+        groups: currentGraph.groups as Group[],
         nodeTypes: currentGraph.nodeTypes as NodeTypeConfig[],
         edgeTypes: currentGraph.edgeTypes as EdgeTypeConfig[],
         labels: activeDocument.labels || [],
@@ -106,6 +112,7 @@ export function useActiveDocument() {
 
       setNodes([]);
       setEdges([]);
+      setGroups([]);
       setLabels([]);
       // Note: We keep nodeTypes and edgeTypes so they're available for new documents
 
@@ -114,6 +121,7 @@ export function useActiveDocument() {
         documentId: null,
         nodes: [],
         edges: [],
+        groups: [],
         nodeTypes: [],
         edgeTypes: [],
         labels: [],
@@ -124,7 +132,7 @@ export function useActiveDocument() {
         isLoadingRef.current = false;
       }, 100);
     }
-  }, [activeDocumentId, activeDocument, documents, setNodes, setEdges, setNodeTypes, setEdgeTypes, setLabels]);
+  }, [activeDocumentId, activeDocument, documents, setNodes, setEdges, setGroups, setNodeTypes, setEdgeTypes, setLabels]);
 
   // Save graphStore changes back to workspace (debounced via workspace)
   useEffect(() => {
@@ -151,11 +159,12 @@ export function useActiveDocument() {
     }
 
     // Mark document as dirty when graph changes
-    // NOTE: We only track nodes/edges here. Type changes are handled by workspaceStore's
+    // NOTE: We only track nodes/edges/groups here. Type changes are handled by workspaceStore's
     // type management actions, which directly mark the document as dirty.
     const hasChanges =
       JSON.stringify(graphNodes) !== JSON.stringify(lastSyncedStateRef.current.nodes) ||
-      JSON.stringify(graphEdges) !== JSON.stringify(lastSyncedStateRef.current.edges);
+      JSON.stringify(graphEdges) !== JSON.stringify(lastSyncedStateRef.current.edges) ||
+      JSON.stringify(graphGroups) !== JSON.stringify(lastSyncedStateRef.current.groups);
 
     if (hasChanges) {
       console.log(`Document ${activeDocumentId} has changes, marking as dirty`);
@@ -166,15 +175,17 @@ export function useActiveDocument() {
         documentId: activeDocumentId,
         nodes: graphNodes as Actor[],
         edges: graphEdges as Relation[],
+        groups: graphGroups as Group[],
         nodeTypes: graphNodeTypes as NodeTypeConfig[],
         edgeTypes: graphEdgeTypes as EdgeTypeConfig[],
         labels: graphLabels as LabelConfig[],
       };
 
-      // Update the timeline's current state with the new graph data (nodes and edges only)
+      // Update the timeline's current state with the new graph data (nodes, edges, and groups)
       useTimelineStore.getState().saveCurrentGraph({
         nodes: graphNodes as never[],
         edges: graphEdges as never[],
+        groups: graphGroups as never[],
       });
 
       // Debounced save
@@ -184,7 +195,7 @@ export function useActiveDocument() {
 
       return () => clearTimeout(timeoutId);
     }
-  }, [graphNodes, graphEdges, graphNodeTypes, graphEdgeTypes, graphLabels, activeDocumentId, activeDocument, documents, markDocumentDirty, saveDocument]);
+  }, [graphNodes, graphEdges, graphGroups, graphNodeTypes, graphEdgeTypes, graphLabels, activeDocumentId, activeDocument, documents, markDocumentDirty, saveDocument]);
 
   // Memory management: Unload inactive documents after timeout
   useEffect(() => {

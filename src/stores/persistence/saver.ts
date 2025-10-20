@@ -1,5 +1,5 @@
-import type { ConstellationDocument, SerializedActor, SerializedRelation } from './types';
-import type { Actor, Relation, NodeTypeConfig, EdgeTypeConfig, LabelConfig } from '../../types';
+import type { ConstellationDocument, SerializedActor, SerializedRelation, SerializedGroup } from './types';
+import type { Actor, Relation, Group, NodeTypeConfig, EdgeTypeConfig, LabelConfig } from '../../types';
 import { STORAGE_KEYS, SCHEMA_VERSION, APP_NAME } from './constants';
 import { safeStringify } from '../../utils/safeStringify';
 
@@ -9,12 +9,17 @@ import { safeStringify } from '../../utils/safeStringify';
 
 // Serialize actors for storage (strip React Flow internals)
 export function serializeActors(actors: Actor[]): SerializedActor[] {
-  return actors.map(actor => ({
-    id: actor.id,
-    type: actor.type || 'custom', // Default to 'custom' if undefined
-    position: actor.position,
-    data: actor.data,
-  }));
+  return actors.map(actor => {
+    const actorWithParent = actor as Actor & { parentId?: string; extent?: 'parent' };
+    return {
+      id: actor.id,
+      type: actor.type || 'custom', // Default to 'custom' if undefined
+      position: actor.position,
+      data: actor.data,
+      ...(actorWithParent.parentId && { parentNode: actorWithParent.parentId }),
+      ...(actorWithParent.extent && { extent: actorWithParent.extent }),
+    };
+  });
 }
 
 // Serialize relations for storage (strip React Flow internals)
@@ -27,6 +32,18 @@ export function serializeRelations(relations: Relation[]): SerializedRelation[] 
     data: relation.data,
     sourceHandle: relation.sourceHandle,
     targetHandle: relation.targetHandle,
+  }));
+}
+
+// Serialize groups for storage (strip React Flow internals)
+export function serializeGroups(groups: Group[]): SerializedGroup[] {
+  return groups.map(group => ({
+    id: group.id,
+    type: 'group' as const,
+    position: group.position,
+    data: group.data,
+    width: group.width ?? undefined,
+    height: group.height ?? undefined,
   }));
 }
 

@@ -1,5 +1,6 @@
 import React, { useMemo, useCallback, useState } from "react";
-import ReactFlow, {
+import {
+  ReactFlow,
   Background,
   Controls,
   NodeTypes,
@@ -9,8 +10,8 @@ import ReactFlow, {
   useEdgesState,
   BackgroundVariant,
   ReactFlowProvider,
-} from "reactflow";
-import "reactflow/dist/style.css";
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
 import { useTimelineStore } from "../../stores/timelineStore";
 import { useWorkspaceStore } from "../../stores/workspaceStore";
 import StateNode from "./StateNode";

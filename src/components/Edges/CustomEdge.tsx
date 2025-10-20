@@ -4,11 +4,14 @@ import {
   getBezierPath,
   EdgeLabelRenderer,
   BaseEdge,
-} from 'reactflow';
+  useNodes,
+} from '@xyflow/react';
 import { useGraphStore } from '../../stores/graphStore';
 import { useSearchStore } from '../../stores/searchStore';
-import type { RelationData } from '../../types';
+import type { Relation } from '../../types';
+import type { Group } from '../../types';
 import LabelBadge from '../Common/LabelBadge';
+import { getFloatingEdgeParams } from '../../utils/edgeUtils';
 
 /**
  * CustomEdge - Represents a relation between actors in the constellation graph
@@ -19,11 +22,14 @@ import LabelBadge from '../Common/LabelBadge';
  * - Optional label display
  * - Edge type badge
  * - Directional arrow markers (directed, bidirectional, undirected)
+ * - Floating edges for minimized groups
  *
  * Usage: Automatically rendered by React Flow for edges with type='custom'
  */
 const CustomEdge = ({
   id,
+  source,
+  target,
   sourceX,
   sourceY,
   targetX,
@@ -32,19 +38,54 @@ const CustomEdge = ({
   targetPosition,
   data,
   selected,
-}: EdgeProps<RelationData>) => {
+}: EdgeProps<Relation>) => {
   const edgeTypes = useGraphStore((state) => state.edgeTypes);
   const labels = useGraphStore((state) => state.labels);
   const { searchText, selectedRelationTypes, selectedLabels } = useSearchStore();
 
+  // Get all nodes to check if source/target are minimized groups
+  const nodes = useNodes();
+  const sourceNode = nodes.find((n) => n.id === source);
+  const targetNode = nodes.find((n) => n.id === target);
+
+  // Check if either endpoint is a minimized group
+  const sourceIsMinimizedGroup = sourceNode?.type === 'group' && (sourceNode.data as Group['data']).minimized;
+  const targetIsMinimizedGroup = targetNode?.type === 'group' && (targetNode.data as Group['data']).minimized;
+
+  // Calculate floating edge parameters if needed
+  // Only float the side(s) that connect to minimized groups
+  let finalSourceX = sourceX;
+  let finalSourceY = sourceY;
+  let finalTargetX = targetX;
+  let finalTargetY = targetY;
+  let finalSourcePosition = sourcePosition;
+  let finalTargetPosition = targetPosition;
+
+  if ((sourceIsMinimizedGroup || targetIsMinimizedGroup) && sourceNode && targetNode) {
+    const floatingParams = getFloatingEdgeParams(sourceNode, targetNode);
+
+    // Only use floating position for the minimized group side(s)
+    if (sourceIsMinimizedGroup) {
+      finalSourceX = floatingParams.sx;
+      finalSourceY = floatingParams.sy;
+      finalSourcePosition = floatingParams.sourcePos;
+    }
+
+    if (targetIsMinimizedGroup) {
+      finalTargetX = floatingParams.tx;
+      finalTargetY = floatingParams.ty;
+      finalTargetPosition = floatingParams.targetPos;
+    }
+  }
+
   // Calculate the bezier path
   const [edgePath, labelX, labelY] = getBezierPath({
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
+    sourceX: finalSourceX,
+    sourceY: finalSourceY,
+    sourcePosition: finalSourcePosition,
+    targetX: finalTargetX,
+    targetY: finalTargetY,
+    targetPosition: finalTargetPosition,
   });
 
   // Find the edge type configuration
@@ -175,6 +216,7 @@ const CustomEdge = ({
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
               pointerEvents: 'all',
               opacity: edgeOpacity,
+              zIndex: 1000,
             }}
             className="bg-white px-2 py-1 rounded border border-gray-300 text-xs font-medium shadow-sm"
           >

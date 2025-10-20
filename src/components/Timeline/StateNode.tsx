@@ -1,17 +1,19 @@
 import React from "react";
-import { Handle, Position, NodeProps } from "reactflow";
+import { Handle, Position, NodeProps, Node } from "@xyflow/react";
 import type { ConstellationState } from "../../types/timeline";
 
-interface StateNodeData {
+interface StateNodeData extends Record<string, unknown> {
   state: ConstellationState;
   isCurrent: boolean;
   onRename?: (stateId: string) => void;
 }
 
+type StateNode = Node<StateNodeData>;
+
 /**
  * StateNode - Custom node for timeline visualization
  */
-const StateNode: React.FC<NodeProps<StateNodeData>> = ({ data, selected }) => {
+const StateNodeComponent: React.FC<NodeProps<StateNode>> = ({ data, selected }) => {
   const { state, isCurrent } = data;
 
   // Format date if present
@@ -93,4 +95,4 @@ const StateNode: React.FC<NodeProps<StateNodeData>> = ({ data, selected }) => {
   );
 };
 
-export default StateNode;
+export default StateNodeComponent;

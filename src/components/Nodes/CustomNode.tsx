@@ -1,5 +1,5 @@
 import { memo, useMemo } from "react";
-import { Handle, Position, NodeProps, useStore } from "reactflow";
+import { Handle, Position, NodeProps, useConnection } from "@xyflow/react";
 import { useGraphStore } from "../../stores/graphStore";
 import { useSearchStore } from "../../stores/searchStore";
 import {
@@ -7,7 +7,7 @@ import {
   adjustColorBrightness,
 } from "../../utils/colorUtils";
 import { getIconComponent } from "../../utils/iconUtils";
-import type { ActorData } from "../../types";
+import type { Actor } from "../../types";
 import NodeShapeRenderer from "./Shapes/NodeShapeRenderer";
 import LabelBadge from "../Common/LabelBadge";
 
@@ -22,14 +22,14 @@ import LabelBadge from "../Common/LabelBadge";
  *
  * Usage: Automatically rendered by React Flow for nodes with type='custom'
  */
-const CustomNode = ({ data, selected }: NodeProps<ActorData>) => {
+const CustomNode = ({ data, selected }: NodeProps<Actor>) => {
   const nodeTypes = useGraphStore((state) => state.nodeTypes);
   const labels = useGraphStore((state) => state.labels);
   const { searchText, selectedActorTypes, selectedLabels } = useSearchStore();
 
   // Check if any connection is being made (to show handles)
-  const connectionNodeId = useStore((state) => state.connectionNodeId);
-  const isConnecting = !!connectionNodeId;
+  const connection = useConnection();
+  const isConnecting = !!connection.inProgress;
 
   // Find the node type configuration
   const nodeTypeConfig = nodeTypes.find((nt) => nt.id === data.type);

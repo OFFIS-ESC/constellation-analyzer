@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { addEdge as rfAddEdge } from 'reactflow';
+import { addEdge as rfAddEdge } from '@xyflow/react';
 import type {
   Actor,
   Relation,
@@ -363,6 +363,68 @@ export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
       };
     }),
 
+  toggleGroupMinimized: (groupId: string) =>
+    set((state) => {
+      const group = state.groups.find((g) => g.id === groupId);
+      if (!group) return state;
+
+      const isMinimized = !group.data.minimized;
+
+      // Update group's minimized state
+      const updatedGroups = state.groups.map((g) => {
+        if (g.id !== groupId) return g;
+
+        if (isMinimized) {
+          // Minimizing: store original dimensions in metadata
+          return {
+            ...g,
+            data: {
+              ...g.data,
+              minimized: true,
+              metadata: {
+                ...g.data.metadata,
+                originalWidth: g.width,
+                originalHeight: g.height,
+              },
+            },
+            width: 220,
+            height: 80,
+            // Override wrapper styles to remove padding and border
+            style: {
+              padding: 0,
+              border: 'none',
+              backgroundColor: 'white', // Solid background (inner div will cover with its own color)
+            },
+          };
+        } else {
+          // Maximizing: restore original dimensions from metadata
+          const originalWidth = (g.data.metadata?.originalWidth as number) || 300;
+          const originalHeight = (g.data.metadata?.originalHeight as number) || 200;
+
+          // Remove the stored dimensions from metadata
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { originalWidth: _, originalHeight: __, ...restMetadata } = g.data.metadata || {};
+
+          return {
+            ...g,
+            data: {
+              ...g.data,
+              minimized: false,
+              metadata: Object.keys(restMetadata).length > 0 ? restMetadata : undefined,
+            },
+            width: originalWidth,
+            height: originalHeight,
+            // Remove wrapper style overrides for maximized state
+            style: undefined,
+          };
+        }
+      });
+
+      return {
+        groups: updatedGroups,
+      };
+    }),
+
   // Utility operations
   clearGraph: () =>
     set({
@@ -415,6 +477,7 @@ export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
       const nodeWithParent = node as Actor & { parentId?: string; extent?: 'parent' };
       if (nodeWithParent.parentId && !validGroupIds.has(nodeWithParent.parentId)) {
         // Remove orphaned parent reference
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { parentId, extent, ...cleanNode } = nodeWithParent;
         return cleanNode as Actor;
       }

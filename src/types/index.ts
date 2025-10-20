@@ -1,7 +1,7 @@
-import { Node, Edge } from 'reactflow';
+import { Node, Edge } from '@xyflow/react';
 
 // Node/Actor Types
-export interface ActorData {
+export interface ActorData extends Record<string, unknown> {
   label: string;
   type: string;
   description?: string;
@@ -15,7 +15,7 @@ export type Actor = Node<ActorData>;
 // Edge/Relation Types
 export type EdgeDirectionality = 'directed' | 'bidirectional' | 'undirected';
 
-export interface RelationData {
+export interface RelationData extends Record<string, unknown> {
   label?: string;
   type: string;
   directionality?: EdgeDirectionality;
@@ -67,11 +67,12 @@ export interface LabelConfig {
 }
 
 // Group Types
-export interface GroupData {
+export interface GroupData extends Record<string, unknown> {
   label: string;
   description?: string;
   color: string;
   actorIds: string[];
+  minimized?: boolean;
   metadata?: Record<string, unknown>;
 }
 
@@ -118,6 +119,7 @@ export interface GraphActions {
   deleteGroup: (id: string, ungroupActors?: boolean) => void;
   addActorToGroup: (actorId: string, groupId: string) => void;
   removeActorFromGroup: (actorId: string, groupId: string) => void;
+  toggleGroupMinimized: (groupId: string) => void;
   clearGraph: () => void;
   setNodes: (nodes: Actor[]) => void;
   setEdges: (edges: Relation[]) => void;

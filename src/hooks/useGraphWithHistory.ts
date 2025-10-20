@@ -411,6 +411,20 @@ export function useGraphWithHistory() {
     [graphStore, pushToHistory]
   );
 
+  const toggleGroupMinimized = useCallback(
+    (groupId: string) => {
+      if (isRestoringRef.current) {
+        graphStore.toggleGroupMinimized(groupId);
+        return;
+      }
+      const group = graphStore.groups.find((g) => g.id === groupId);
+      const action = group?.data.minimized ? 'Maximize' : 'Minimize';
+      pushToHistory(`${action} Group: ${group?.data.label}`);
+      graphStore.toggleGroupMinimized(groupId);
+    },
+    [graphStore, pushToHistory]
+  );
+
   /**
    * createGroupWithActors - Atomic operation to create a group and add actors to it
    *
@@ -470,6 +484,7 @@ export function useGraphWithHistory() {
     deleteGroup,
     addActorToGroup,
     removeActorFromGroup,
+    toggleGroupMinimized,
     createGroupWithActors,
     addNodeType,
     updateNodeType,

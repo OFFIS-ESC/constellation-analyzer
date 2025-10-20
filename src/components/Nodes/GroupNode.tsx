@@ -1,6 +1,6 @@
 import { memo, useState, useMemo } from 'react';
-import { NodeProps, NodeResizer, useStore } from 'reactflow';
-import type { GroupData } from '../../types';
+import { NodeProps, NodeResizer, useStore, Handle, Position } from '@xyflow/react';
+import type { Group } from '../../types';
 import type { Actor } from '../../types';
 
 /**
@@ -16,15 +16,15 @@ import type { Actor } from '../../types';
  *
  * Usage: Automatically rendered by React Flow for nodes with type='group'
  */
-const GroupNode = ({ id, data, selected }: NodeProps<GroupData>) => {
+const GroupNode = ({ id, data, selected }: NodeProps<Group>) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editLabel, setEditLabel] = useState(data.label);
 
   // Get child nodes from React Flow store to calculate minimum dimensions
   const childNodes = useStore((state) => {
-    return state.nodeInternals
-      ? Array.from(state.nodeInternals.values()).filter(
-          (node) => (node as Actor & { parentId?: string }).parentId === id
+    return state.nodeLookup
+      ? Array.from(state.nodeLookup.values()).filter(
+          (node) => (node as unknown as Actor & { parentId?: string }).parentId === id
         )
       : [];
   });
@@ -84,6 +84,109 @@ const GroupNode = ({ id, data, selected }: NodeProps<GroupData>) => {
     }
   };
 
+  // Minimized state - render as compact rectangle
+  if (data.minimized) {
+    // Convert color to solid (remove alpha) for minimized state
+    const solidColor = data.color
+      ? data.color.replace(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/, 'rgb($1, $2, $3)')
+      : '#f0f2f5';
+
+    return (
+      <div
+        className="group-minimized"
+        style={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: solidColor,
+          borderRadius: '8px',
+          // Use separate border properties to override .react-flow__node-group dashed border
+          borderWidth: '2px',
+          borderStyle: 'solid',
+          borderColor: selected ? '#3b82f6' : 'rgba(0, 0, 0, 0.2)',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+          cursor: 'pointer',
+          position: 'relative',
+        }}
+      >
+        {/* Connection handles for minimized groups - hidden but necessary for edge routing */}
+        <Handle
+          type="target"
+          position={Position.Top}
+          id="top"
+          isConnectable={false}
+          style={{ opacity: 0 }}
+        />
+        <Handle
+          type="source"
+          position={Position.Top}
+          id="top"
+          isConnectable={false}
+          style={{ opacity: 0 }}
+        />
+        <Handle
+          type="target"
+          position={Position.Right}
+          id="right"
+          isConnectable={false}
+          style={{ opacity: 0 }}
+        />
+        <Handle
+          type="source"
+          position={Position.Right}
+          id="right"
+          isConnectable={false}
+          style={{ opacity: 0 }}
+        />
+        <Handle
+          type="target"
+          position={Position.Bottom}
+          id="bottom"
+          isConnectable={false}
+          style={{ opacity: 0 }}
+        />
+        <Handle
+          type="source"
+          position={Position.Bottom}
+          id="bottom"
+          isConnectable={false}
+          style={{ opacity: 0 }}
+        />
+        <Handle
+          type="target"
+          position={Position.Left}
+          id="left"
+          isConnectable={false}
+          style={{ opacity: 0 }}
+        />
+        <Handle
+          type="source"
+          position={Position.Left}
+          id="left"
+          isConnectable={false}
+          style={{ opacity: 0 }}
+        />
+
+        <div
+          style={{
+            padding: '12px 20px',
+            textAlign: 'center',
+          }}
+        >
+          <div className="text-sm font-semibold text-gray-800 leading-tight">
+            {data.label}
+          </div>
+          <div className="text-xs text-gray-600 mt-1.5">
+            {data.actorIds.length} actor{data.actorIds.length !== 1 ? 's' : ''}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Normal (maximized) state
   return (
     <div
       style={{

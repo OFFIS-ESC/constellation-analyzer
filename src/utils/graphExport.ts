@@ -1,6 +1,6 @@
 import { toPng, toSvg } from 'html-to-image';
-import { getNodesBounds } from 'reactflow';
-import type { Node } from 'reactflow';
+import { getNodesBounds } from '@xyflow/react';
+import type { Node } from '@xyflow/react';
 
 /**
  * Graph Export Utilities

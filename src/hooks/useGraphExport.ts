@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useReactFlow } from 'reactflow';
+import { useReactFlow } from '@xyflow/react';
 import { exportGraphAsPNG, exportGraphAsSVG } from '../utils/graphExport';
 import type { ExportOptions } from '../utils/graphExport';
 

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { ReactFlowProvider, useReactFlow } from "reactflow";
+import { ReactFlowProvider, useReactFlow } from "@xyflow/react";
 import GraphEditor from "./components/Editor/GraphEditor";
 import LeftPanel, { type LeftPanelRef } from "./components/Panels/LeftPanel";
 import RightPanel from "./components/Panels/RightPanel";

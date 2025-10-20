@@ -1,6 +1,9 @@
 import { create } from "zustand";
 import type { NodeTypeConfig, EdgeTypeConfig, LabelConfig } from "../types";
-import type { ConstellationState, StateId } from "../types/timeline";
+import type { ConstellationState, StateId, Timeline } from "../types/timeline";
+import type { Actor, Relation, Group } from "../types";
+import type { ConstellationDocument } from "./persistence/types";
+import { createDocumentSnapshot } from "./workspace/documentUtils";
 
 /**
  * History Store - Per-Document Undo/Redo System
@@ -52,8 +55,17 @@ interface HistoryActions {
   // Initialize history for a document
   initializeHistory: (documentId: string) => void;
 
-  // Push a new action onto the document's history stack
+  // Push a new action onto the document's history stack (low-level)
   pushAction: (documentId: string, action: HistoryAction) => void;
+
+  // Push action with automatic snapshot creation (high-level - USE THIS)
+  pushToHistory: (
+    documentId: string,
+    description: string,
+    document: ConstellationDocument,
+    timeline: Timeline,
+    graphStore: { nodes: Actor[]; edges: Relation[]; groups: Group[] }
+  ) => void;
 
   // Undo the last action for a specific document
   undo: (documentId: string, currentSnapshot: DocumentSnapshot) => DocumentSnapshot | null;
@@ -160,6 +172,34 @@ export const useHistoryStore = create<HistoryStore & HistoryActions>(
         });
 
         return { histories: newHistories };
+      });
+    },
+
+    pushToHistory: (
+      documentId: string,
+      description: string,
+      document: ConstellationDocument,
+      timeline: Timeline,
+      graphStore: { nodes: Actor[]; edges: Relation[]; groups: Group[] }
+    ) => {
+      // ✅ Use centralized snapshot creation (single source of truth)
+      const snapshot = createDocumentSnapshot(
+        documentId,
+        document,
+        timeline,
+        graphStore
+      );
+
+      if (!snapshot) {
+        console.warn('Failed to create snapshot for history');
+        return;
+      }
+
+      // Call low-level pushAction
+      get().pushAction(documentId, {
+        description,
+        timestamp: Date.now(),
+        documentState: snapshot,
       });
     },
 

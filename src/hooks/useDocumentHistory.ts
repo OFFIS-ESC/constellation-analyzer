@@ -4,7 +4,6 @@ import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useHistoryStore } from '../stores/historyStore';
 import { useGraphStore } from '../stores/graphStore';
 import { useTimelineStore } from '../stores/timelineStore';
-import { createDocumentSnapshot } from '../stores/workspace/documentUtils';
 import type { DocumentSnapshot } from '../stores/historyStore';
 
 /**
@@ -59,25 +58,14 @@ export function useDocumentHistory() {
         return;
       }
 
-      // ✅ Use centralized snapshot creation (single source of truth)
-      const snapshot = createDocumentSnapshot(
+      // ✅ Call historyStore's high-level pushToHistory (single source of truth)
+      historyStore.pushToHistory(
         activeDocumentId,
+        description,
         activeDoc,
         timeline,
         graphStore
       );
-
-      if (!snapshot) {
-        console.warn('Failed to create snapshot');
-        return;
-      }
-
-      // Push to history
-      historyStore.pushAction(activeDocumentId, {
-        description,
-        timestamp: Date.now(),
-        documentState: snapshot,
-      });
     },
     [activeDocumentId, historyStore]
   );

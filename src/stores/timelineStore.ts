@@ -11,7 +11,6 @@ import { useGraphStore } from "./graphStore";
 import { useWorkspaceStore } from "./workspaceStore";
 import { useToastStore } from "./toastStore";
 import { useHistoryStore } from "./historyStore";
-import { createDocumentSnapshot } from "./workspace/documentUtils";
 
 /**
  * Timeline Store
@@ -33,7 +32,13 @@ function generateStateId(): StateId {
   return `state_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
-// Helper to push document state to history
+/**
+ * Helper to push document state to history from timeline operations
+ *
+ * This is a convenience wrapper that gathers the required state and calls
+ * historyStore.pushToHistory(). Timeline operations use this to track changes
+ * in the unified document history system.
+ */
 function pushDocumentHistory(documentId: string, description: string) {
   const historyStore = useHistoryStore.getState();
   const timelineStore = useTimelineStore.getState();
@@ -48,24 +53,14 @@ function pushDocumentHistory(documentId: string, description: string) {
     return;
   }
 
-  // ✅ Use centralized snapshot creation (single source of truth)
-  const snapshot = createDocumentSnapshot(
+  // ✅ Call historyStore's high-level pushToHistory (single source of truth for snapshots)
+  historyStore.pushToHistory(
     documentId,
+    description,
     document,
     timeline,
     graphStore
   );
-
-  if (!snapshot) {
-    console.warn('Failed to create snapshot');
-    return;
-  }
-
-  historyStore.pushAction(documentId, {
-    description,
-    timestamp: Date.now(),
-    documentState: snapshot,
-  });
 }
 
 export const useTimelineStore = create<TimelineStore & TimelineActions>(

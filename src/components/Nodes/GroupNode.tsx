@@ -220,6 +220,20 @@ const GroupNode = ({ id, data, selected }: NodeProps<Group>) => {
         position: 'relative',
       }}
     >
+      {/* Background color overlay - uses group's custom color */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: data.color || 'rgba(240, 242, 245, 0.5)',
+          borderRadius: '8px',
+          pointerEvents: 'none', // Let clicks pass through to children
+        }}
+      />
+
       {/* Resize handles - only visible when selected */}
       <NodeResizer
         isVisible={selected}

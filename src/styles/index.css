@@ -46,14 +46,14 @@ code {
 
 /* Group node styling - React Flow native */
 .react-flow__node-group {
-  background-color: rgba(240, 242, 245, 0.5);
+  background-color: transparent; /* Background handled by inner div for custom colors */
   border: 2px dashed rgba(100, 116, 139, 0.4);
   border-radius: 8px;
   padding: 10px; /* Default padding for maximized groups */
 }
 
 .react-flow__node-group.selected {
-  background-color: rgba(219, 234, 254, 0.5);
+  background-color: transparent; /* Background handled by inner div for custom colors */
   border: 2px solid rgba(59, 130, 246, 0.6);
 }
 

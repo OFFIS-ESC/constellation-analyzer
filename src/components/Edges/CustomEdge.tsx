@@ -216,7 +216,7 @@ const CustomEdge = ({
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
               pointerEvents: 'all',
               opacity: edgeOpacity,
-              zIndex: 1000,
+              zIndex: 1100, // Higher than selected groups (which get ~1000) to stay on top
             }}
             className="bg-white px-2 py-1 rounded border border-gray-300 text-xs font-medium shadow-sm"
           >

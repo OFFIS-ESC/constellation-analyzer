@@ -1352,79 +1352,78 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
     const originalLabels = [...doc.labels];
     const originalIsDirty = state.documentMetadata.get(documentId)?.isDirty;
 
-    // Capture original timeline state (deep copy of nodes/edges that contain the label)
+    // Capture original timeline for rollback (shallow copy of the entire timeline)
     const timelineStore = useTimelineStore.getState();
     const timeline = timelineStore.timelines.get(documentId);
-    const originalTimelineStates = new Map<string, {
-      nodes: Array<{ id: string; labels: string[] }>;
-      edges: Array<{ id: string; labels: string[] }>;
-    }>();
-
-    if (timeline) {
-      timeline.states.forEach((constellationState, stateId) => {
-        const affectedNodes: Array<{ id: string; labels: string[] }> = [];
-        const affectedEdges: Array<{ id: string; labels: string[] }> = [];
-
-        // Capture nodes that have this label
-        constellationState.graph.nodes.forEach((node) => {
-          const nodeData = node.data as { labels?: string[] };
-          if (nodeData?.labels && nodeData.labels.includes(labelId)) {
-            affectedNodes.push({ id: node.id, labels: [...nodeData.labels] });
-          }
-        });
-
-        // Capture edges that have this label
-        constellationState.graph.edges.forEach((edge) => {
-          const edgeData = edge.data as { labels?: string[] };
-          if (edgeData?.labels && edgeData.labels.includes(labelId)) {
-            affectedEdges.push({ id: edge.id, labels: [...edgeData.labels] });
-          }
-        });
-
-        if (affectedNodes.length > 0 || affectedEdges.length > 0) {
-          originalTimelineStates.set(stateId, { nodes: affectedNodes, edges: affectedEdges });
-        }
-      });
-    }
+    const originalTimeline = timeline ? { ...timeline, states: new Map(timeline.states) } : null;
 
     get().executeTypeTransaction(
       () => {
         // 1. Remove from document's labels
         doc.labels = (doc.labels || []).filter((label) => label.id !== labelId);
 
-        // 2. Remove label from all nodes and edges in all timeline states
+        // 2. Remove label from all nodes and edges in all timeline states (IMMUTABLE)
         if (timeline) {
+          // ✅ Build new states Map with cleaned labels (immutable update)
+          const newStates = new Map();
           let hasChanges = false;
 
-          // Iterate through all timeline states and clean up label references
-          timeline.states.forEach((constellationState) => {
-            // Clean up nodes
-            constellationState.graph.nodes.forEach((node) => {
-              const nodeData = node.data as { labels?: string[] };
-              if (nodeData?.labels && nodeData.labels.includes(labelId)) {
-                nodeData.labels = nodeData.labels.filter((id: string) => id !== labelId);
-                hasChanges = true;
-              }
-            });
-
-            // Clean up edges
-            constellationState.graph.edges.forEach((edge) => {
-              const edgeData = edge.data as { labels?: string[] };
-              if (edgeData?.labels && edgeData.labels.includes(labelId)) {
-                edgeData.labels = edgeData.labels.filter((id: string) => id !== labelId);
-                hasChanges = true;
-              }
-            });
+          timeline.states.forEach((constellationState, stateId) => {
+            // Create new state with cleaned labels
+            const cleanedState = {
+              ...constellationState,
+              graph: {
+                ...constellationState.graph,
+                nodes: constellationState.graph.nodes.map((node) => {
+                  const nodeData = node.data as { labels?: string[] };
+                  if (nodeData?.labels?.includes(labelId)) {
+                    hasChanges = true;
+                    return {
+                      ...node,
+                      data: {
+                        ...nodeData,
+                        labels: nodeData.labels.filter((id: string) => id !== labelId),
+                      },
+                    };
+                  }
+                  return node;
+                }),
+                edges: constellationState.graph.edges.map((edge) => {
+                  const edgeData = edge.data as { labels?: string[] };
+                  if (edgeData?.labels?.includes(labelId)) {
+                    hasChanges = true;
+                    return {
+                      ...edge,
+                      data: {
+                        ...edgeData,
+                        labels: edgeData.labels.filter((id: string) => id !== labelId),
+                      },
+                    };
+                  }
+                  return edge;
+                }),
+              },
+            };
+            newStates.set(stateId, cleanedState);
           });
 
-          // If this is the active document and changes were made, sync to graphStore
-          if (hasChanges && documentId === state.activeDocumentId) {
-            const currentState = timeline.states.get(timeline.currentStateId);
-            if (currentState) {
-              useGraphStore.setState({
-                nodes: currentState.graph.nodes as Actor[],
-                edges: currentState.graph.edges as Relation[],
-              });
+          // ✅ Atomic swap - replace entire timeline at once
+          if (hasChanges) {
+            const newTimeline = {
+              ...timeline,
+              states: newStates,
+            };
+            timelineStore.timelines.set(documentId, newTimeline);
+
+            // Sync to graphStore if active
+            if (documentId === state.activeDocumentId) {
+              const currentState = newStates.get(timeline.currentStateId);
+              if (currentState) {
+                useGraphStore.setState({
+                  nodes: currentState.graph.nodes as Actor[],
+                  edges: currentState.graph.edges as Relation[],
+                });
+              }
             }
           }
         }
@@ -1444,38 +1443,13 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
         // Rollback on failure
         doc.labels = originalLabels;
 
-        // Restore timeline state label references
-        if (timeline) {
-          originalTimelineStates.forEach((originalState, stateId) => {
-            const constellationState = timeline.states.get(stateId);
-            if (!constellationState) return;
-
-            // Restore node labels
-            originalState.nodes.forEach((originalNode) => {
-              const node = constellationState.graph.nodes.find((n) => n.id === originalNode.id);
-              if (node) {
-                const nodeData = node.data as { labels?: string[] };
-                if (nodeData) {
-                  nodeData.labels = [...originalNode.labels];
-                }
-              }
-            });
-
-            // Restore edge labels
-            originalState.edges.forEach((originalEdge) => {
-              const edge = constellationState.graph.edges.find((e) => e.id === originalEdge.id);
-              if (edge) {
-                const edgeData = edge.data as { labels?: string[] };
-                if (edgeData) {
-                  edgeData.labels = [...originalEdge.labels];
-                }
-              }
-            });
-          });
+        // Restore entire timeline (atomic rollback)
+        if (originalTimeline) {
+          timelineStore.timelines.set(documentId, originalTimeline);
 
           // Sync restored state to graphStore if active
           if (documentId === state.activeDocumentId) {
-            const currentState = timeline.states.get(timeline.currentStateId);
+            const currentState = originalTimeline.states.get(originalTimeline.currentStateId);
             if (currentState) {
               useGraphStore.setState({
                 nodes: currentState.graph.nodes as Actor[],

@@ -1,7 +1,7 @@
 import type { Actor, Relation, NodeTypeConfig, EdgeTypeConfig } from '../../types';
 import type { ConstellationDocument } from './types';
-import { createDocument, serializeActors, serializeRelations } from './saver';
-import { validateDocument } from './loader';
+import { createDocument, serializeActors, serializeRelations } from '../workspace/documentUtils';
+import { validateDocument } from '../workspace/documentUtils';
 
 /**
  * File I/O - Export and import ConstellationDocument to/from files

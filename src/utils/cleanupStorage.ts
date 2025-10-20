@@ -27,8 +27,7 @@ export function cleanupAllStorage(): { cleaned: number; errors: number } {
         key === WORKSPACE_STORAGE_KEYS.WORKSPACE_STATE ||
         key === WORKSPACE_STORAGE_KEYS.WORKSPACE_SETTINGS ||
         key.startsWith(WORKSPACE_STORAGE_KEYS.DOCUMENT_PREFIX) ||
-        key.startsWith(WORKSPACE_STORAGE_KEYS.DOCUMENT_METADATA_PREFIX) ||
-        key === WORKSPACE_STORAGE_KEYS.LEGACY_GRAPH_STATE
+        key.startsWith(WORKSPACE_STORAGE_KEYS.DOCUMENT_METADATA_PREFIX)
       )) {
         keysToClean.push(key);
       }
@@ -81,8 +80,7 @@ export function needsStorageCleanup(): boolean {
         key === WORKSPACE_STORAGE_KEYS.WORKSPACE_STATE ||
         key === WORKSPACE_STORAGE_KEYS.WORKSPACE_SETTINGS ||
         key.startsWith(WORKSPACE_STORAGE_KEYS.DOCUMENT_PREFIX) ||
-        key.startsWith(WORKSPACE_STORAGE_KEYS.DOCUMENT_METADATA_PREFIX) ||
-        key === WORKSPACE_STORAGE_KEYS.LEGACY_GRAPH_STATE
+        key.startsWith(WORKSPACE_STORAGE_KEYS.DOCUMENT_METADATA_PREFIX)
       )) {
         const json = localStorage.getItem(key);
         if (json && json.includes('"__proto__"')) {

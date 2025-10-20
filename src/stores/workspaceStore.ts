@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { ConstellationDocument } from './persistence/types';
 import type { Workspace, WorkspaceActions, DocumentMetadata, WorkspaceSettings } from './workspace/types';
 import type { Actor, Relation } from '../types';
-import { createDocument as createDocumentHelper } from './persistence/saver';
+import { createDocument as createDocumentHelper } from './workspace/documentUtils';
 import { selectFileForImport, exportDocumentToFile } from './persistence/fileIO';
 import {
   generateWorkspaceId,
@@ -13,11 +13,9 @@ import {
   loadDocumentFromStorage,
   deleteDocumentFromStorage,
   saveDocumentMetadata,
-  loadDocumentMetadata,
   loadAllDocumentMetadata,
   clearWorkspaceStorage,
 } from './workspace/persistence';
-import { migrateToWorkspace, needsMigration } from './workspace/migration';
 import {
   exportAllDocumentsAsZip,
   exportWorkspace as exportWorkspaceToZip,
@@ -28,7 +26,7 @@ import { useTimelineStore } from './timelineStore';
 import { useGraphStore } from './graphStore';
 import { useBibliographyStore } from './bibliographyStore';
 import type { ConstellationState, Timeline } from '../types/timeline';
-import { getCurrentGraphFromDocument } from './persistence/loader';
+import { getCurrentGraphFromDocument } from './workspace/documentUtils';
 // @ts-expect-error - citation.js doesn't have TypeScript definitions
 import { Cite } from '@citation-js/core';
 import type { CSLReference } from '../types/bibliography';
@@ -70,24 +68,6 @@ function initializeWorkspace(): Workspace {
     }
     if (errors > 0) {
       console.error(`[Security] ✗ ${errors} errors during cleanup`);
-    }
-  }
-
-  // Check if migration is needed
-  if (needsMigration()) {
-    console.log('Migration needed, migrating legacy data...');
-    const migratedState = migrateToWorkspace();
-    if (migratedState) {
-      // Load migrated document
-      const docId = migratedState.activeDocumentId!;
-      const doc = loadDocumentFromStorage(docId);
-      const meta = loadDocumentMetadata(docId);
-
-      return {
-        ...migratedState,
-        documents: doc ? new Map([[docId, doc]]) : new Map(),
-        documentMetadata: meta ? new Map([[docId, meta]]) : new Map(),
-      };
     }
   }
 

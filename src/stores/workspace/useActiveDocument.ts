@@ -3,7 +3,7 @@ import { useWorkspaceStore } from '../workspaceStore';
 import { useGraphStore } from '../graphStore';
 import { useTimelineStore } from '../timelineStore';
 import type { Actor, Relation, Group, NodeTypeConfig, EdgeTypeConfig, LabelConfig } from '../../types';
-import { getCurrentGraphFromDocument } from '../persistence/loader';
+import { getCurrentGraphFromDocument } from './documentUtils';
 
 /**
  * useActiveDocument Hook

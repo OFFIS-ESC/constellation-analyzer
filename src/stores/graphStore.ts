@@ -11,7 +11,6 @@ import type {
   GroupData,
   GraphActions
 } from '../types';
-import { loadGraphState } from './persistence/loader';
 
 /**
  * ⚠️ IMPORTANT: DO NOT USE THIS STORE DIRECTLY IN COMPONENTS ⚠️
@@ -52,32 +51,15 @@ const defaultEdgeTypes: EdgeTypeConfig[] = [
   { id: 'influences', label: 'Influences', color: '#8b5cf6', style: 'dotted' },
 ];
 
-// Load initial state from localStorage or use defaults
-const loadInitialState = (): GraphStore => {
-  const savedState = loadGraphState();
-
-  if (savedState) {
-    return {
-      nodes: savedState.nodes,
-      edges: savedState.edges,
-      groups: savedState.groups || [],
-      nodeTypes: savedState.nodeTypes,
-      edgeTypes: savedState.edgeTypes,
-      labels: savedState.labels || [],
-    };
-  }
-
-  return {
-    nodes: [],
-    edges: [],
-    groups: [],
-    nodeTypes: defaultNodeTypes,
-    edgeTypes: defaultEdgeTypes,
-    labels: [],
-  };
+// Initial state - starts empty, documents are loaded by workspaceStore
+const initialState: GraphStore = {
+  nodes: [],
+  edges: [],
+  groups: [],
+  nodeTypes: defaultNodeTypes,
+  edgeTypes: defaultEdgeTypes,
+  labels: [],
 };
-
-const initialState = loadInitialState();
 
 export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
   nodes: initialState.nodes,

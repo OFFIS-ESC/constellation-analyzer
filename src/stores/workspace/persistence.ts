@@ -1,6 +1,6 @@
 import type { ConstellationDocument } from '../persistence/types';
 import type { WorkspaceState, DocumentMetadata } from './types';
-import { validateDocument } from '../persistence/loader';
+import { validateDocument } from './documentUtils';
 import { safeStringify, safeParse } from '../../utils/safeStringify';
 
 /**
@@ -15,9 +15,6 @@ export const WORKSPACE_STORAGE_KEYS = {
   WORKSPACE_SETTINGS: 'constellation:workspace:settings:v1',
   DOCUMENT_PREFIX: 'constellation:document:v1:',
   DOCUMENT_METADATA_PREFIX: 'constellation:meta:v1:',
-
-  // Legacy key for migration
-  LEGACY_GRAPH_STATE: 'constellation:graph:v1',
 } as const;
 
 // Generate unique workspace ID
@@ -160,11 +157,6 @@ export function loadAllDocumentMetadata(): Map<string, DocumentMetadata> {
   }
 
   return metadataMap;
-}
-
-// Check if legacy data exists (for migration)
-export function hasLegacyData(): boolean {
-  return localStorage.getItem(WORKSPACE_STORAGE_KEYS.LEGACY_GRAPH_STATE) !== null;
 }
 
 // Clear all workspace data (for reset)

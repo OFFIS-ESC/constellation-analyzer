@@ -103,4 +103,11 @@ export interface WorkspaceActions {
   // Viewport operations
   saveViewport: (documentId: string, viewport: { x: number; y: number; zoom: number }) => void;
   getViewport: (documentId: string) => { x: number; y: number; zoom: number } | undefined;
+
+  // Transaction helper (internal utility for atomic operations)
+  executeTypeTransaction: <T>(
+    operation: () => T,
+    rollback: () => void,
+    operationName: string
+  ) => T | null;
 }

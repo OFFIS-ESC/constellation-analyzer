@@ -957,7 +957,51 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
     return metadata?.viewport;
   },
 
-  // Type management - document-level operations
+  // ============================================================================
+  // TYPE MANAGEMENT - DOCUMENT-LEVEL OPERATIONS WITH TRANSACTIONS
+  // ============================================================================
+
+  /**
+   * Execute a type operation with transaction semantics and automatic rollback
+   *
+   * This ensures type operations are atomic: either all steps succeed or all are rolled back.
+   * Handles errors gracefully (e.g., localStorage quota exceeded) with automatic rollback.
+   *
+   * @param operation - Function that performs the operation (can throw)
+   * @param rollback - Function to rollback changes on failure
+   * @param operationName - Human-readable name for error messages
+   * @returns Operation result or null on failure
+   */
+  executeTypeTransaction: <T>(
+    operation: () => T,
+    rollback: () => void,
+    operationName: string
+  ): T | null => {
+    try {
+      const result = operation();
+      return result;
+    } catch (error) {
+      console.error(`${operationName} failed:`, error);
+
+      // Rollback changes
+      try {
+        rollback();
+        console.log(`Rolled back ${operationName}`);
+      } catch (rollbackError) {
+        console.error(`Rollback failed for ${operationName}:`, rollbackError);
+      }
+
+      // Show user-friendly error
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      useToastStore.getState().showToast(
+        `Failed to ${operationName}: ${errorMessage}`,
+        'error'
+      );
+
+      return null;
+    }
+  },
+
   addNodeTypeToDocument: (documentId: string, nodeType) => {
     const state = get();
     const doc = state.documents.get(documentId);
@@ -967,19 +1011,40 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
       return;
     }
 
-    // Add to document's node types
-    doc.nodeTypes = [...doc.nodeTypes, nodeType];
+    // Capture original state for rollback
+    const originalNodeTypes = [...doc.nodeTypes];
+    const originalIsDirty = state.documentMetadata.get(documentId)?.isDirty;
 
-    // Save document
-    saveDocumentToStorage(documentId, doc);
+    get().executeTypeTransaction(
+      () => {
+        // 1. Update document in memory
+        doc.nodeTypes = [...doc.nodeTypes, nodeType];
 
-    // Mark as dirty
-    get().markDocumentDirty(documentId);
+        // 2. Save to storage (can throw QuotaExceededError)
+        saveDocumentToStorage(documentId, doc);
 
-    // If this is the active document, sync to graphStore
-    if (documentId === state.activeDocumentId) {
-      useGraphStore.getState().setNodeTypes(doc.nodeTypes);
-    }
+        // 3. Mark as dirty
+        get().markDocumentDirty(documentId);
+
+        // 4. Sync to graphStore if active
+        if (documentId === state.activeDocumentId) {
+          useGraphStore.getState().setNodeTypes(doc.nodeTypes);
+        }
+      },
+      () => {
+        // Rollback on failure
+        doc.nodeTypes = originalNodeTypes;
+        const metadata = state.documentMetadata.get(documentId);
+        if (metadata && originalIsDirty !== undefined) {
+          metadata.isDirty = originalIsDirty;
+        }
+        // Re-sync to graphStore if active
+        if (documentId === state.activeDocumentId) {
+          useGraphStore.getState().setNodeTypes(doc.nodeTypes);
+        }
+      },
+      'add node type'
+    );
   },
 
   updateNodeTypeInDocument: (documentId: string, typeId: string, updates) => {
@@ -991,21 +1056,42 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
       return;
     }
 
-    // Update in document's node types
-    doc.nodeTypes = doc.nodeTypes.map((type) =>
-      type.id === typeId ? { ...type, ...updates } : type
+    // Capture original state for rollback
+    const originalNodeTypes = [...doc.nodeTypes];
+    const originalIsDirty = state.documentMetadata.get(documentId)?.isDirty;
+
+    get().executeTypeTransaction(
+      () => {
+        // 1. Update document in memory
+        doc.nodeTypes = doc.nodeTypes.map((type) =>
+          type.id === typeId ? { ...type, ...updates } : type
+        );
+
+        // 2. Save to storage (can throw QuotaExceededError)
+        saveDocumentToStorage(documentId, doc);
+
+        // 3. Mark as dirty
+        get().markDocumentDirty(documentId);
+
+        // 4. Sync to graphStore if active
+        if (documentId === state.activeDocumentId) {
+          useGraphStore.getState().setNodeTypes(doc.nodeTypes);
+        }
+      },
+      () => {
+        // Rollback on failure
+        doc.nodeTypes = originalNodeTypes;
+        const metadata = state.documentMetadata.get(documentId);
+        if (metadata && originalIsDirty !== undefined) {
+          metadata.isDirty = originalIsDirty;
+        }
+        // Re-sync to graphStore if active
+        if (documentId === state.activeDocumentId) {
+          useGraphStore.getState().setNodeTypes(doc.nodeTypes);
+        }
+      },
+      'update node type'
     );
-
-    // Save document
-    saveDocumentToStorage(documentId, doc);
-
-    // Mark as dirty
-    get().markDocumentDirty(documentId);
-
-    // If this is the active document, sync to graphStore
-    if (documentId === state.activeDocumentId) {
-      useGraphStore.getState().setNodeTypes(doc.nodeTypes);
-    }
   },
 
   deleteNodeTypeFromDocument: (documentId: string, typeId: string) => {
@@ -1017,19 +1103,40 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
       return;
     }
 
-    // Remove from document's node types
-    doc.nodeTypes = doc.nodeTypes.filter((type) => type.id !== typeId);
+    // Capture original state for rollback
+    const originalNodeTypes = [...doc.nodeTypes];
+    const originalIsDirty = state.documentMetadata.get(documentId)?.isDirty;
 
-    // Save document
-    saveDocumentToStorage(documentId, doc);
+    get().executeTypeTransaction(
+      () => {
+        // 1. Update document in memory
+        doc.nodeTypes = doc.nodeTypes.filter((type) => type.id !== typeId);
 
-    // Mark as dirty
-    get().markDocumentDirty(documentId);
+        // 2. Save to storage (can throw QuotaExceededError)
+        saveDocumentToStorage(documentId, doc);
 
-    // If this is the active document, sync to graphStore
-    if (documentId === state.activeDocumentId) {
-      useGraphStore.getState().setNodeTypes(doc.nodeTypes);
-    }
+        // 3. Mark as dirty
+        get().markDocumentDirty(documentId);
+
+        // 4. Sync to graphStore if active
+        if (documentId === state.activeDocumentId) {
+          useGraphStore.getState().setNodeTypes(doc.nodeTypes);
+        }
+      },
+      () => {
+        // Rollback on failure
+        doc.nodeTypes = originalNodeTypes;
+        const metadata = state.documentMetadata.get(documentId);
+        if (metadata && originalIsDirty !== undefined) {
+          metadata.isDirty = originalIsDirty;
+        }
+        // Re-sync to graphStore if active
+        if (documentId === state.activeDocumentId) {
+          useGraphStore.getState().setNodeTypes(doc.nodeTypes);
+        }
+      },
+      'delete node type'
+    );
   },
 
   addEdgeTypeToDocument: (documentId: string, edgeType) => {
@@ -1041,19 +1148,31 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
       return;
     }
 
-    // Add to document's edge types
-    doc.edgeTypes = [...doc.edgeTypes, edgeType];
+    // Capture original state for rollback
+    const originalEdgeTypes = [...doc.edgeTypes];
+    const originalIsDirty = state.documentMetadata.get(documentId)?.isDirty;
 
-    // Save document
-    saveDocumentToStorage(documentId, doc);
-
-    // Mark as dirty
-    get().markDocumentDirty(documentId);
-
-    // If this is the active document, sync to graphStore
-    if (documentId === state.activeDocumentId) {
-      useGraphStore.getState().setEdgeTypes(doc.edgeTypes);
-    }
+    get().executeTypeTransaction(
+      () => {
+        doc.edgeTypes = [...doc.edgeTypes, edgeType];
+        saveDocumentToStorage(documentId, doc);
+        get().markDocumentDirty(documentId);
+        if (documentId === state.activeDocumentId) {
+          useGraphStore.getState().setEdgeTypes(doc.edgeTypes);
+        }
+      },
+      () => {
+        doc.edgeTypes = originalEdgeTypes;
+        const metadata = state.documentMetadata.get(documentId);
+        if (metadata && originalIsDirty !== undefined) {
+          metadata.isDirty = originalIsDirty;
+        }
+        if (documentId === state.activeDocumentId) {
+          useGraphStore.getState().setEdgeTypes(doc.edgeTypes);
+        }
+      },
+      'add edge type'
+    );
   },
 
   updateEdgeTypeInDocument: (documentId: string, typeId: string, updates) => {
@@ -1065,21 +1184,33 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
       return;
     }
 
-    // Update in document's edge types
-    doc.edgeTypes = doc.edgeTypes.map((type) =>
-      type.id === typeId ? { ...type, ...updates } : type
+    // Capture original state for rollback
+    const originalEdgeTypes = [...doc.edgeTypes];
+    const originalIsDirty = state.documentMetadata.get(documentId)?.isDirty;
+
+    get().executeTypeTransaction(
+      () => {
+        doc.edgeTypes = doc.edgeTypes.map((type) =>
+          type.id === typeId ? { ...type, ...updates } : type
+        );
+        saveDocumentToStorage(documentId, doc);
+        get().markDocumentDirty(documentId);
+        if (documentId === state.activeDocumentId) {
+          useGraphStore.getState().setEdgeTypes(doc.edgeTypes);
+        }
+      },
+      () => {
+        doc.edgeTypes = originalEdgeTypes;
+        const metadata = state.documentMetadata.get(documentId);
+        if (metadata && originalIsDirty !== undefined) {
+          metadata.isDirty = originalIsDirty;
+        }
+        if (documentId === state.activeDocumentId) {
+          useGraphStore.getState().setEdgeTypes(doc.edgeTypes);
+        }
+      },
+      'update edge type'
     );
-
-    // Save document
-    saveDocumentToStorage(documentId, doc);
-
-    // Mark as dirty
-    get().markDocumentDirty(documentId);
-
-    // If this is the active document, sync to graphStore
-    if (documentId === state.activeDocumentId) {
-      useGraphStore.getState().setEdgeTypes(doc.edgeTypes);
-    }
   },
 
   deleteEdgeTypeFromDocument: (documentId: string, typeId: string) => {
@@ -1091,19 +1222,31 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
       return;
     }
 
-    // Remove from document's edge types
-    doc.edgeTypes = doc.edgeTypes.filter((type) => type.id !== typeId);
+    // Capture original state for rollback
+    const originalEdgeTypes = [...doc.edgeTypes];
+    const originalIsDirty = state.documentMetadata.get(documentId)?.isDirty;
 
-    // Save document
-    saveDocumentToStorage(documentId, doc);
-
-    // Mark as dirty
-    get().markDocumentDirty(documentId);
-
-    // If this is the active document, sync to graphStore
-    if (documentId === state.activeDocumentId) {
-      useGraphStore.getState().setEdgeTypes(doc.edgeTypes);
-    }
+    get().executeTypeTransaction(
+      () => {
+        doc.edgeTypes = doc.edgeTypes.filter((type) => type.id !== typeId);
+        saveDocumentToStorage(documentId, doc);
+        get().markDocumentDirty(documentId);
+        if (documentId === state.activeDocumentId) {
+          useGraphStore.getState().setEdgeTypes(doc.edgeTypes);
+        }
+      },
+      () => {
+        doc.edgeTypes = originalEdgeTypes;
+        const metadata = state.documentMetadata.get(documentId);
+        if (metadata && originalIsDirty !== undefined) {
+          metadata.isDirty = originalIsDirty;
+        }
+        if (documentId === state.activeDocumentId) {
+          useGraphStore.getState().setEdgeTypes(doc.edgeTypes);
+        }
+      },
+      'delete edge type'
+    );
   },
 
   // Label management - document-level operations
@@ -1121,19 +1264,31 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
       doc.labels = [];
     }
 
-    // Add to document's labels
-    doc.labels = [...doc.labels, label];
+    // Capture original state for rollback
+    const originalLabels = [...doc.labels];
+    const originalIsDirty = state.documentMetadata.get(documentId)?.isDirty;
 
-    // Save document
-    saveDocumentToStorage(documentId, doc);
-
-    // Mark as dirty
-    get().markDocumentDirty(documentId);
-
-    // If this is the active document, sync to graphStore
-    if (documentId === state.activeDocumentId) {
-      useGraphStore.getState().setLabels(doc.labels);
-    }
+    get().executeTypeTransaction(
+      () => {
+        doc.labels = [...(doc.labels || []), label];
+        saveDocumentToStorage(documentId, doc);
+        get().markDocumentDirty(documentId);
+        if (documentId === state.activeDocumentId) {
+          useGraphStore.getState().setLabels(doc.labels);
+        }
+      },
+      () => {
+        doc.labels = originalLabels;
+        const metadata = state.documentMetadata.get(documentId);
+        if (metadata && originalIsDirty !== undefined) {
+          metadata.isDirty = originalIsDirty;
+        }
+        if (documentId === state.activeDocumentId) {
+          useGraphStore.getState().setLabels(doc.labels);
+        }
+      },
+      'add label'
+    );
   },
 
   updateLabelInDocument: (documentId: string, labelId: string, updates) => {
@@ -1150,21 +1305,33 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
       doc.labels = [];
     }
 
-    // Update in document's labels
-    doc.labels = doc.labels.map((label) =>
-      label.id === labelId ? { ...label, ...updates } : label
+    // Capture original state for rollback
+    const originalLabels = [...doc.labels];
+    const originalIsDirty = state.documentMetadata.get(documentId)?.isDirty;
+
+    get().executeTypeTransaction(
+      () => {
+        doc.labels = (doc.labels || []).map((label) =>
+          label.id === labelId ? { ...label, ...updates } : label
+        );
+        saveDocumentToStorage(documentId, doc);
+        get().markDocumentDirty(documentId);
+        if (documentId === state.activeDocumentId) {
+          useGraphStore.getState().setLabels(doc.labels);
+        }
+      },
+      () => {
+        doc.labels = originalLabels;
+        const metadata = state.documentMetadata.get(documentId);
+        if (metadata && originalIsDirty !== undefined) {
+          metadata.isDirty = originalIsDirty;
+        }
+        if (documentId === state.activeDocumentId) {
+          useGraphStore.getState().setLabels(doc.labels);
+        }
+      },
+      'update label'
     );
-
-    // Save document
-    saveDocumentToStorage(documentId, doc);
-
-    // Mark as dirty
-    get().markDocumentDirty(documentId);
-
-    // If this is the active document, sync to graphStore
-    if (documentId === state.activeDocumentId) {
-      useGraphStore.getState().setLabels(doc.labels);
-    }
   },
 
   deleteLabelFromDocument: (documentId: string, labelId: string) => {
@@ -1181,58 +1348,155 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
       doc.labels = [];
     }
 
-    // Remove from document's labels
-    doc.labels = doc.labels.filter((label) => label.id !== labelId);
+    // Capture original state for rollback
+    const originalLabels = [...doc.labels];
+    const originalIsDirty = state.documentMetadata.get(documentId)?.isDirty;
 
-    // Remove label from all nodes and edges in all timeline states
+    // Capture original timeline state (deep copy of nodes/edges that contain the label)
     const timelineStore = useTimelineStore.getState();
     const timeline = timelineStore.timelines.get(documentId);
+    const originalTimelineStates = new Map<string, {
+      nodes: Array<{ id: string; labels: string[] }>;
+      edges: Array<{ id: string; labels: string[] }>;
+    }>();
 
     if (timeline) {
-      let hasChanges = false;
+      timeline.states.forEach((constellationState, stateId) => {
+        const affectedNodes: Array<{ id: string; labels: string[] }> = [];
+        const affectedEdges: Array<{ id: string; labels: string[] }> = [];
 
-      // Iterate through all timeline states and clean up label references
-      timeline.states.forEach((constellationState) => {
-        // Clean up nodes
+        // Capture nodes that have this label
         constellationState.graph.nodes.forEach((node) => {
           const nodeData = node.data as { labels?: string[] };
           if (nodeData?.labels && nodeData.labels.includes(labelId)) {
-            nodeData.labels = nodeData.labels.filter((id: string) => id !== labelId);
-            hasChanges = true;
+            affectedNodes.push({ id: node.id, labels: [...nodeData.labels] });
           }
         });
 
-        // Clean up edges
+        // Capture edges that have this label
         constellationState.graph.edges.forEach((edge) => {
           const edgeData = edge.data as { labels?: string[] };
           if (edgeData?.labels && edgeData.labels.includes(labelId)) {
-            edgeData.labels = edgeData.labels.filter((id: string) => id !== labelId);
-            hasChanges = true;
+            affectedEdges.push({ id: edge.id, labels: [...edgeData.labels] });
           }
         });
-      });
 
-      // If this is the active document and changes were made, sync to graphStore
-      if (hasChanges && documentId === state.activeDocumentId) {
-        const currentState = timeline.states.get(timeline.currentStateId);
-        if (currentState) {
-          useGraphStore.setState({
-            nodes: currentState.graph.nodes as Actor[],
-            edges: currentState.graph.edges as Relation[],
-          });
+        if (affectedNodes.length > 0 || affectedEdges.length > 0) {
+          originalTimelineStates.set(stateId, { nodes: affectedNodes, edges: affectedEdges });
         }
-      }
+      });
     }
 
-    // Save document
-    saveDocumentToStorage(documentId, doc);
+    get().executeTypeTransaction(
+      () => {
+        // 1. Remove from document's labels
+        doc.labels = (doc.labels || []).filter((label) => label.id !== labelId);
 
-    // Mark as dirty
-    get().markDocumentDirty(documentId);
+        // 2. Remove label from all nodes and edges in all timeline states
+        if (timeline) {
+          let hasChanges = false;
 
-    // If this is the active document, sync to graphStore
-    if (documentId === state.activeDocumentId) {
-      useGraphStore.getState().setLabels(doc.labels);
-    }
+          // Iterate through all timeline states and clean up label references
+          timeline.states.forEach((constellationState) => {
+            // Clean up nodes
+            constellationState.graph.nodes.forEach((node) => {
+              const nodeData = node.data as { labels?: string[] };
+              if (nodeData?.labels && nodeData.labels.includes(labelId)) {
+                nodeData.labels = nodeData.labels.filter((id: string) => id !== labelId);
+                hasChanges = true;
+              }
+            });
+
+            // Clean up edges
+            constellationState.graph.edges.forEach((edge) => {
+              const edgeData = edge.data as { labels?: string[] };
+              if (edgeData?.labels && edgeData.labels.includes(labelId)) {
+                edgeData.labels = edgeData.labels.filter((id: string) => id !== labelId);
+                hasChanges = true;
+              }
+            });
+          });
+
+          // If this is the active document and changes were made, sync to graphStore
+          if (hasChanges && documentId === state.activeDocumentId) {
+            const currentState = timeline.states.get(timeline.currentStateId);
+            if (currentState) {
+              useGraphStore.setState({
+                nodes: currentState.graph.nodes as Actor[],
+                edges: currentState.graph.edges as Relation[],
+              });
+            }
+          }
+        }
+
+        // 3. Save document to storage (can throw QuotaExceededError)
+        saveDocumentToStorage(documentId, doc);
+
+        // 4. Mark as dirty
+        get().markDocumentDirty(documentId);
+
+        // 5. If this is the active document, sync to graphStore
+        if (documentId === state.activeDocumentId) {
+          useGraphStore.getState().setLabels(doc.labels);
+        }
+      },
+      () => {
+        // Rollback on failure
+        doc.labels = originalLabels;
+
+        // Restore timeline state label references
+        if (timeline) {
+          originalTimelineStates.forEach((originalState, stateId) => {
+            const constellationState = timeline.states.get(stateId);
+            if (!constellationState) return;
+
+            // Restore node labels
+            originalState.nodes.forEach((originalNode) => {
+              const node = constellationState.graph.nodes.find((n) => n.id === originalNode.id);
+              if (node) {
+                const nodeData = node.data as { labels?: string[] };
+                if (nodeData) {
+                  nodeData.labels = [...originalNode.labels];
+                }
+              }
+            });
+
+            // Restore edge labels
+            originalState.edges.forEach((originalEdge) => {
+              const edge = constellationState.graph.edges.find((e) => e.id === originalEdge.id);
+              if (edge) {
+                const edgeData = edge.data as { labels?: string[] };
+                if (edgeData) {
+                  edgeData.labels = [...originalEdge.labels];
+                }
+              }
+            });
+          });
+
+          // Sync restored state to graphStore if active
+          if (documentId === state.activeDocumentId) {
+            const currentState = timeline.states.get(timeline.currentStateId);
+            if (currentState) {
+              useGraphStore.setState({
+                nodes: currentState.graph.nodes as Actor[],
+                edges: currentState.graph.edges as Relation[],
+              });
+            }
+          }
+        }
+
+        // Restore isDirty flag
+        const metadata = state.documentMetadata.get(documentId);
+        if (metadata && originalIsDirty !== undefined) {
+          metadata.isDirty = originalIsDirty;
+        }
+
+        // Sync labels to graphStore if active
+        if (documentId === state.activeDocumentId) {
+          useGraphStore.getState().setLabels(doc.labels);
+        }
+      },
+      'delete label'
+    );
   },
 }));

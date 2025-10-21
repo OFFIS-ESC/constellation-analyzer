@@ -822,6 +822,21 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onMultiSelect,
     setContextMenu(null); // Close context menu if open
   }, []);
 
+  // Handle node double-click - maximize minimized groups
+  const handleNodeDoubleClick = useCallback(
+    (_event: React.MouseEvent, node: Node) => {
+      // Check if this is a minimized group
+      if (node.type === 'group') {
+        const groupData = node.data as Group['data'];
+        if (groupData.minimized) {
+          // Toggle to maximize the group
+          toggleGroupMinimized(node.id);
+        }
+      }
+    },
+    [toggleGroupMinimized],
+  );
+
   // Handle edge click - ReactFlow handles selection automatically
   const handleEdgeClick = useCallback(() => {
     setContextMenu(null); // Close context menu if open
@@ -1058,6 +1073,7 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onMultiSelect,
         onNodesDelete={handleNodesDelete}
         onEdgesDelete={handleEdgesDelete}
         onNodeClick={handleNodeClick}
+        onNodeDoubleClick={handleNodeDoubleClick}
         onEdgeClick={handleEdgeClick}
         onNodeContextMenu={handleNodeContextMenu}
         onEdgeContextMenu={handleEdgeContextMenu}

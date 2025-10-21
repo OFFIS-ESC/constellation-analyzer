@@ -187,8 +187,9 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onMultiSelect,
       }
     });
 
-    // Map to deduplicate edges between groups: "source_target" -> edge
-    const edgeMap = new Map<string, Edge>();
+    // Map to deduplicate and aggregate edges between groups
+    // Key: "source_target" -> { edge, aggregatedRelations: [...] }
+    const edgeMap = new Map<string, { edge: Edge; aggregatedRelations: Relation[] }>();
 
     // Reroute edges: if source or target is in a minimized group, redirect to the group
     // Filter out edges that are internal to a minimized group (both source and target in same group)
@@ -206,10 +207,18 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onMultiSelect,
       }
 
       // Create edge key for deduplication
-      const edgeKey = `${newSource}_${newTarget}`;
+      // For edges between two minimized groups, use a normalized key (alphabetically sorted)
+      // so that A->B and B->A use the same key and get aggregated together
+      const bothAreGroups = sourceChanged && targetChanged;
+      const edgeKey = bothAreGroups
+        ? [newSource, newTarget].sort().join('_') // Normalized key for bidirectional aggregation
+        : `${newSource}_${newTarget}`; // Directional key for normal edges
+
+      // Check if this edge was rerouted (at least one endpoint changed)
+      const wasRerouted = sourceChanged || targetChanged;
 
       // Only update if source or target changed
-      if (sourceChanged || targetChanged) {
+      if (wasRerouted) {
         // Destructure to separate handle properties from the rest
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { sourceHandle, targetHandle, ...edgeWithoutHandles } = edge;
@@ -234,20 +243,43 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onMultiSelect,
           newEdge.targetHandle = targetHandle;
         }
 
-        // If we already have an edge between these nodes, keep the first one
-        // (you could also merge labels or aggregate data here if needed)
-        if (!edgeMap.has(edgeKey)) {
-          edgeMap.set(edgeKey, newEdge);
+        // If we already have an edge between these nodes, aggregate the relations
+        if (edgeMap.has(edgeKey)) {
+          const existing = edgeMap.get(edgeKey)!;
+          existing.aggregatedRelations.push(edge as Relation);
+        } else {
+          // First edge between these groups - store it with aggregation data
+          edgeMap.set(edgeKey, {
+            edge: newEdge,
+            aggregatedRelations: [edge as Relation],
+          });
         }
       } else {
-        // No rerouting needed, just add the edge
+        // No rerouting needed, just add the edge (no aggregation for normal edges)
         if (!edgeMap.has(edgeKey)) {
-          edgeMap.set(edgeKey, edge);
+          edgeMap.set(edgeKey, {
+            edge,
+            aggregatedRelations: [],
+          });
         }
       }
     });
 
-    return Array.from(edgeMap.values());
+    // Convert the map to an array of edges, attaching aggregation metadata
+    return Array.from(edgeMap.values()).map(({ edge, aggregatedRelations }) => {
+      if (aggregatedRelations.length > 1) {
+        // Multiple relations aggregated - add metadata to edge data
+        return {
+          ...edge,
+          data: {
+            ...edge.data,
+            aggregatedCount: aggregatedRelations.length,
+            aggregatedRelations: aggregatedRelations,
+          },
+        } as Edge;
+      }
+      return edge;
+    });
   }, [storeEdges, storeGroups, storeNodes]);
 
   const [edges, setEdgesState, onEdgesChange] = useEdgesState(
@@ -831,6 +863,13 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onMultiSelect,
   const handleEdgeContextMenu = useCallback(
     (event: React.MouseEvent, edge: Edge) => {
       event.preventDefault();
+
+      // Don't show context menu for aggregated edges (synthetic edges between minimized groups)
+      const isAggregated = !!(edge.data as { aggregatedCount?: number })?.aggregatedCount;
+      if (isAggregated) {
+        return; // No context menu for aggregated edges
+      }
+
       setContextMenu({
         x: event.clientX,
         y: event.clientY,

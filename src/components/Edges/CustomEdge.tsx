@@ -93,13 +93,21 @@ const CustomEdge = ({
     targetPosition: finalTargetPosition,
   });
 
+  // Check if this is an aggregated edge
+  const isAggregated = !!(data as { aggregatedCount?: number })?.aggregatedCount;
+
   // Find the edge type configuration
   const edgeTypeConfig = edgeTypes.find((et) => et.id === data?.type);
-  const edgeColor = edgeTypeConfig?.color || '#6b7280';
-  const edgeStyle = edgeTypeConfig?.style || 'solid';
+
+  // For aggregated edges, use neutral styling (dark gray, solid, no arrows)
+  const edgeColor = isAggregated ? '#4b5563' : (edgeTypeConfig?.color || '#6b7280'); // dark gray for aggregated
+  const edgeStyle = isAggregated ? 'solid' : (edgeTypeConfig?.style || 'solid');
 
   // Use custom label if provided, otherwise use type's default label
-  const displayLabel = data?.label || edgeTypeConfig?.label;
+  // For aggregated edges, show "Multiple types" instead
+  const displayLabel = isAggregated
+    ? undefined // Don't show individual type label for aggregated edges
+    : (data?.label || edgeTypeConfig?.label);
 
   // Convert style to stroke-dasharray
   const strokeDasharray = {
@@ -109,7 +117,10 @@ const CustomEdge = ({
   }[edgeStyle];
 
   // Get directionality (default to 'directed' for backwards compatibility)
-  const directionality = data?.directionality || edgeTypeConfig?.defaultDirectionality || 'directed';
+  // For aggregated edges, use 'undirected' (no arrows)
+  const directionality = isAggregated
+    ? 'undirected'
+    : (data?.directionality || edgeTypeConfig?.defaultDirectionality || 'directed');
 
   // Check if this edge matches the filter criteria
   const isMatch = useMemo(() => {
@@ -212,8 +223,8 @@ const CustomEdge = ({
         markerStart={markerStart}
       />
 
-      {/* Edge label - show custom or type default, plus labels */}
-      {(displayLabel || (data?.labels && data.labels.length > 0)) && (
+      {/* Edge label - show custom or type default, plus labels, plus aggregation count */}
+      {(displayLabel || (data?.labels && data.labels.length > 0) || (data as { aggregatedCount?: number })?.aggregatedCount) && (
         <EdgeLabelRenderer>
           <div
             style={{
@@ -245,6 +256,15 @@ const CustomEdge = ({
                     />
                   );
                 })}
+              </div>
+            )}
+            {/* Aggregation counter for multiple relations between minimized groups */}
+            {(data as { aggregatedCount?: number })?.aggregatedCount && (
+              <div
+                className="mt-1 px-2 py-0.5 rounded-full text-xs font-semibold text-white"
+                style={{ backgroundColor: edgeColor }}
+              >
+                {(data as { aggregatedCount?: number }).aggregatedCount} relations
               </div>
             )}
           </div>

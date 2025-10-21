@@ -133,6 +133,32 @@ const RightPanel = ({
 
   // Edge properties view
   if (selectedEdge) {
+    // Check if this is an aggregated edge (multiple relations between minimized groups)
+    const isAggregated = !!(selectedEdge.data as { aggregatedCount?: number })?.aggregatedCount;
+
+    if (isAggregated) {
+      // Show a special view for aggregated edges
+      const aggregatedCount = (selectedEdge.data as { aggregatedCount?: number })?.aggregatedCount || 0;
+      return (
+        <div
+          className="h-full bg-white border-l border-gray-200 flex flex-col"
+          style={{ width: `${rightPanelWidth}px` }}
+        >
+          <PanelHeader title="Aggregated Relations" onCollapse={collapseRightPanel} />
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="bg-blue-50 border border-blue-200 rounded p-4 mb-4">
+              <p className="text-sm text-blue-800">
+                <strong>{aggregatedCount} relations</strong> are aggregated between these minimized groups.
+              </p>
+              <p className="text-xs text-blue-600 mt-2">
+                Maximize the groups to see and edit individual relations.
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div
         className="h-full bg-white border-l border-gray-200 flex flex-col"

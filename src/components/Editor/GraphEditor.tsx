@@ -54,6 +54,7 @@ interface GraphEditorProps {
   onNodeSelect: (node: Actor | null) => void;
   onEdgeSelect: (edge: Relation | null) => void;
   onGroupSelect: (group: Group | null) => void;
+  onMultiSelect?: (actors: Actor[], relations: Relation[], groups: Group[]) => void;
   onAddNodeRequest?: (callback: (nodeTypeId: string, position?: { x: number; y: number }) => void) => void;
   onExportRequest?: (callback: (format: 'png' | 'svg', options?: ExportOptions) => Promise<void>) => void;
 }
@@ -71,7 +72,7 @@ interface GraphEditorProps {
  *
  * Usage: Core component that wraps React Flow with custom nodes and edges
  */
-const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onAddNodeRequest, onExportRequest }: GraphEditorProps) => {
+const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onMultiSelect, onAddNodeRequest, onExportRequest }: GraphEditorProps) => {
   // Sync with workspace active document
   const { activeDocumentId } = useActiveDocument();
   const { saveViewport, getViewport } = useWorkspaceStore();
@@ -470,8 +471,29 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onAddNodeReque
       nodes: Node[];
       edges: Edge[];
     }) => {
-      // If a single node is selected
-      if (selectedNodes.length == 1) {
+      const totalSelected = selectedNodes.length + selectedEdges.length;
+
+      // Multi-selection: 2 or more items
+      if (totalSelected >= 2) {
+        const actors: Actor[] = [];
+        const groups: Group[] = [];
+
+        selectedNodes.forEach((node) => {
+          if (node.type === 'group') {
+            groups.push(node as Group);
+          } else {
+            actors.push(node as Actor);
+          }
+        });
+
+        const relations = selectedEdges as Relation[];
+
+        if (onMultiSelect) {
+          onMultiSelect(actors, relations, groups);
+        }
+      }
+      // Single node selected
+      else if (selectedNodes.length === 1) {
         const selectedItem = selectedNodes[0];
 
         // Check if it's a group (type === 'group')
@@ -486,8 +508,8 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onAddNodeReque
           // Don't call others - parent will handle clearing
         }
       }
-      // If an edge is selected, notify parent
-      else if (selectedEdges.length == 1) {
+      // Single edge selected
+      else if (selectedEdges.length === 1) {
         const selectedEdge = selectedEdges[0] as Relation;
         onEdgeSelect(selectedEdge);
         // Don't call others - parent will handle clearing
@@ -499,7 +521,7 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onAddNodeReque
         onGroupSelect(null);
       }
     },
-    [onNodeSelect, onEdgeSelect, onGroupSelect],
+    [onNodeSelect, onEdgeSelect, onGroupSelect, onMultiSelect],
   );
 
   // Register the selection change handler with ReactFlow

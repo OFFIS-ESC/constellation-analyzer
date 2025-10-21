@@ -154,9 +154,11 @@ const GroupEditorPanel = ({ selectedGroup, onClose }: Props) => {
   const groupActors = nodes.filter((node) => selectedGroup.data.actorIds.includes(node.id));
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-4">
-      {/* Name */}
-      <div>
+    <>
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-3 space-y-4">
+        {/* Name */}
+        <div>
         <label className="block text-xs font-medium text-gray-600 mb-1">
           Group Name
         </label>
@@ -242,9 +244,10 @@ const GroupEditorPanel = ({ selectedGroup, onClose }: Props) => {
           </div>
         )}
       </div>
+      </div>
 
-      {/* Actions */}
-      <div className="pt-4 border-t border-gray-200 space-y-2">
+      {/* Footer with actions */}
+      <div className="px-3 py-3 border-t border-gray-200 bg-gray-50 space-y-2">
         <button
           onClick={() => {
             // Sync current React Flow dimensions before toggling
@@ -264,7 +267,7 @@ const GroupEditorPanel = ({ selectedGroup, onClose }: Props) => {
               toggleGroupMinimized(currentGroup.id);
             }, 0);
           }}
-          className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 rounded hover:bg-gray-100 transition-colors flex items-center justify-center space-x-2"
+          className="w-full flex items-center justify-center space-x-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
         >
           {currentGroup.data.minimized ? (
             <>
@@ -280,13 +283,13 @@ const GroupEditorPanel = ({ selectedGroup, onClose }: Props) => {
         </button>
         <button
           onClick={handleUngroup}
-          className="w-full px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 rounded hover:bg-blue-100 transition-colors"
+          className="w-full flex items-center justify-center space-x-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
         >
-          Ungroup (Keep Actors)
+          <span>Ungroup (Keep Actors)</span>
         </button>
         <button
           onClick={handleDeleteGroup}
-          className="w-full px-4 py-2 text-sm font-medium text-red-700 bg-red-50 rounded hover:bg-red-100 transition-colors flex items-center justify-center space-x-2"
+          className="w-full flex items-center justify-center space-x-2 px-3 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
         >
           <DeleteIcon fontSize="small" />
           <span>Delete Group & Actors</span>
@@ -294,7 +297,7 @@ const GroupEditorPanel = ({ selectedGroup, onClose }: Props) => {
       </div>
 
       {ConfirmDialogComponent}
-    </div>
+    </>
   );
 };
 

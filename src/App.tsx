@@ -47,9 +47,15 @@ function AppContent() {
 
   // Ref for LeftPanel to call focusSearch
   const leftPanelRef = useRef<LeftPanelRef>(null);
+  // Selection state - single item selection
   const [selectedNode, setSelectedNode] = useState<Actor | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<Relation | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
+
+  // Multi-selection state
+  const [selectedActors, setSelectedActors] = useState<Actor[]>([]);
+  const [selectedRelations, setSelectedRelations] = useState<Relation[]>([]);
+  const [selectedGroups, setSelectedGroups] = useState<Group[]>([]);
   // Use refs for callbacks to avoid triggering re-renders
   const addNodeCallbackRef = useRef<
     ((nodeTypeId: string, position?: { x: number; y: number }) => void) | null
@@ -92,18 +98,35 @@ function AppContent() {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Escape: Close property panels
       if (e.key === "Escape") {
-        if (selectedNode || selectedEdge || selectedGroup) {
+        if (
+          selectedNode ||
+          selectedEdge ||
+          selectedGroup ||
+          selectedActors.length > 0 ||
+          selectedRelations.length > 0 ||
+          selectedGroups.length > 0
+        ) {
           e.preventDefault();
           setSelectedNode(null);
           setSelectedEdge(null);
           setSelectedGroup(null);
+          setSelectedActors([]);
+          setSelectedRelations([]);
+          setSelectedGroups([]);
         }
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedNode, selectedEdge, selectedGroup]);
+  }, [
+    selectedNode,
+    selectedEdge,
+    selectedGroup,
+    selectedActors,
+    selectedRelations,
+    selectedGroups,
+  ]);
 
   return (
     <div className="flex flex-col h-screen bg-gray-100">
@@ -146,6 +169,9 @@ function AppContent() {
                 setSelectedNode(null);
                 setSelectedEdge(null);
                 setSelectedGroup(null);
+                setSelectedActors([]);
+                setSelectedRelations([]);
+                setSelectedGroups([]);
               }}
               onAddNode={addNodeCallbackRef.current || undefined}
             />
@@ -163,6 +189,9 @@ function AppContent() {
                 if (node) {
                   setSelectedEdge(null);
                   setSelectedGroup(null);
+                  setSelectedActors([]);
+                  setSelectedRelations([]);
+                  setSelectedGroups([]);
                 }
               }}
               onEdgeSelect={(edge) => {
@@ -171,6 +200,9 @@ function AppContent() {
                 if (edge) {
                   setSelectedNode(null);
                   setSelectedGroup(null);
+                  setSelectedActors([]);
+                  setSelectedRelations([]);
+                  setSelectedGroups([]);
                 }
               }}
               onGroupSelect={(group) => {
@@ -179,7 +211,19 @@ function AppContent() {
                 if (group) {
                   setSelectedNode(null);
                   setSelectedEdge(null);
+                  setSelectedActors([]);
+                  setSelectedRelations([]);
+                  setSelectedGroups([]);
                 }
+              }}
+              onMultiSelect={(actors, relations, groups) => {
+                setSelectedActors(actors);
+                setSelectedRelations(relations);
+                setSelectedGroups(groups);
+                // Clear single selections
+                setSelectedNode(null);
+                setSelectedEdge(null);
+                setSelectedGroup(null);
               }}
               onAddNodeRequest={(
                 callback: (
@@ -206,10 +250,16 @@ function AppContent() {
               selectedNode={selectedNode}
               selectedEdge={selectedEdge}
               selectedGroup={selectedGroup}
+              selectedActors={selectedActors}
+              selectedRelations={selectedRelations}
+              selectedGroups={selectedGroups}
               onClose={() => {
                 setSelectedNode(null);
                 setSelectedEdge(null);
                 setSelectedGroup(null);
+                setSelectedActors([]);
+                setSelectedRelations([]);
+                setSelectedGroups([]);
               }}
             />
           )}

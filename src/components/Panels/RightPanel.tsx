@@ -7,6 +7,7 @@ import NodeEditorPanel from './NodeEditorPanel';
 import EdgeEditorPanel from './EdgeEditorPanel';
 import GroupEditorPanel from './GroupEditorPanel';
 import GraphAnalysisPanel from './GraphAnalysisPanel';
+import MultiSelectProperties from './MultiSelectProperties';
 import type { Actor, Relation, Group } from '../../types';
 
 /**
@@ -25,6 +26,9 @@ interface Props {
   selectedNode: Actor | null;
   selectedEdge: Relation | null;
   selectedGroup: Group | null;
+  selectedActors?: Actor[];
+  selectedRelations?: Relation[];
+  selectedGroups?: Group[];
   onClose: () => void;
 }
 
@@ -47,7 +51,15 @@ const PanelHeader = ({ title, onCollapse }: PanelHeaderProps) => (
   </div>
 );
 
-const RightPanel = ({ selectedNode, selectedEdge, selectedGroup, onClose }: Props) => {
+const RightPanel = ({
+  selectedNode,
+  selectedEdge,
+  selectedGroup,
+  selectedActors = [],
+  selectedRelations = [],
+  selectedGroups = [],
+  onClose,
+}: Props) => {
   const {
     rightPanelCollapsed,
     rightPanelWidth,
@@ -56,6 +68,11 @@ const RightPanel = ({ selectedNode, selectedEdge, selectedGroup, onClose }: Prop
   } = usePanelStore();
 
   const { nodes, edges } = useGraphWithHistory();
+
+  // Calculate total multi-selection count
+  const totalMultiSelect =
+    selectedActors.length + selectedRelations.length + selectedGroups.length;
+  const hasMultiSelect = totalMultiSelect >= 2;
 
   // Collapsed view
   if (rightPanelCollapsed) {
@@ -66,6 +83,24 @@ const RightPanel = ({ selectedNode, selectedEdge, selectedGroup, onClose }: Prop
             <ChevronLeftIcon fontSize="small" />
           </IconButton>
         </Tooltip>
+      </div>
+    );
+  }
+
+  // Multi-select view (priority over single selections)
+  if (hasMultiSelect) {
+    return (
+      <div
+        className="h-full bg-white border-l border-gray-200 flex flex-col"
+        style={{ width: `${rightPanelWidth}px` }}
+      >
+        <PanelHeader title="Multi-Select Properties" onCollapse={collapseRightPanel} />
+        <MultiSelectProperties
+          selectedActors={selectedActors}
+          selectedRelations={selectedRelations}
+          selectedGroups={selectedGroups}
+          onClose={onClose}
+        />
       </div>
     );
   }

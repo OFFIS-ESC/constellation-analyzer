@@ -241,13 +241,25 @@ export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
   deleteGroup: (id: string, ungroupActors = true) =>
     set((state) => {
       if (ungroupActors) {
-        // Remove group and unparent actors (move them back to canvas)
+        // Remove group and unparent actors (keep them at their current absolute positions)
         // Note: parentId is a React Flow v11+ property for parent-child relationships
+        const group = state.groups.find((g) => g.id === id);
+
         const updatedNodes = state.nodes.map((node) => {
           const nodeWithParent = node as Actor & { parentId?: string; extent?: 'parent' };
-          return nodeWithParent.parentId === id
-            ? { ...node, parentId: undefined, extent: undefined }
-            : node;
+          if (nodeWithParent.parentId === id && group) {
+            // Convert relative position to absolute position
+            return {
+              ...node,
+              parentId: undefined,
+              extent: undefined,
+              position: {
+                x: group.position.x + node.position.x,
+                y: group.position.y + node.position.y,
+              }
+            };
+          }
+          return node;
         });
 
         return {
@@ -278,26 +290,77 @@ export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
   addActorToGroup: (actorId: string, groupId: string) =>
     set((state) => {
       const group = state.groups.find((g) => g.id === groupId);
-      if (!group) return state;
+      const actor = state.nodes.find((n) => n.id === actorId);
+      if (!group || !actor) return state;
 
-      // Update actor to be child of group
-      const updatedNodes = state.nodes.map((node) =>
-        node.id === actorId
-          ? {
-              ...node,
-              parentId: groupId,
-              extent: 'parent' as const,
-              // Convert to relative position (will be adjusted in component)
-              position: node.position,
-            }
-          : node
-      );
+      // Calculate new group bounds to include the actor
+      const actorWidth = 150; // Approximate node width
+      const actorHeight = 80; // Approximate node height
+      const padding = 20;
 
-      // Update group's actorIds
+      const actorAbsX = actor.position.x;
+      const actorAbsY = actor.position.y;
+
+      // Current group bounds
+      const groupX = group.position.x;
+      const groupY = group.position.y;
+      const groupWidth = typeof group.style?.width === 'number' ? group.style.width : 200;
+      const groupHeight = typeof group.style?.height === 'number' ? group.style.height : 200;
+
+      // Calculate new bounds
+      const newMinX = Math.min(groupX, actorAbsX - padding);
+      const newMinY = Math.min(groupY, actorAbsY - padding);
+      const newMaxX = Math.max(groupX + groupWidth, actorAbsX + actorWidth + padding);
+      const newMaxY = Math.max(groupY + groupHeight, actorAbsY + actorHeight + padding);
+
+      const newGroupX = newMinX;
+      const newGroupY = newMinY;
+      const newGroupWidth = newMaxX - newMinX;
+      const newGroupHeight = newMaxY - newMinY;
+
+      // Calculate position delta for existing child nodes
+      const deltaX = groupX - newGroupX;
+      const deltaY = groupY - newGroupY;
+
+      // Update actor to be child of group with relative position
+      const updatedNodes = state.nodes.map((node) => {
+        const nodeWithParent = node as Actor & { parentId?: string; extent?: 'parent' };
+
+        if (node.id === actorId) {
+          // New actor: convert to relative position
+          return {
+            ...node,
+            parentId: groupId,
+            extent: 'parent' as const,
+            position: {
+              x: actorAbsX - newGroupX,
+              y: actorAbsY - newGroupY,
+            },
+          };
+        } else if (nodeWithParent.parentId === groupId) {
+          // Existing child: adjust position due to group position change
+          return {
+            ...node,
+            position: {
+              x: node.position.x + deltaX,
+              y: node.position.y + deltaY,
+            },
+          };
+        }
+        return node;
+      });
+
+      // Update group's position, size, and actorIds
       const updatedGroups = state.groups.map((g) =>
         g.id === groupId
           ? {
               ...g,
+              position: { x: newGroupX, y: newGroupY },
+              style: {
+                ...g.style,
+                width: newGroupWidth,
+                height: newGroupHeight,
+              },
               data: {
                 ...g.data,
                 actorIds: [...g.data.actorIds, actorId],
@@ -314,17 +377,23 @@ export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
 
   removeActorFromGroup: (actorId: string, groupId: string) =>
     set((state) => {
-      // Update actor to remove parent
-      const updatedNodes = state.nodes.map((node) =>
-        node.id === actorId
-          ? {
-              ...node,
-              parentId: undefined,
-              extent: undefined,
-              // Keep current position (will be adjusted in component)
-            }
-          : node
-      );
+      const group = state.groups.find((g) => g.id === groupId);
+
+      // Update actor to remove parent and convert to absolute position
+      const updatedNodes = state.nodes.map((node) => {
+        if (node.id === actorId && group) {
+          return {
+            ...node,
+            parentId: undefined,
+            extent: undefined,
+            position: {
+              x: group.position.x + node.position.x,
+              y: group.position.y + node.position.y,
+            },
+          };
+        }
+        return node;
+      });
 
       // Update group's actorIds
       const updatedGroups = state.groups.map((g) =>
@@ -352,12 +421,15 @@ export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
 
       const isMinimized = !group.data.minimized;
 
-      // Update group's minimized state
+      // Update group's minimized state and child nodes
       const updatedGroups = state.groups.map((g) => {
         if (g.id !== groupId) return g;
 
         if (isMinimized) {
           // Minimizing: store original dimensions in metadata
+          const currentWidth = typeof g.style?.width === 'number' ? g.style.width : 300;
+          const currentHeight = typeof g.style?.height === 'number' ? g.style.height : 200;
+
           return {
             ...g,
             data: {
@@ -365,17 +437,14 @@ export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
               minimized: true,
               metadata: {
                 ...g.data.metadata,
-                originalWidth: g.width,
-                originalHeight: g.height,
+                originalWidth: currentWidth,
+                originalHeight: currentHeight,
               },
             },
-            width: 220,
-            height: 80,
-            // Override wrapper styles to remove padding and border
             style: {
-              padding: 0,
-              border: 'none',
-              backgroundColor: 'white', // Solid background (inner div will cover with its own color)
+              ...g.style,
+              width: 220,
+              height: 80,
             },
           };
         } else {
@@ -394,16 +463,30 @@ export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
               minimized: false,
               metadata: Object.keys(restMetadata).length > 0 ? restMetadata : undefined,
             },
-            width: originalWidth,
-            height: originalHeight,
-            // Remove wrapper style overrides for maximized state
-            style: undefined,
+            style: {
+              ...g.style,
+              width: originalWidth,
+              height: originalHeight,
+            },
           };
         }
       });
 
+      // When minimizing, hide child nodes; when maximizing, show them
+      const updatedNodes = state.nodes.map((node) => {
+        const nodeWithParent = node as Actor & { parentId?: string };
+        if (nodeWithParent.parentId === groupId) {
+          return {
+            ...node,
+            hidden: isMinimized,
+          };
+        }
+        return node;
+      });
+
       return {
         groups: updatedGroups,
+        nodes: updatedNodes,
       };
     }),
 

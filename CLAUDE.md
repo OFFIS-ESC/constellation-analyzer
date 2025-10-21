@@ -52,3 +52,4 @@ Since this is a new project, the initial setup should include:
 - Set up project structure (components, hooks, utils, types)
 - Configure linting and formatting tools
 - Establish data models for nodes, edges, and graph state
+- build: npm run build; lint: npm run lint

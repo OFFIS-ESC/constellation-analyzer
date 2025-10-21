@@ -11,6 +11,7 @@ import type {
   GroupData,
   GraphActions
 } from '../types';
+import { MINIMIZED_GROUP_WIDTH, MINIMIZED_GROUP_HEIGHT } from '../constants';
 
 /**
  * ⚠️ IMPORTANT: DO NOT USE THIS STORE DIRECTLY IN COMPONENTS ⚠️
@@ -443,8 +444,8 @@ export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
             },
             style: {
               ...g.style,
-              width: 220,
-              height: 80,
+              width: MINIMIZED_GROUP_WIDTH,
+              height: MINIMIZED_GROUP_HEIGHT,
             },
           };
         } else {

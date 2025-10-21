@@ -1,6 +1,7 @@
 import type { Relation, RelationData } from '../types';
 import type { Node } from '@xyflow/react';
 import { Position } from '@xyflow/react';
+import { MINIMIZED_GROUP_WIDTH, MINIMIZED_GROUP_HEIGHT } from '../constants';
 
 /**
  * Generates a unique ID for edges
@@ -21,13 +22,20 @@ function getNodeIntersection(intersectionNode: Node, targetNode: Node) {
   } = intersectionNode;
   const targetPosition = targetNode.position;
 
-  const w = (intersectionNodeWidth ?? 0) / 2;
-  const h = (intersectionNodeHeight ?? 0) / 2;
+  // Use fallback dimensions if width/height are not set (e.g., for groups without measured dimensions)
+  const w = (intersectionNodeWidth ?? MINIMIZED_GROUP_WIDTH) / 2;
+  const h = (intersectionNodeHeight ?? MINIMIZED_GROUP_HEIGHT) / 2;
 
   const x2 = intersectionNodePosition.x + w;
   const y2 = intersectionNodePosition.y + h;
-  const x1 = targetPosition.x + (targetNode.width ?? 0) / 2;
-  const y1 = targetPosition.y + (targetNode.height ?? 0) / 2;
+  const x1 = targetPosition.x + (targetNode.width ?? MINIMIZED_GROUP_WIDTH) / 2;
+  const y1 = targetPosition.y + (targetNode.height ?? MINIMIZED_GROUP_HEIGHT) / 2;
+
+  // Guard against division by zero
+  if (w === 0 || h === 0) {
+    // If node has no dimensions, return center point
+    return { x: x2, y: y2 };
+  }
 
   const xx1 = (x1 - x2) / (2 * w) - (y1 - y2) / (2 * h);
   const yy1 = (x1 - x2) / (2 * w) + (y1 - y2) / (2 * h);
@@ -50,8 +58,9 @@ function getEdgePosition(node: Node, intersectionPoint: { x: number; y: number }
   const px = Math.round(intersectionPoint.x);
   const py = Math.round(intersectionPoint.y);
 
-  const width = node.width ?? 0;
-  const height = node.height ?? 0;
+  // Use fallback dimensions if not set (same as getNodeIntersection)
+  const width = node.width ?? MINIMIZED_GROUP_WIDTH;
+  const height = node.height ?? MINIMIZED_GROUP_HEIGHT;
 
   if (px <= nx + 1) {
     return Position.Left;

@@ -170,58 +170,85 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onMultiSelect,
 
   // Reroute edges to minimized groups and filter internal edges
   const visibleEdges = useMemo(() => {
-    // Build a map of actor -> group for actors in minimized groups
+    // Build a map of actor -> group by examining each actor's parentId
+    // This is the canonical source of truth in React Flow
     const actorToMinimizedGroup = new Map<string, string>();
-    storeGroups.forEach((group) => {
-      if (group.data.minimized) {
-        group.data.actorIds.forEach((actorId) => {
-          actorToMinimizedGroup.set(actorId, group.id);
-        });
+
+    // Get set of minimized group IDs
+    const minimizedGroupIds = new Set(
+      storeGroups.filter((group) => group.data.minimized).map((group) => group.id)
+    );
+
+    // Map each actor to its parent group (if the group is minimized)
+    storeNodes.forEach((node) => {
+      const nodeWithParent = node as Actor & { parentId?: string };
+      if (nodeWithParent.parentId && minimizedGroupIds.has(nodeWithParent.parentId)) {
+        actorToMinimizedGroup.set(node.id, nodeWithParent.parentId);
       }
     });
 
+    // Map to deduplicate edges between groups: "source_target" -> edge
+    const edgeMap = new Map<string, Edge>();
+
     // Reroute edges: if source or target is in a minimized group, redirect to the group
     // Filter out edges that are internal to a minimized group (both source and target in same group)
-    return (storeEdges as Edge[])
-      .map((edge) => {
-        const newSource = actorToMinimizedGroup.get(edge.source) || edge.source;
-        const newTarget = actorToMinimizedGroup.get(edge.target) || edge.target;
+    (storeEdges as Edge[]).forEach((edge) => {
+      const newSource = actorToMinimizedGroup.get(edge.source) || edge.source;
+      const newTarget = actorToMinimizedGroup.get(edge.target) || edge.target;
 
-        const sourceChanged = newSource !== edge.source;
-        const targetChanged = newTarget !== edge.target;
+      const sourceChanged = newSource !== edge.source;
+      const targetChanged = newTarget !== edge.target;
 
-        // Filter: if both source and target are rerouted to the SAME group, hide this edge
-        // (it's an internal edge within a minimized group)
-        if (sourceChanged && targetChanged && newSource === newTarget) {
-          return null; // Mark for filtering
+      // Filter: if both source and target are rerouted to the SAME group, hide this edge
+      // (it's an internal edge within a minimized group)
+      if (sourceChanged && targetChanged && newSource === newTarget) {
+        return; // Skip this edge
+      }
+
+      // Create edge key for deduplication
+      const edgeKey = `${newSource}_${newTarget}`;
+
+      // Only update if source or target changed
+      if (sourceChanged || targetChanged) {
+        // Destructure to separate handle properties from the rest
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { sourceHandle, targetHandle, ...edgeWithoutHandles } = edge;
+
+        // Create new edge object with updated source/target
+        const newEdge: Edge = {
+          ...edgeWithoutHandles,
+          source: newSource,
+          target: newTarget,
+        };
+
+        // Explicitly delete handle properties to ensure they don't exist
+        // This is critical - React Flow will error if handles are present but invalid
+        delete (newEdge as Record<string, unknown>).sourceHandle;
+        delete (newEdge as Record<string, unknown>).targetHandle;
+
+        // Only re-add handle IDs if the endpoint was NOT rerouted to a group
+        if (!sourceChanged && sourceHandle !== undefined && sourceHandle !== null) {
+          newEdge.sourceHandle = sourceHandle;
+        }
+        if (!targetChanged && targetHandle !== undefined && targetHandle !== null) {
+          newEdge.targetHandle = targetHandle;
         }
 
-        // Only update if source or target changed
-        if (sourceChanged || targetChanged) {
-          // Destructure to separate handle properties from the rest
-          const { sourceHandle, targetHandle, ...edgeWithoutHandles } = edge;
-
-          // Create new edge object, omitting handle properties when rerouting to groups
-          const newEdge: Edge = {
-            ...edgeWithoutHandles,
-            source: newSource,
-            target: newTarget,
-          };
-
-          // Only include handle IDs if not rerouted to a group
-          if (!sourceChanged && sourceHandle) {
-            newEdge.sourceHandle = sourceHandle;
-          }
-          if (!targetChanged && targetHandle) {
-            newEdge.targetHandle = targetHandle;
-          }
-
-          return newEdge;
+        // If we already have an edge between these nodes, keep the first one
+        // (you could also merge labels or aggregate data here if needed)
+        if (!edgeMap.has(edgeKey)) {
+          edgeMap.set(edgeKey, newEdge);
         }
-        return edge;
-      })
-      .filter((edge): edge is Edge => edge !== null); // Remove null entries
-  }, [storeEdges, storeGroups]);
+      } else {
+        // No rerouting needed, just add the edge
+        if (!edgeMap.has(edgeKey)) {
+          edgeMap.set(edgeKey, edge);
+        }
+      }
+    });
+
+    return Array.from(edgeMap.values());
+  }, [storeEdges, storeGroups, storeNodes]);
 
   const [edges, setEdgesState, onEdgesChange] = useEdgesState(
     visibleEdges,
@@ -284,10 +311,17 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onMultiSelect,
       if (hasPendingSelection) {
         const pendingEdgeId = pendingType === 'edge' ? pendingId : null;
 
-        const newEdges = visibleEdges.map((edge) => ({
-          ...edge,
-          selected: edge.id === pendingEdgeId,
-        }));
+        const newEdges = visibleEdges.map((edge) => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { sourceHandle, targetHandle, ...edgeWithoutHandles } = edge;
+          return {
+            ...edgeWithoutHandles,
+            selected: edge.id === pendingEdgeId,
+            // Only include handles if they exist and are not null
+            ...(sourceHandle !== undefined && sourceHandle !== null ? { sourceHandle } : {}),
+            ...(targetHandle !== undefined && targetHandle !== null ? { targetHandle } : {}),
+          };
+        });
 
         // Clear pending selection after applying it to both nodes and edges
         pendingSelectionRef.current = null;
@@ -300,10 +334,17 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onMultiSelect,
         currentEdges.map((edge) => [edge.id, edge.selected])
       );
 
-      return visibleEdges.map((edge) => ({
-        ...edge,
-        selected: selectionMap.get(edge.id) || false,
-      }));
+      return visibleEdges.map((edge) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { sourceHandle, targetHandle, ...edgeWithoutHandles } = edge;
+        return {
+          ...edgeWithoutHandles,
+          selected: selectionMap.get(edge.id) || false,
+          // Only include handles if they exist and are not null
+          ...(sourceHandle !== undefined && sourceHandle !== null ? { sourceHandle } : {}),
+          ...(targetHandle !== undefined && targetHandle !== null ? { targetHandle } : {}),
+        };
+      });
     });
   }, [allNodes, visibleEdges, setNodesState, setEdgesState]);
 

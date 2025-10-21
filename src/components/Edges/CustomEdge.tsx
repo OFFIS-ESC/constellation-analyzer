@@ -53,7 +53,8 @@ const CustomEdge = ({
   const targetIsMinimizedGroup = targetNode?.type === 'group' && (targetNode.data as Group['data']).minimized;
 
   // Calculate floating edge parameters if needed
-  // Only float the side(s) that connect to minimized groups
+  // When connecting to groups (especially minimized ones), we need to use floating edges
+  // because groups don't have specific handles
   let finalSourceX = sourceX;
   let finalSourceY = sourceY;
   let finalTargetX = targetX;
@@ -61,10 +62,14 @@ const CustomEdge = ({
   let finalSourcePosition = sourcePosition;
   let finalTargetPosition = targetPosition;
 
-  if ((sourceIsMinimizedGroup || targetIsMinimizedGroup) && sourceNode && targetNode) {
+  // Check if we need to use floating edge calculations
+  const needsFloatingEdge = (sourceIsMinimizedGroup || targetIsMinimizedGroup) && sourceNode && targetNode;
+
+  if (needsFloatingEdge) {
     const floatingParams = getFloatingEdgeParams(sourceNode, targetNode);
 
-    // Only use floating position for the minimized group side(s)
+    // When either endpoint is a minimized group, use floating positions for that side
+    // IMPORTANT: When BOTH are groups, we must use floating for BOTH sides
     if (sourceIsMinimizedGroup) {
       finalSourceX = floatingParams.sx;
       finalSourceY = floatingParams.sy;

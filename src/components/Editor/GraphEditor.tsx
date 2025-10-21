@@ -220,7 +220,6 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onMultiSelect,
       // Only update if source or target changed
       if (wasRerouted) {
         // Destructure to separate handle properties from the rest
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { sourceHandle, targetHandle, ...edgeWithoutHandles } = edge;
 
         // Create new edge object with updated source/target
@@ -344,7 +343,6 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onMultiSelect,
         const pendingEdgeId = pendingType === 'edge' ? pendingId : null;
 
         const newEdges = visibleEdges.map((edge) => {
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           const { sourceHandle, targetHandle, ...edgeWithoutHandles } = edge;
           return {
             ...edgeWithoutHandles,
@@ -367,7 +365,6 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onMultiSelect,
       );
 
       return visibleEdges.map((edge) => {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { sourceHandle, targetHandle, ...edgeWithoutHandles } = edge;
         return {
           ...edgeWithoutHandles,

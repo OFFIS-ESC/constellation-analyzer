@@ -5,7 +5,7 @@ import {
   loadDocumentFromStorage,
   clearWorkspaceStorage,
 } from './workspace/persistence';
-import { mockNodeTypes, mockEdgeTypes } from '../test/mocks';
+import { mockNodeTypes, mockEdgeTypes } from '../test-utils/mocks';
 
 // Create a mock showToast that we can track
 const mockShowToast = vi.fn();

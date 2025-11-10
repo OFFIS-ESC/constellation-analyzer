@@ -3,7 +3,7 @@ import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useGraphStore } from '../../stores/graphStore';
 import { useTimelineStore } from '../../stores/timelineStore';
 import { useHistoryStore } from '../../stores/historyStore';
-import { resetWorkspaceStore } from '../../test/test-helpers';
+import { resetWorkspaceStore } from '../../test-utils/test-helpers';
 
 /**
  * Integration tests for store synchronization patterns

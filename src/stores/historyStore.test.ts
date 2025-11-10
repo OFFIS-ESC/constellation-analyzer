@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useHistoryStore, type DocumentSnapshot, type HistoryAction } from './historyStore';
-import { mockNodeTypes, mockEdgeTypes, mockLabels } from '../test/mocks';
+import { mockNodeTypes, mockEdgeTypes, mockLabels } from '../test-utils/mocks';
 import type { ConstellationDocument } from './persistence/types';
 import type { Timeline } from '../types/timeline';
 

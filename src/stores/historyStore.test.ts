@@ -327,7 +327,7 @@ describe('historyStore', () => {
             id: 'node-1',
             type: 'custom',
             position: { x: 100, y: 100 },
-            data: { actorType: 'person', name: 'Test' },
+            data: { type: 'person', label: 'Test' },
           },
         ],
         edges: [],
@@ -342,9 +342,9 @@ describe('historyStore', () => {
 
       // Snapshot is serialized (Map -> object) during pushAction
       // Need to access states as a record object, not a Map
-      const states = snapshot?.timeline.states as Record<string, unknown>;
+      const states = snapshot?.timeline.states as Record<string, unknown> | undefined;
       const currentStateId = snapshot?.timeline.currentStateId;
-      const currentState = states[currentStateId] as { graph: { nodes: unknown[] } };
+      const currentState = currentStateId && states ? states[currentStateId] as { graph: { nodes: unknown[] } } : undefined;
 
       expect(currentState?.graph.nodes).toHaveLength(1);
     });
@@ -872,7 +872,7 @@ describe('historyStore', () => {
       const history = state.histories.get(TEST_DOC_ID);
 
       // Should have consistent state
-      expect(history?.undoStack.length + history?.redoStack.length).toBe(10);
+      expect((history?.undoStack.length ?? 0) + (history?.redoStack.length ?? 0)).toBe(10);
     });
 
     it('should handle empty snapshots', () => {

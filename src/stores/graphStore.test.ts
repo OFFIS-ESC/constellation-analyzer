@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useGraphStore } from './graphStore';
-import type { Actor, Relation, Group, NodeTypeConfig, EdgeTypeConfig, LabelConfig } from '../types';
+import type { Actor, Relation, Group, NodeTypeConfig, EdgeTypeConfig, LabelConfig, NodeShape } from '../types';
 import { MINIMIZED_GROUP_WIDTH, MINIMIZED_GROUP_HEIGHT } from '../constants';
 
 // Helper to create a mock node
@@ -10,8 +10,8 @@ function createMockNode(id: string, actorType: string = 'person'): Actor {
     type: 'custom',
     position: { x: 100, y: 100 },
     data: {
-      actorType,
-      name: `Test ${id}`,
+      type: actorType,
+      label: `Test ${id}`,
       description: 'Test description',
     },
   };
@@ -25,7 +25,7 @@ function createMockEdge(id: string, source: string, target: string, relationType
     target,
     type: 'custom',
     data: {
-      relationType,
+      type: relationType,
       description: 'Test relation',
     },
   };
@@ -39,6 +39,7 @@ function createMockGroup(id: string, actorIds: string[] = []): Group {
     position: { x: 0, y: 0 },
     data: {
       label: `Group ${id}`,
+      color: '#cccccc',
       actorIds,
       minimized: false,
     },
@@ -158,33 +159,35 @@ describe('graphStore', () => {
         const { updateNode } = useGraphStore.getState();
 
         updateNode('node-1', {
-          data: { name: 'Updated Name', actorType: 'person' },
+          data: { label: 'Updated Name', type: 'person' },
         });
 
         const state = useGraphStore.getState();
-        expect(state.nodes[0].data.name).toBe('Updated Name');
+        expect(state.nodes[0].data.label).toBe('Updated Name');
       });
 
       it('should merge data instead of replacing', () => {
         const { updateNode } = useGraphStore.getState();
 
         updateNode('node-1', {
-          data: { description: 'New description' },
+          data: { label: 'Test node-1', type: 'person', description: 'New description' },
         });
 
         const state = useGraphStore.getState();
-        expect(state.nodes[0].data.name).toBe('Test node-1'); // Preserved
+        expect(state.nodes[0].data.label).toBe('Test node-1'); // Preserved
         expect(state.nodes[0].data.description).toBe('New description'); // Updated
       });
 
       it('should validate labels against existing labels', () => {
         const { addLabel, updateNode } = useGraphStore.getState();
 
-        addLabel({ id: 'label-1', label: 'Valid', color: '#000' });
-        addLabel({ id: 'label-2', label: 'Also Valid', color: '#111' });
+        addLabel({ id: 'label-1', name: 'Valid', color: '#000', appliesTo: 'actors' });
+        addLabel({ id: 'label-2', name: 'Also Valid', color: '#111', appliesTo: 'actors' });
 
         updateNode('node-1', {
           data: {
+            label: 'Test node-1',
+            type: 'person',
             labels: ['label-1', 'label-999', 'label-2'], // label-999 doesn't exist
           },
         });
@@ -198,6 +201,8 @@ describe('graphStore', () => {
 
         updateNode('node-1', {
           data: {
+            label: 'Test node-1',
+            type: 'person',
             labels: ['invalid-1', 'invalid-2'],
           },
         });
@@ -359,7 +364,7 @@ describe('graphStore', () => {
       it('should validate labels against existing labels', () => {
         const { addLabel, updateEdge } = useGraphStore.getState();
 
-        addLabel({ id: 'label-1', label: 'Valid', color: '#000' });
+        addLabel({ id: 'label-1', name: 'Valid', color: '#000', appliesTo: 'relations' });
 
         updateEdge('edge-1', {
           labels: ['label-1', 'invalid-label'],
@@ -805,8 +810,9 @@ describe('graphStore', () => {
 
         const label: LabelConfig = {
           id: 'label-1',
-          label: 'Important',
+          name: 'Important',
           color: '#ff0000',
+          appliesTo: 'both',
         };
 
         addLabel(label);
@@ -820,16 +826,16 @@ describe('graphStore', () => {
     describe('updateLabel', () => {
       beforeEach(() => {
         const { addLabel } = useGraphStore.getState();
-        addLabel({ id: 'label-1', label: 'Test', color: '#000' });
+        addLabel({ id: 'label-1', name: 'Test', color: '#000', appliesTo: 'both' });
       });
 
       it('should update label', () => {
         const { updateLabel } = useGraphStore.getState();
 
-        updateLabel('label-1', { label: 'Updated', color: '#fff' });
+        updateLabel('label-1', { name: 'Updated', color: '#fff' });
 
         const state = useGraphStore.getState();
-        expect(state.labels[0].label).toBe('Updated');
+        expect(state.labels[0].name).toBe('Updated');
         expect(state.labels[0].color).toBe('#fff');
       });
     });
@@ -837,8 +843,8 @@ describe('graphStore', () => {
     describe('deleteLabel', () => {
       beforeEach(() => {
         const { addNode, addEdge, addLabel } = useGraphStore.getState();
-        addLabel({ id: 'label-1', label: 'Test', color: '#000' });
-        addLabel({ id: 'label-2', label: 'Other', color: '#111' });
+        addLabel({ id: 'label-1', name: 'Test', color: '#000', appliesTo: 'both' });
+        addLabel({ id: 'label-2', name: 'Other', color: '#111', appliesTo: 'both' });
 
         // Add nodes and edges with labels
         const node = createMockNode('node-1');
@@ -846,7 +852,7 @@ describe('graphStore', () => {
         addNode(node);
 
         const edge = createMockEdge('edge-1', 'node-1', 'node-1');
-        edge.data = { ...edge.data, labels: ['label-1'] };
+        edge.data = { ...edge.data, type: 'collaborates', labels: ['label-1'] };
         addEdge(edge);
       });
 
@@ -972,7 +978,7 @@ describe('graphStore', () => {
       it('should set labels', () => {
         const { setLabels } = useGraphStore.getState();
         const labels: LabelConfig[] = [
-          { id: 'label-1', label: 'Test', color: '#000' },
+          { id: 'label-1', name: 'Test', color: '#000', appliesTo: 'both' },
         ];
 
         setLabels(labels);
@@ -991,13 +997,13 @@ describe('graphStore', () => {
           edges: [createMockEdge('edge-1', 'node-1', 'node-1')],
           groups: [createMockGroup('group-1')],
           nodeTypes: [
-            { id: 'custom', label: 'Custom', color: '#000', shape: 'circle', icon: 'Test', description: 'Test' },
+            { id: 'custom', label: 'Custom', color: '#000', shape: 'circle' as NodeShape, icon: 'Test', description: 'Test' },
           ],
           edgeTypes: [
-            { id: 'custom', label: 'Custom', color: '#000', style: 'solid' },
+            { id: 'custom', label: 'Custom', color: '#000', style: 'solid' as const },
           ],
           labels: [
-            { id: 'label-1', label: 'Test', color: '#000' },
+            { id: 'label-1', name: 'Test', color: '#000', appliesTo: 'both' as const },
           ],
         };
 

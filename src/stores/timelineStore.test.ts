@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useTimelineStore } from './timelineStore';
+import type { Timeline, ConstellationState } from '../types/timeline';
+import type { Actor, Relation, Group, NodeTypeConfig, EdgeTypeConfig, LabelConfig } from '../types';
 
 // Mock dependent stores
 const mockShowToast = vi.fn();
@@ -8,7 +10,15 @@ const mockLoadGraphState = vi.fn();
 const mockPushToHistory = vi.fn();
 
 // Create a mutable mock state for graphStore
-const mockGraphState = {
+const mockGraphState: {
+  nodes: Actor[];
+  edges: Relation[];
+  groups: Group[];
+  nodeTypes: NodeTypeConfig[];
+  edgeTypes: EdgeTypeConfig[];
+  labels: LabelConfig[];
+  loadGraphState: typeof mockLoadGraphState;
+} = {
   nodes: [],
   edges: [],
   groups: [],
@@ -133,7 +143,7 @@ describe('timelineStore', () => {
       const { initializeTimeline } = useTimelineStore.getState();
 
       const initialGraph = {
-        nodes: [{ id: 'node-1', type: 'custom', position: { x: 0, y: 0 }, data: {} }],
+        nodes: [{ id: 'node-1', type: 'custom', position: { x: 0, y: 0 }, data: { label: 'Test', type: 'person' } }],
         edges: [],
         groups: [],
       };
@@ -141,7 +151,7 @@ describe('timelineStore', () => {
       initializeTimeline(TEST_DOC_ID, initialGraph);
 
       // Modify original
-      initialGraph.nodes.push({ id: 'node-2', type: 'custom', position: { x: 0, y: 0 }, data: {} });
+      initialGraph.nodes.push({ id: 'node-2', type: 'custom', position: { x: 0, y: 0 }, data: { label: 'Test', type: 'person' } });
 
       // Timeline should be unaffected
       const state = useTimelineStore.getState();
@@ -184,7 +194,11 @@ describe('timelineStore', () => {
       const { loadTimeline } = useTimelineStore.getState();
 
       // Simulate loaded JSON (states as plain object)
-      const timelineFromJSON = {
+      const timelineFromJSON: {
+        states: Record<string, ConstellationState>;
+        currentStateId: string;
+        rootStateId: string;
+      } = {
         states: {
           'state-1': {
             id: 'state-1',
@@ -199,7 +213,7 @@ describe('timelineStore', () => {
         rootStateId: 'state-1',
       };
 
-      loadTimeline(TEST_DOC_ID, timelineFromJSON as Timeline);
+      loadTimeline(TEST_DOC_ID, timelineFromJSON as unknown as Timeline);
 
       const state = useTimelineStore.getState();
       const timeline = state.timelines.get(TEST_DOC_ID);
@@ -233,7 +247,7 @@ describe('timelineStore', () => {
       const { createState } = useTimelineStore.getState();
 
       // Simulate current graph with nodes by mutating mockGraphState
-      mockGraphState.nodes = [{ id: 'node-1', type: 'custom', position: { x: 0, y: 0 }, data: {} }];
+      mockGraphState.nodes = [{ id: 'node-1', type: 'custom', position: { x: 0, y: 0 }, data: { label: 'Test', type: 'person' } }];
 
       const newStateId = createState('With Nodes');
 
@@ -345,7 +359,7 @@ describe('timelineStore', () => {
       const { switchToState, getAllStates } = useTimelineStore.getState();
 
       // Mock current graph with nodes by mutating mockGraphState
-      mockGraphState.nodes = [{ id: 'node-modified', type: 'custom', position: { x: 100, y: 100 }, data: {} }];
+      mockGraphState.nodes = [{ id: 'node-modified', type: 'custom', position: { x: 100, y: 100 }, data: { label: 'Test', type: 'person' } }];
 
       const states = getAllStates();
       const currentStateId = states[2].id; // Current is State 3
@@ -415,13 +429,13 @@ describe('timelineStore', () => {
     it('should merge metadata', () => {
       const { updateState, getState } = useTimelineStore.getState();
 
-      updateState(stateId, { metadata: { custom: 'value1' } });
-      updateState(stateId, { metadata: { another: 'value2' } });
+      updateState(stateId, { metadata: { date: '2024-01-01' } });
+      updateState(stateId, { metadata: { color: '#FF0000' } });
 
       const updatedState = getState(stateId);
       expect(updatedState?.metadata).toEqual({
-        custom: 'value1',
-        another: 'value2',
+        date: '2024-01-01',
+        color: '#FF0000',
       });
     });
 
@@ -574,7 +588,7 @@ describe('timelineStore', () => {
       const originalState = timeline?.states.get(stateId);
       if (originalState) {
         originalState.graph = {
-          nodes: [{ id: 'node-1', type: 'custom', position: { x: 0, y: 0 }, data: {} }],
+          nodes: [{ id: 'node-1', type: 'custom', position: { x: 0, y: 0 }, data: { label: 'Test', type: 'person' } }],
           edges: [],
           groups: [],
         };
@@ -587,7 +601,7 @@ describe('timelineStore', () => {
 
       // Modify original
       if (originalState) {
-        originalState.graph.nodes.push({ id: 'node-2', type: 'custom', position: { x: 0, y: 0 }, data: {} });
+        originalState.graph.nodes.push({ id: 'node-2', type: 'custom', position: { x: 0, y: 0 }, data: { label: 'Test', type: 'person' } });
       }
 
       // Duplicate should be unaffected
@@ -702,7 +716,7 @@ describe('timelineStore', () => {
       const currentStateId = timeline?.currentStateId;
 
       const newGraph = {
-        nodes: [{ id: 'node-1', type: 'custom', position: { x: 0, y: 0 }, data: {} }],
+        nodes: [{ id: 'node-1', type: 'custom', position: { x: 0, y: 0 }, data: { label: 'Test', type: 'person' } }],
         edges: [],
         groups: [],
       };

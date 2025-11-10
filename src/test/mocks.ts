@@ -22,8 +22,8 @@ export const mockEdgeTypes: EdgeTypeConfig[] = [
 
 // Mock default labels
 export const mockLabels: LabelConfig[] = [
-  { id: 'label-1', label: 'Important', color: '#ef4444' },
-  { id: 'label-2', label: 'Archive', color: '#6b7280' },
+  { id: 'label-1', name: 'Important', color: '#ef4444', appliesTo: 'both' },
+  { id: 'label-2', name: 'Archive', color: '#6b7280', appliesTo: 'both' },
 ];
 
 // Create a mock document

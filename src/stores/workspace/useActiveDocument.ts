@@ -39,7 +39,7 @@ export function useActiveDocument() {
   const graphLabels = useGraphStore((state) => state.labels);
 
   // Track unload timers for inactive documents
-  const unloadTimersRef = useRef<Map<string, number>>(new Map());
+  const unloadTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   // Track when we're loading a document to prevent false dirty marking
   const isLoadingRef = useRef(false);

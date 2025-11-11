@@ -135,3 +135,6 @@ export interface GraphActions {
 export interface EditorActions {
   updateSettings: (settings: Partial<EditorSettings>) => void;
 }
+
+// Re-export workspace types
+export type { WorkspaceSettings } from '../stores/workspace/types';

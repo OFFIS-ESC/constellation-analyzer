@@ -170,7 +170,7 @@ describe('Store Synchronization Integration', () => {
         id: 'custom-type',
         label: 'Custom Type',
         color: '#ff0000',
-        shape: 'diamond' as const,
+        shape: 'circle' as const,
         icon: 'Star',
         description: 'A custom node type',
       };

@@ -47,6 +47,10 @@ import type { ExportOptions } from "../../utils/graphExport";
 
 import type { Actor, Relation, Group, GroupData } from "../../types";
 
+// Zoom level constants for React Flow
+const MIN_ZOOM = 0.1;  // Allow zooming out to 10% for large charts
+const MAX_ZOOM = 2.5;  // Allow zooming in to 250%
+
 interface GraphEditorProps {
   selectedNode: Actor | null;
   selectedEdge: Relation | null;
@@ -499,8 +503,8 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onMultiSelect,
           nodes: matchingNodeIds.map((id) => ({ id })),
           padding: 0.2,      // 20% padding around selection
           duration: 300,     // 300ms smooth animation
-          maxZoom: 2.5,      // Allow more zoom in
-          minZoom: 0.5,      // Don't zoom out too much
+          maxZoom: MAX_ZOOM,
+          minZoom: MIN_ZOOM,
         });
       }
     }, 300); // Debounce 300ms
@@ -1085,6 +1089,8 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onMultiSelect,
         snapGrid={[gridSize, gridSize]}
         panOnDrag={panOnDrag}
         zoomOnScroll={zoomOnScroll}
+        minZoom={MIN_ZOOM}
+        maxZoom={MAX_ZOOM}
         connectionRadius={0}
         fitView
         attributionPosition="bottom-left"

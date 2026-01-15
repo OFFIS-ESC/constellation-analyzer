@@ -20,6 +20,7 @@ export interface DocumentMetadata {
     y: number;
     zoom: number;
   };
+  preferPresentationMode?: boolean;  // Whether document should open in presentation mode
 }
 
 // Recent file entry
@@ -103,6 +104,9 @@ export interface WorkspaceActions {
   // Viewport operations
   saveViewport: (documentId: string, viewport: { x: number; y: number; zoom: number }) => void;
   getViewport: (documentId: string) => { x: number; y: number; zoom: number } | undefined;
+
+  // Presentation mode operations
+  setDocumentPresentationPreference: (documentId: string, enabled: boolean) => void;
 
   // Transaction helper (internal utility for atomic operations)
   executeTypeTransaction: <T>(

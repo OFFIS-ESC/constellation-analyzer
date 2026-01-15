@@ -16,6 +16,10 @@ interface SettingsState {
   autoZoomEnabled: boolean;
   setAutoZoomEnabled: (enabled: boolean) => void;
 
+  // Presentation Mode Settings
+  presentationMode: boolean;
+  setPresentationMode: (enabled: boolean) => void;
+
   // Future settings can be added here
   // Example:
   // theme: 'light' | 'dark';
@@ -29,6 +33,11 @@ export const useSettingsStore = create<SettingsState>()(
       autoZoomEnabled: true,
       setAutoZoomEnabled: (enabled: boolean) =>
         set({ autoZoomEnabled: enabled }),
+
+      // Presentation Mode Settings
+      presentationMode: false,
+      setPresentationMode: (enabled: boolean) =>
+        set({ presentationMode: enabled }),
 
       // Future settings implementations go here
     }),

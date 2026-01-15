@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { useSettingsStore } from '../../stores/settingsStore';
 import { useGraphWithHistory } from '../../hooks/useGraphWithHistory';
 import { useDocumentHistory } from '../../hooks/useDocumentHistory';
 import DocumentManager from '../Workspace/DocumentManager';
@@ -56,6 +57,7 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) =>
 
   const { clearGraph } = useGraphWithHistory();
   const { undo, redo, canUndo, canRedo, undoDescription, redoDescription } = useDocumentHistory();
+  const { setPresentationMode } = useSettingsStore();
 
   // Listen for custom event to close all menus (e.g., from graph canvas clicks, context menu opens)
   useEffect(() => {
@@ -439,6 +441,18 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) =>
                   {getShortcutLabel('fit-view') && (
                     <span className="text-xs text-gray-400">{getShortcutLabel('fit-view')}</span>
                   )}
+                </button>
+
+                {/* Presentation Mode */}
+                <button
+                  onClick={() => {
+                    setPresentationMode(true);
+                    closeMenu();
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between"
+                >
+                  <span>Presentation Mode</span>
+                  <span className="text-xs text-gray-400">F11</span>
                 </button>
               </div>
             )}

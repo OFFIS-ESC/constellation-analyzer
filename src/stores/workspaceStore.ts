@@ -25,6 +25,7 @@ import { useToastStore } from './toastStore';
 import { useTimelineStore } from './timelineStore';
 import { useGraphStore } from './graphStore';
 import { useBibliographyStore } from './bibliographyStore';
+import { useSettingsStore } from './settingsStore';
 import type { ConstellationState, Timeline } from '../types/timeline';
 import { getCurrentGraphFromDocument } from './workspace/documentUtils';
 // @ts-expect-error - citation.js doesn't have TypeScript definitions
@@ -552,6 +553,12 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
   // Switch active document (opens it as a tab if not already open)
   switchToDocument: (documentId: string) => {
     get().loadDocument(documentId).then(() => {
+      // Check if document prefers presentation mode and auto-enter if so
+      const metadata = get().documentMetadata.get(documentId);
+      if (metadata?.preferPresentationMode) {
+        useSettingsStore.getState().setPresentationMode(true);
+      }
+
       set((state) => {
         // Add to documentOrder if not already there (reopen closed document)
         const newOrder = state.documentOrder.includes(documentId)
@@ -968,6 +975,21 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
     const state = get();
     const metadata = state.documentMetadata.get(documentId);
     return metadata?.viewport;
+  },
+
+  // Set document presentation mode preference
+  setDocumentPresentationPreference: (documentId: string, enabled: boolean) => {
+    set((state) => {
+      const metadata = state.documentMetadata.get(documentId);
+      if (metadata) {
+        metadata.preferPresentationMode = enabled;
+        const newMetadata = new Map(state.documentMetadata);
+        newMetadata.set(documentId, metadata);
+        saveDocumentMetadata(documentId, metadata);
+        return { documentMetadata: newMetadata };
+      }
+      return {};
+    });
   },
 
   // ============================================================================

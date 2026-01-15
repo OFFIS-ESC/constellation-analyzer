@@ -52,6 +52,7 @@ const MIN_ZOOM = 0.1;  // Allow zooming out to 10% for large charts
 const MAX_ZOOM = 2.5;  // Allow zooming in to 250%
 
 interface GraphEditorProps {
+  presentationMode?: boolean;
   selectedNode: Actor | null;
   selectedEdge: Relation | null;
   selectedGroup: Group | null;
@@ -76,7 +77,10 @@ interface GraphEditorProps {
  *
  * Usage: Core component that wraps React Flow with custom nodes and edges
  */
-const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onMultiSelect, onAddNodeRequest, onExportRequest }: GraphEditorProps) => {
+const GraphEditor = ({ presentationMode = false, onNodeSelect, onEdgeSelect, onGroupSelect, onMultiSelect, onAddNodeRequest, onExportRequest }: GraphEditorProps) => {
+  // Determine if editing is allowed
+  const isEditable = !presentationMode;
+
   // Sync with workspace active document
   const { activeDocumentId } = useActiveDocument();
   const { saveViewport, getViewport } = useWorkspaceStore();
@@ -109,8 +113,6 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onMultiSelect,
     showGrid,
     snapToGrid,
     gridSize,
-    panOnDrag,
-    zoomOnScroll,
     selectedRelationType,
   } = useEditorStore();
 
@@ -1070,33 +1072,37 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onMultiSelect,
         edges={edges}
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}
-        onConnect={handleConnect}
-        onNodesDelete={handleNodesDelete}
-        onEdgesDelete={handleEdgesDelete}
+        onConnect={isEditable ? handleConnect : undefined}
+        onNodesDelete={isEditable ? handleNodesDelete : undefined}
+        onEdgesDelete={isEditable ? handleEdgesDelete : undefined}
         onNodeClick={handleNodeClick}
-        onNodeDoubleClick={handleNodeDoubleClick}
+        onNodeDoubleClick={isEditable ? handleNodeDoubleClick : undefined}
         onEdgeClick={handleEdgeClick}
-        onNodeContextMenu={handleNodeContextMenu}
-        onEdgeContextMenu={handleEdgeContextMenu}
-        onPaneContextMenu={handlePaneContextMenu}
+        onNodeContextMenu={isEditable ? handleNodeContextMenu : undefined}
+        onEdgeContextMenu={isEditable ? handleEdgeContextMenu : undefined}
+        onPaneContextMenu={isEditable ? handlePaneContextMenu : undefined}
         onPaneClick={handlePaneClick}
         onMove={handleViewportChange}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         connectionMode={ConnectionMode.Loose}
-        connectOnClick={true}
+        connectOnClick={isEditable}
         snapToGrid={snapToGrid}
         snapGrid={[gridSize, gridSize]}
-        panOnDrag={panOnDrag}
-        zoomOnScroll={zoomOnScroll}
+        panOnDrag={true}
+        zoomOnScroll={true}
+        panOnScroll={presentationMode ? true : undefined}
+        nodesDraggable={isEditable}
+        nodesConnectable={isEditable}
+        elementsSelectable={isEditable}
         minZoom={MIN_ZOOM}
         maxZoom={MAX_ZOOM}
         connectionRadius={0}
         fitView
         attributionPosition="bottom-left"
       >
-        {/* Background grid */}
-        {showGrid && (
+        {/* Background grid - Hide in presentation mode */}
+        {!presentationMode && showGrid && (
           <Background
             variant={BackgroundVariant.Dots}
             gap={gridSize}
@@ -1105,10 +1111,10 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onMultiSelect,
           />
         )}
 
-        {/* Zoom and pan controls */}
-        <Controls />
+        {/* Zoom and pan controls - Simplified in presentation mode */}
+        <Controls showInteractive={isEditable} />
 
-        {/* MiniMap for navigation */}
+        {/* MiniMap for navigation - Read-only in presentation mode */}
         <MiniMap
           nodeColor={(node) => {
             const actor = node as Actor;
@@ -1117,8 +1123,8 @@ const GraphEditor = ({ onNodeSelect, onEdgeSelect, onGroupSelect, onMultiSelect,
             );
             return nodeType?.color || "#6b7280";
           }}
-          pannable
-          zoomable
+          pannable={isEditable}
+          zoomable={isEditable}
         />
       </ReactFlow>
 

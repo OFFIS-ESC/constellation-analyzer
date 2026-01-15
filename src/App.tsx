@@ -14,9 +14,12 @@ import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
 import { useDocumentHistory } from "./hooks/useDocumentHistory";
 import { useWorkspaceStore } from "./stores/workspaceStore";
 import { usePanelStore } from "./stores/panelStore";
+import { useSettingsStore } from "./stores/settingsStore";
 import { useCreateDocument } from "./hooks/useCreateDocument";
 import type { Actor, Relation, Group } from "./types";
 import type { ExportOptions } from "./utils/graphExport";
+import PresentationTimelineOverlay from "./components/Presentation/PresentationTimelineOverlay";
+import "./styles/presentation.css";
 
 /**
  * App - Root application component
@@ -41,6 +44,7 @@ function AppContent() {
   const { undo, redo } = useDocumentHistory();
   const { activeDocumentId } = useWorkspaceStore();
   const { leftPanelVisible, rightPanelVisible, bottomPanelVisible } = usePanelStore();
+  const { presentationMode } = useSettingsStore();
   const { handleNewDocument, NewDocumentDialog } = useCreateDocument();
   const [showDocumentManager, setShowDocumentManager] = useState(false);
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
@@ -129,40 +133,44 @@ function AppContent() {
   ]);
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100">
-      {/* Header */}
-      <header className="bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg">
-        <div className="px-6 py-3">
-          <div className="flex items-center gap-3">
-            <img
-              src="favicon.svg"
-              alt="Constellation Analyzer Logo"
-              className="w-8 h-8"
-            />
-            <h1 className="text-xl font-bold">Constellation Analyzer</h1>
-            <span className="text-blue-100 text-sm border-l border-blue-400 pl-3">
-              Visual editor for analyzing actors and their relationships
-            </span>
+    <div className={`flex flex-col h-screen bg-gray-100 ${presentationMode ? 'presentation-mode' : ''}`}>
+      {/* Header - Hide in presentation mode */}
+      {!presentationMode && (
+        <header className="bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg">
+          <div className="px-6 py-3">
+            <div className="flex items-center gap-3">
+              <img
+                src="favicon.svg"
+                alt="Constellation Analyzer Logo"
+                className="w-8 h-8"
+              />
+              <h1 className="text-xl font-bold">Constellation Analyzer</h1>
+              <span className="text-blue-100 text-sm border-l border-blue-400 pl-3">
+                Visual editor for analyzing actors and their relationships
+              </span>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
-      {/* Menu Bar */}
-      <MenuBar
-        onOpenHelp={() => setShowKeyboardHelp(true)}
-        onFitView={handleFitView}
-        onExport={exportCallbackRef.current || undefined}
-      />
+      {/* Menu Bar - Hide in presentation mode */}
+      {!presentationMode && (
+        <MenuBar
+          onOpenHelp={() => setShowKeyboardHelp(true)}
+          onFitView={handleFitView}
+          onExport={exportCallbackRef.current || undefined}
+        />
+      )}
 
-      {/* Document Tabs */}
-      <DocumentTabs />
+      {/* Document Tabs - Hide in presentation mode */}
+      {!presentationMode && <DocumentTabs />}
 
       {/* Main content area with side panels and bottom panel */}
       <main className="flex-1 overflow-hidden flex flex-col">
         {/* Top section: Left panel, graph editor, right panel */}
         <div className="flex-1 overflow-hidden flex">
-          {/* Left Panel */}
-          {leftPanelVisible && activeDocumentId && (
+          {/* Left Panel - Hide in presentation mode */}
+          {!presentationMode && leftPanelVisible && activeDocumentId && (
             <LeftPanel
               ref={leftPanelRef}
               onDeselectAll={() => {
@@ -178,8 +186,9 @@ function AppContent() {
           )}
 
           {/* Center: Graph Editor */}
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden relative">
             <GraphEditor
+              presentationMode={presentationMode}
               selectedNode={selectedNode}
               selectedEdge={selectedEdge}
               selectedGroup={selectedGroup}
@@ -242,10 +251,15 @@ function AppContent() {
                 exportCallbackRef.current = callback;
               }}
             />
+
+            {/* Presentation Timeline Overlay - Floats inside graph editor */}
+            {presentationMode && activeDocumentId && (
+              <PresentationTimelineOverlay />
+            )}
           </div>
 
-          {/* Right Panel */}
-          {rightPanelVisible && activeDocumentId && (
+          {/* Right Panel - Hide in presentation mode */}
+          {!presentationMode && rightPanelVisible && activeDocumentId && (
             <RightPanel
               selectedNode={selectedNode}
               selectedEdge={selectedEdge}
@@ -265,8 +279,8 @@ function AppContent() {
           )}
         </div>
 
-        {/* Bottom Panel (Timeline) - show when bottomPanelVisible and there's an active document */}
-        {bottomPanelVisible && activeDocumentId && (
+        {/* Bottom Panel (Timeline) - Hide in presentation mode, show regular timeline */}
+        {!presentationMode && bottomPanelVisible && activeDocumentId && (
           <BottomPanel />
         )}
       </main>

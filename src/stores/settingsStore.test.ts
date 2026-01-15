@@ -9,6 +9,7 @@ describe('settingsStore', () => {
     // Reset store to initial state
     useSettingsStore.setState({
       autoZoomEnabled: true,
+      presentationMode: false,
     });
   });
 
@@ -17,6 +18,7 @@ describe('settingsStore', () => {
       const state = useSettingsStore.getState();
 
       expect(state.autoZoomEnabled).toBe(true);
+      expect(state.presentationMode).toBe(false);
     });
   });
 
@@ -124,6 +126,51 @@ describe('settingsStore', () => {
 
       const parsed = JSON.parse(stored!);
       expect(parsed.version).toBe(1);
+    });
+  });
+
+  describe('setPresentationMode', () => {
+    it('should enable presentation mode', () => {
+      const { setPresentationMode } = useSettingsStore.getState();
+
+      setPresentationMode(true);
+
+      expect(useSettingsStore.getState().presentationMode).toBe(true);
+    });
+
+    it('should disable presentation mode', () => {
+      const { setPresentationMode } = useSettingsStore.getState();
+
+      setPresentationMode(true);
+      setPresentationMode(false);
+
+      expect(useSettingsStore.getState().presentationMode).toBe(false);
+    });
+
+    it('should toggle presentation mode multiple times', () => {
+      const { setPresentationMode } = useSettingsStore.getState();
+
+      setPresentationMode(true);
+      expect(useSettingsStore.getState().presentationMode).toBe(true);
+
+      setPresentationMode(false);
+      expect(useSettingsStore.getState().presentationMode).toBe(false);
+
+      setPresentationMode(true);
+      expect(useSettingsStore.getState().presentationMode).toBe(true);
+    });
+
+    it('should persist presentation mode to localStorage', () => {
+      const { setPresentationMode } = useSettingsStore.getState();
+
+      setPresentationMode(true);
+
+      // Check localStorage directly
+      const stored = localStorage.getItem('constellation-settings');
+      expect(stored).toBeTruthy();
+
+      const parsed = JSON.parse(stored!);
+      expect(parsed.state.presentationMode).toBe(true);
     });
   });
 

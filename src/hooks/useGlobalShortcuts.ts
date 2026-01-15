@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { useWorkspaceStore } from "../stores/workspaceStore";
+import { useSettingsStore } from "../stores/settingsStore";
 import type { KeyboardShortcut } from "./useKeyboardShortcutManager";
 
 /**
@@ -29,6 +30,7 @@ export function useGlobalShortcuts(options: UseGlobalShortcutsOptions = {}) {
     closeDocument,
     saveDocument,
   } = useWorkspaceStore();
+  const { presentationMode, setPresentationMode } = useSettingsStore();
 
   useEffect(() => {
     const shortcutDefinitions: KeyboardShortcut[] = [
@@ -166,6 +168,27 @@ export function useGlobalShortcuts(options: UseGlobalShortcutsOptions = {}) {
         enabled: !!options.onFitView,
       },
       {
+        id: "toggle-presentation-mode",
+        description: "Toggle Presentation Mode",
+        key: "F11",
+        handler: () => {
+          setPresentationMode(!presentationMode);
+        },
+        category: "View",
+      },
+      {
+        id: "exit-presentation-mode",
+        description: "Exit Presentation Mode",
+        key: "Escape",
+        handler: () => {
+          if (presentationMode) {
+            setPresentationMode(false);
+          }
+        },
+        category: "View",
+        priority: 10, // Higher priority to handle before other Escape handlers
+      },
+      {
         id: "show-help",
         description: "Show Keyboard Shortcuts",
         key: "?",
@@ -203,6 +226,8 @@ export function useGlobalShortcuts(options: UseGlobalShortcutsOptions = {}) {
     switchToDocument,
     closeDocument,
     saveDocument,
+    presentationMode,
+    setPresentationMode,
     options,
   ]);
 }

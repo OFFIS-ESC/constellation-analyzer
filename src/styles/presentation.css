@@ -1,0 +1,73 @@
+/**
+ * Presentation Mode Touch Optimizations
+ *
+ * CSS styles to optimize the interface for touch table interactions
+ * in presentation mode.
+ */
+
+/* Touch optimization for presentation mode container */
+.presentation-mode {
+  /* Faster tap response - removes 300ms delay */
+  touch-action: manipulation;
+
+  /* Prevent text selection during touch interactions */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Larger touch targets for better accessibility */
+.presentation-mode button,
+.presentation-mode .touch-target {
+  min-height: 60px;
+  min-width: 60px;
+}
+
+/* Smooth transitions for touch interactions */
+.presentation-mode .transition-all {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+/* Hide scrollbars in presentation mode for cleaner look */
+.presentation-mode ::-webkit-scrollbar {
+  display: none;
+}
+
+.presentation-mode {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Ensure backdrop blur is supported */
+@supports (backdrop-filter: blur(8px)) {
+  .backdrop-blur-sm {
+    backdrop-filter: blur(4px);
+  }
+
+  .backdrop-blur-md {
+    backdrop-filter: blur(8px);
+  }
+}
+
+/* Fallback for browsers without backdrop-filter support */
+@supports not (backdrop-filter: blur(8px)) {
+  .backdrop-blur-sm {
+    background-color: rgba(0, 0, 0, 0.4) !important;
+  }
+
+  .backdrop-blur-md {
+    background-color: rgba(0, 0, 0, 0.5) !important;
+  }
+}
+
+/* Touch-optimized button feedback */
+.presentation-mode button:active {
+  transform: scale(0.95);
+  transition-duration: 100ms;
+}
+
+/* Prevent double-tap zoom on buttons */
+.presentation-mode button {
+  touch-action: manipulation;
+}

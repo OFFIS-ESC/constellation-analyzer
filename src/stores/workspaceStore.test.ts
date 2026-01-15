@@ -588,6 +588,52 @@ describe('workspaceStore', () => {
     });
   });
 
+  describe('Document Presentation Preference', () => {
+    describe('setDocumentPresentationPreference', () => {
+      it('should set document presentation preference', () => {
+        const { createDocument, setDocumentPresentationPreference } = useWorkspaceStore.getState();
+
+        const docId = createDocument('Test Doc');
+        setDocumentPresentationPreference(docId, true);
+
+        const metadata = useWorkspaceStore.getState().documentMetadata.get(docId);
+        expect(metadata?.preferPresentationMode).toBe(true);
+      });
+
+      it('should update existing document preference', () => {
+        const { createDocument, setDocumentPresentationPreference } = useWorkspaceStore.getState();
+
+        const docId = createDocument('Test Doc');
+        setDocumentPresentationPreference(docId, true);
+        setDocumentPresentationPreference(docId, false);
+
+        const metadata = useWorkspaceStore.getState().documentMetadata.get(docId);
+        expect(metadata?.preferPresentationMode).toBe(false);
+      });
+
+      it('should persist document presentation preference to storage', () => {
+        const { createDocument, setDocumentPresentationPreference } = useWorkspaceStore.getState();
+
+        const docId = createDocument('Test Doc');
+        setDocumentPresentationPreference(docId, true);
+
+        // Verify it persists by checking localStorage (using correct prefix)
+        const stored = localStorage.getItem(`constellation:meta:v1:${docId}`);
+        expect(stored).toBeTruthy();
+
+        const parsed = JSON.parse(stored!);
+        expect(parsed.preferPresentationMode).toBe(true);
+      });
+
+      it('should handle invalid document ID gracefully', () => {
+        const { setDocumentPresentationPreference } = useWorkspaceStore.getState();
+
+        // Should not throw error
+        expect(() => setDocumentPresentationPreference('invalid', true)).not.toThrow();
+      });
+    });
+  });
+
   describe('Edge Cases', () => {
     it('should handle rapid document creation', () => {
       const { createDocument } = useWorkspaceStore.getState();

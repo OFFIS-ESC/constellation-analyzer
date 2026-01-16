@@ -1,18 +1,18 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { useWorkspaceStore } from './workspaceStore';
+import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
+import { useWorkspaceStore } from "./workspaceStore";
 import {
   loadWorkspaceState,
   loadDocumentFromStorage,
   clearWorkspaceStorage,
-} from './workspace/persistence';
-import { mockNodeTypes, mockEdgeTypes } from '../test-utils/mocks';
-import type { TangibleConfig } from '../types';
+} from "./workspace/persistence";
+import { mockNodeTypes, mockEdgeTypes } from "../test-utils/mocks";
+import type { TangibleConfig } from "../types";
 
 // Create a mock showToast that we can track
 const mockShowToast = vi.fn();
 
 // Mock the dependent stores
-vi.mock('./toastStore', () => ({
+vi.mock("./toastStore", () => ({
   useToastStore: {
     getState: () => ({
       showToast: mockShowToast,
@@ -20,7 +20,7 @@ vi.mock('./toastStore', () => ({
   },
 }));
 
-vi.mock('./timelineStore', () => ({
+vi.mock("./timelineStore", () => ({
   useTimelineStore: {
     getState: () => ({
       timelines: new Map(),
@@ -30,7 +30,7 @@ vi.mock('./timelineStore', () => ({
   },
 }));
 
-vi.mock('./graphStore', () => ({
+vi.mock("./graphStore", () => ({
   useGraphStore: {
     getState: () => ({
       nodes: [],
@@ -50,7 +50,7 @@ vi.mock('./graphStore', () => ({
   },
 }));
 
-vi.mock('./bibliographyStore', () => ({
+vi.mock("./bibliographyStore", () => ({
   useBibliographyStore: {
     getState: () => ({
       citeInstance: {
@@ -60,13 +60,13 @@ vi.mock('./bibliographyStore', () => ({
         reset: vi.fn(),
       },
       appMetadata: {},
-      settings: { defaultStyle: 'apa', sortOrder: 'author' },
+      settings: { defaultStyle: "apa", sortOrder: "author" },
     }),
   },
   clearBibliographyForDocumentSwitch: vi.fn(),
 }));
 
-describe('workspaceStore', () => {
+describe("workspaceStore", () => {
   beforeEach(() => {
     // Clear localStorage
     localStorage.clear();
@@ -79,8 +79,8 @@ describe('workspaceStore', () => {
     // Reset workspace store to a clean state
     // This simulates a fresh application start
     useWorkspaceStore.setState({
-      workspaceId: 'test-workspace',
-      workspaceName: 'Test Workspace',
+      workspaceId: "test-workspace",
+      workspaceName: "Test Workspace",
       documentOrder: [],
       activeDocumentId: null,
       documents: new Map(),
@@ -99,19 +99,19 @@ describe('workspaceStore', () => {
     clearWorkspaceStorage();
   });
 
-  describe('Initial State', () => {
-    it('should initialize with empty workspace', () => {
+  describe("Initial State", () => {
+    it("should initialize with empty workspace", () => {
       const state = useWorkspaceStore.getState();
 
       expect(state.workspaceId).toBeDefined();
-      expect(state.workspaceName).toBe('Test Workspace');
+      expect(state.workspaceName).toBe("Test Workspace");
       expect(state.documentOrder).toEqual([]);
       expect(state.activeDocumentId).toBeNull();
       expect(state.documents.size).toBe(0);
       expect(state.documentMetadata.size).toBe(0);
     });
 
-    it('should have default settings', () => {
+    it("should have default settings", () => {
       const state = useWorkspaceStore.getState();
 
       expect(state.settings.maxOpenDocuments).toBe(10);
@@ -122,9 +122,9 @@ describe('workspaceStore', () => {
     });
   });
 
-  describe('Document Creation', () => {
-    describe('createDocument', () => {
-      it('should create a new document with default title', () => {
+  describe("Document Creation", () => {
+    describe("createDocument", () => {
+      it("should create a new document with default title", () => {
         const { createDocument } = useWorkspaceStore.getState();
 
         const documentId = createDocument();
@@ -138,17 +138,17 @@ describe('workspaceStore', () => {
         expect(state.activeDocumentId).toBe(documentId);
       });
 
-      it('should create document with custom title', () => {
+      it("should create document with custom title", () => {
         const { createDocument } = useWorkspaceStore.getState();
 
-        const documentId = createDocument('My Analysis');
+        const documentId = createDocument("My Analysis");
 
         const state = useWorkspaceStore.getState();
         const metadata = state.documentMetadata.get(documentId);
-        expect(metadata?.title).toBe('My Analysis');
+        expect(metadata?.title).toBe("My Analysis");
       });
 
-      it('should initialize document with default types', () => {
+      it("should initialize document with default types", () => {
         const { createDocument } = useWorkspaceStore.getState();
 
         const documentId = createDocument();
@@ -159,7 +159,7 @@ describe('workspaceStore', () => {
         expect(document?.edgeTypes).toHaveLength(2);
       });
 
-      it('should save document to localStorage', () => {
+      it("should save document to localStorage", () => {
         const { createDocument } = useWorkspaceStore.getState();
 
         const documentId = createDocument();
@@ -168,24 +168,25 @@ describe('workspaceStore', () => {
         expect(loaded).toBeTruthy();
       });
 
-      it('should show success toast', () => {
+      it("should show success toast", () => {
         const { createDocument } = useWorkspaceStore.getState();
 
-        createDocument('Test Doc');
+        createDocument("Test Doc");
 
         expect(mockShowToast).toHaveBeenCalledWith(
           'Document "Test Doc" created',
-          'success'
+          "success",
         );
       });
     });
 
-    describe('createDocumentFromTemplate', () => {
-      it('should create document from template with same types', () => {
-        const { createDocument, createDocumentFromTemplate } = useWorkspaceStore.getState();
+    describe("createDocumentFromTemplate", () => {
+      it("should create document from template with same types", () => {
+        const { createDocument, createDocumentFromTemplate } =
+          useWorkspaceStore.getState();
 
-        const sourceId = createDocument('Source');
-        const newId = createDocumentFromTemplate(sourceId, 'From Template');
+        const sourceId = createDocument("Source");
+        const newId = createDocumentFromTemplate(sourceId, "From Template");
 
         const state = useWorkspaceStore.getState();
         const source = state.documents.get(sourceId);
@@ -195,10 +196,11 @@ describe('workspaceStore', () => {
         expect(newDoc?.edgeTypes).toEqual(source?.edgeTypes);
       });
 
-      it('should create empty graph from template', () => {
-        const { createDocument, createDocumentFromTemplate } = useWorkspaceStore.getState();
+      it("should create empty graph from template", () => {
+        const { createDocument, createDocumentFromTemplate } =
+          useWorkspaceStore.getState();
 
-        const sourceId = createDocument('Source');
+        const sourceId = createDocument("Source");
         const newId = createDocumentFromTemplate(sourceId);
 
         const state = useWorkspaceStore.getState();
@@ -209,23 +211,24 @@ describe('workspaceStore', () => {
         expect(newDoc?.edgeTypes).toHaveLength(2);
       });
 
-      it('should handle non-existent source document', () => {
+      it("should handle non-existent source document", () => {
         const { createDocumentFromTemplate } = useWorkspaceStore.getState();
 
-        const result = createDocumentFromTemplate('non-existent-id');
+        const result = createDocumentFromTemplate("non-existent-id");
 
-        expect(result).toBe('');
+        expect(result).toBe("");
       });
     });
   });
 
-  describe('Document Navigation', () => {
-    describe('switchToDocument', () => {
-      it('should switch active document', async () => {
-        const { createDocument, switchToDocument } = useWorkspaceStore.getState();
+  describe("Document Navigation", () => {
+    describe("switchToDocument", () => {
+      it("should switch active document", async () => {
+        const { createDocument, switchToDocument } =
+          useWorkspaceStore.getState();
 
-        const doc1 = createDocument('Doc 1');
-        createDocument('Doc 2');
+        const doc1 = createDocument("Doc 1");
+        createDocument("Doc 2");
 
         await switchToDocument(doc1);
 
@@ -233,10 +236,11 @@ describe('workspaceStore', () => {
         expect(state.activeDocumentId).toBe(doc1);
       });
 
-      it('should add document to order if not present', async () => {
-        const { createDocument, closeDocument, switchToDocument } = useWorkspaceStore.getState();
+      it("should add document to order if not present", async () => {
+        const { createDocument, closeDocument, switchToDocument } =
+          useWorkspaceStore.getState();
 
-        const docId = createDocument('Test');
+        const docId = createDocument("Test");
         closeDocument(docId);
 
         // Document closed but still in storage
@@ -247,13 +251,14 @@ describe('workspaceStore', () => {
       });
     });
 
-    describe('reorderDocuments', () => {
-      it('should reorder document tabs', () => {
-        const { createDocument, reorderDocuments } = useWorkspaceStore.getState();
+    describe("reorderDocuments", () => {
+      it("should reorder document tabs", () => {
+        const { createDocument, reorderDocuments } =
+          useWorkspaceStore.getState();
 
-        const doc1 = createDocument('Doc 1');
-        const doc2 = createDocument('Doc 2');
-        const doc3 = createDocument('Doc 3');
+        const doc1 = createDocument("Doc 1");
+        const doc2 = createDocument("Doc 2");
+        const doc3 = createDocument("Doc 3");
 
         reorderDocuments([doc3, doc1, doc2]);
 
@@ -263,52 +268,53 @@ describe('workspaceStore', () => {
     });
   });
 
-  describe('Document Modification', () => {
-    describe('renameDocument', () => {
-      it('should rename document', () => {
+  describe("Document Modification", () => {
+    describe("renameDocument", () => {
+      it("should rename document", () => {
         const { createDocument, renameDocument } = useWorkspaceStore.getState();
 
-        const docId = createDocument('Old Name');
-        renameDocument(docId, 'New Name');
+        const docId = createDocument("Old Name");
+        renameDocument(docId, "New Name");
 
         const state = useWorkspaceStore.getState();
         const metadata = state.documentMetadata.get(docId);
-        expect(metadata?.title).toBe('New Name');
+        expect(metadata?.title).toBe("New Name");
       });
 
-      it('should update lastModified timestamp', async () => {
+      it("should update lastModified timestamp", async () => {
         const { createDocument, renameDocument } = useWorkspaceStore.getState();
 
-        const docId = createDocument('Test');
+        const docId = createDocument("Test");
         const state1 = useWorkspaceStore.getState();
         const originalTime = state1.documentMetadata.get(docId)?.lastModified;
 
         // Small delay to ensure timestamp difference
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 10));
 
-        renameDocument(docId, 'Renamed');
+        renameDocument(docId, "Renamed");
 
         const state2 = useWorkspaceStore.getState();
         const newTime = state2.documentMetadata.get(docId)?.lastModified;
         expect(newTime).not.toBe(originalTime);
       });
 
-      it('should persist rename to storage', () => {
+      it("should persist rename to storage", () => {
         const { createDocument, renameDocument } = useWorkspaceStore.getState();
 
-        const docId = createDocument('Test');
-        renameDocument(docId, 'Renamed');
+        const docId = createDocument("Test");
+        renameDocument(docId, "Renamed");
 
         const loaded = loadDocumentFromStorage(docId);
-        expect(loaded?.metadata.title).toBe('Renamed');
+        expect(loaded?.metadata.title).toBe("Renamed");
       });
     });
 
-    describe('duplicateDocument', () => {
-      it('should create copy of document', () => {
-        const { createDocument, duplicateDocument } = useWorkspaceStore.getState();
+    describe("duplicateDocument", () => {
+      it("should create copy of document", () => {
+        const { createDocument, duplicateDocument } =
+          useWorkspaceStore.getState();
 
-        const originalId = createDocument('Original');
+        const originalId = createDocument("Original");
         const duplicateId = duplicateDocument(originalId);
 
         expect(duplicateId).toBeTruthy();
@@ -316,13 +322,14 @@ describe('workspaceStore', () => {
 
         const state = useWorkspaceStore.getState();
         const metadata = state.documentMetadata.get(duplicateId);
-        expect(metadata?.title).toBe('Original (Copy)');
+        expect(metadata?.title).toBe("Original (Copy)");
       });
 
-      it('should copy document types', () => {
-        const { createDocument, duplicateDocument } = useWorkspaceStore.getState();
+      it("should copy document types", () => {
+        const { createDocument, duplicateDocument } =
+          useWorkspaceStore.getState();
 
-        const originalId = createDocument('Original');
+        const originalId = createDocument("Original");
         const duplicateId = duplicateDocument(originalId);
 
         const state = useWorkspaceStore.getState();
@@ -333,24 +340,25 @@ describe('workspaceStore', () => {
         expect(duplicate?.edgeTypes).toEqual(original?.edgeTypes);
       });
 
-      it('should handle non-existent document', () => {
+      it("should handle non-existent document", () => {
         const { duplicateDocument } = useWorkspaceStore.getState();
 
-        const result = duplicateDocument('non-existent');
+        const result = duplicateDocument("non-existent");
 
-        expect(result).toBe('');
+        expect(result).toBe("");
         expect(mockShowToast).toHaveBeenCalledWith(
-          'Failed to duplicate: Document not found',
-          'error'
+          "Failed to duplicate: Document not found",
+          "error",
         );
       });
     });
 
-    describe('markDocumentDirty / saveDocument', () => {
-      it('should mark document as dirty', () => {
-        const { createDocument, markDocumentDirty } = useWorkspaceStore.getState();
+    describe("markDocumentDirty / saveDocument", () => {
+      it("should mark document as dirty", () => {
+        const { createDocument, markDocumentDirty } =
+          useWorkspaceStore.getState();
 
-        const docId = createDocument('Test');
+        const docId = createDocument("Test");
         markDocumentDirty(docId);
 
         const state = useWorkspaceStore.getState();
@@ -358,10 +366,11 @@ describe('workspaceStore', () => {
         expect(metadata?.isDirty).toBe(true);
       });
 
-      it('should clear dirty flag on save', () => {
-        const { createDocument, markDocumentDirty, saveDocument } = useWorkspaceStore.getState();
+      it("should clear dirty flag on save", () => {
+        const { createDocument, markDocumentDirty, saveDocument } =
+          useWorkspaceStore.getState();
 
-        const docId = createDocument('Test');
+        const docId = createDocument("Test");
         markDocumentDirty(docId);
         saveDocument(docId);
 
@@ -370,15 +379,15 @@ describe('workspaceStore', () => {
         expect(metadata?.isDirty).toBe(false);
       });
 
-      it('should update updatedAt timestamp on save', async () => {
+      it("should update updatedAt timestamp on save", async () => {
         const { createDocument, saveDocument } = useWorkspaceStore.getState();
 
-        const docId = createDocument('Test');
+        const docId = createDocument("Test");
         const state1 = useWorkspaceStore.getState();
         const doc1 = state1.documents.get(docId);
         const originalTime = doc1?.metadata.updatedAt;
 
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 10));
         saveDocument(docId);
 
         const state2 = useWorkspaceStore.getState();
@@ -388,12 +397,12 @@ describe('workspaceStore', () => {
     });
   });
 
-  describe('Document Deletion', () => {
-    describe('closeDocument', () => {
-      it('should close document and remove from memory', () => {
+  describe("Document Deletion", () => {
+    describe("closeDocument", () => {
+      it("should close document and remove from memory", () => {
         const { createDocument, closeDocument } = useWorkspaceStore.getState();
 
-        const docId = createDocument('Test');
+        const docId = createDocument("Test");
         closeDocument(docId);
 
         const state = useWorkspaceStore.getState();
@@ -401,10 +410,11 @@ describe('workspaceStore', () => {
         expect(state.documentOrder).not.toContain(docId);
       });
 
-      it('should prompt if document has unsaved changes', () => {
-        const { createDocument, markDocumentDirty, closeDocument } = useWorkspaceStore.getState();
+      it("should prompt if document has unsaved changes", () => {
+        const { createDocument, markDocumentDirty, closeDocument } =
+          useWorkspaceStore.getState();
 
-        const docId = createDocument('Test');
+        const docId = createDocument("Test");
         markDocumentDirty(docId);
 
         global.confirm = vi.fn(() => false);
@@ -414,11 +424,11 @@ describe('workspaceStore', () => {
         expect(global.confirm).toHaveBeenCalled();
       });
 
-      it('should switch to next document after close', () => {
+      it("should switch to next document after close", () => {
         const { createDocument, closeDocument } = useWorkspaceStore.getState();
 
-        const doc1 = createDocument('Doc 1');
-        const doc2 = createDocument('Doc 2');
+        const doc1 = createDocument("Doc 1");
+        const doc2 = createDocument("Doc 2");
 
         closeDocument(doc2);
 
@@ -426,10 +436,10 @@ describe('workspaceStore', () => {
         expect(state.activeDocumentId).toBe(doc1);
       });
 
-      it('should set active to null if no documents left', () => {
+      it("should set active to null if no documents left", () => {
         const { createDocument, closeDocument } = useWorkspaceStore.getState();
 
-        const docId = createDocument('Only Doc');
+        const docId = createDocument("Only Doc");
         closeDocument(docId);
 
         const state = useWorkspaceStore.getState();
@@ -437,11 +447,11 @@ describe('workspaceStore', () => {
       });
     });
 
-    describe('deleteDocument', () => {
-      it('should delete document completely', () => {
+    describe("deleteDocument", () => {
+      it("should delete document completely", () => {
         const { createDocument, deleteDocument } = useWorkspaceStore.getState();
 
-        const docId = createDocument('Test');
+        const docId = createDocument("Test");
         deleteDocument(docId);
 
         const state = useWorkspaceStore.getState();
@@ -450,35 +460,35 @@ describe('workspaceStore', () => {
         expect(state.documentOrder).not.toContain(docId);
       });
 
-      it('should remove from localStorage', () => {
+      it("should remove from localStorage", () => {
         const { createDocument, deleteDocument } = useWorkspaceStore.getState();
 
-        const docId = createDocument('Test');
+        const docId = createDocument("Test");
         deleteDocument(docId);
 
         const loaded = loadDocumentFromStorage(docId);
         expect(loaded).toBeNull();
       });
 
-      it('should show success toast', () => {
+      it("should show success toast", () => {
         const { createDocument, deleteDocument } = useWorkspaceStore.getState();
 
-        const docId = createDocument('Test Doc');
+        const docId = createDocument("Test Doc");
         deleteDocument(docId);
 
         expect(mockShowToast).toHaveBeenCalledWith(
           'Document "Test Doc" deleted',
-          'info'
+          "info",
         );
       });
     });
   });
 
-  describe('Viewport Management', () => {
-    it('should save viewport state', () => {
+  describe("Viewport Management", () => {
+    it("should save viewport state", () => {
       const { createDocument, saveViewport } = useWorkspaceStore.getState();
 
-      const docId = createDocument('Test');
+      const docId = createDocument("Test");
       const viewport = { x: 100, y: 200, zoom: 1.5 };
 
       saveViewport(docId, viewport);
@@ -488,10 +498,11 @@ describe('workspaceStore', () => {
       expect(metadata?.viewport).toEqual(viewport);
     });
 
-    it('should retrieve viewport state', () => {
-      const { createDocument, saveViewport, getViewport } = useWorkspaceStore.getState();
+    it("should retrieve viewport state", () => {
+      const { createDocument, saveViewport, getViewport } =
+        useWorkspaceStore.getState();
 
-      const docId = createDocument('Test');
+      const docId = createDocument("Test");
       const viewport = { x: 100, y: 200, zoom: 1.5 };
 
       saveViewport(docId, viewport);
@@ -500,21 +511,21 @@ describe('workspaceStore', () => {
       expect(retrieved).toEqual(viewport);
     });
 
-    it('should return undefined for non-existent document', () => {
+    it("should return undefined for non-existent document", () => {
       const { getViewport } = useWorkspaceStore.getState();
 
-      const result = getViewport('non-existent');
+      const result = getViewport("non-existent");
 
       expect(result).toBeUndefined();
     });
   });
 
-  describe('Workspace Operations', () => {
-    describe('saveWorkspace', () => {
-      it('should persist workspace state', () => {
+  describe("Workspace Operations", () => {
+    describe("saveWorkspace", () => {
+      it("should persist workspace state", () => {
         const { createDocument, saveWorkspace } = useWorkspaceStore.getState();
 
-        createDocument('Test');
+        createDocument("Test");
         saveWorkspace();
 
         const loaded = loadWorkspaceState();
@@ -523,8 +534,8 @@ describe('workspaceStore', () => {
       });
     });
 
-    describe('clearWorkspace', () => {
-      it('should prompt for confirmation', () => {
+    describe("clearWorkspace", () => {
+      it("should prompt for confirmation", () => {
         const { clearWorkspace } = useWorkspaceStore.getState();
 
         global.confirm = vi.fn(() => false);
@@ -533,11 +544,11 @@ describe('workspaceStore', () => {
         expect(global.confirm).toHaveBeenCalled();
       });
 
-      it('should clear all documents when confirmed', () => {
+      it("should clear all documents when confirmed", () => {
         const { createDocument, clearWorkspace } = useWorkspaceStore.getState();
 
-        createDocument('Doc 1');
-        createDocument('Doc 2');
+        createDocument("Doc 1");
+        createDocument("Doc 2");
 
         global.confirm = vi.fn(() => true);
         clearWorkspace();
@@ -548,10 +559,10 @@ describe('workspaceStore', () => {
         expect(state.documentOrder).toEqual([]);
       });
 
-      it('should clear localStorage', () => {
+      it("should clear localStorage", () => {
         const { createDocument, clearWorkspace } = useWorkspaceStore.getState();
 
-        const docId = createDocument('Test');
+        const docId = createDocument("Test");
 
         // Verify document exists
         expect(loadDocumentFromStorage(docId)).toBeTruthy();
@@ -569,11 +580,12 @@ describe('workspaceStore', () => {
       });
     });
 
-    describe('getActiveDocument', () => {
-      it('should return active document', () => {
-        const { createDocument, getActiveDocument } = useWorkspaceStore.getState();
+    describe("getActiveDocument", () => {
+      it("should return active document", () => {
+        const { createDocument, getActiveDocument } =
+          useWorkspaceStore.getState();
 
-        const docId = createDocument('Test');
+        const docId = createDocument("Test");
 
         const activeDoc = getActiveDocument();
 
@@ -581,7 +593,7 @@ describe('workspaceStore', () => {
         expect(activeDoc?.metadata.documentId).toBe(docId);
       });
 
-      it('should return null if no active document', () => {
+      it("should return null if no active document", () => {
         const { getActiveDocument } = useWorkspaceStore.getState();
 
         const result = getActiveDocument();
@@ -591,33 +603,40 @@ describe('workspaceStore', () => {
     });
   });
 
-  describe('Document Presentation Preference', () => {
-    describe('setDocumentPresentationPreference', () => {
-      it('should set document presentation preference', () => {
-        const { createDocument, setDocumentPresentationPreference } = useWorkspaceStore.getState();
+  describe("Document Presentation Preference", () => {
+    describe("setDocumentPresentationPreference", () => {
+      it("should set document presentation preference", () => {
+        const { createDocument, setDocumentPresentationPreference } =
+          useWorkspaceStore.getState();
 
-        const docId = createDocument('Test Doc');
+        const docId = createDocument("Test Doc");
         setDocumentPresentationPreference(docId, true);
 
-        const metadata = useWorkspaceStore.getState().documentMetadata.get(docId);
+        const metadata = useWorkspaceStore
+          .getState()
+          .documentMetadata.get(docId);
         expect(metadata?.preferPresentationMode).toBe(true);
       });
 
-      it('should update existing document preference', () => {
-        const { createDocument, setDocumentPresentationPreference } = useWorkspaceStore.getState();
+      it("should update existing document preference", () => {
+        const { createDocument, setDocumentPresentationPreference } =
+          useWorkspaceStore.getState();
 
-        const docId = createDocument('Test Doc');
+        const docId = createDocument("Test Doc");
         setDocumentPresentationPreference(docId, true);
         setDocumentPresentationPreference(docId, false);
 
-        const metadata = useWorkspaceStore.getState().documentMetadata.get(docId);
+        const metadata = useWorkspaceStore
+          .getState()
+          .documentMetadata.get(docId);
         expect(metadata?.preferPresentationMode).toBe(false);
       });
 
-      it('should persist document presentation preference to storage', () => {
-        const { createDocument, setDocumentPresentationPreference } = useWorkspaceStore.getState();
+      it("should persist document presentation preference to storage", () => {
+        const { createDocument, setDocumentPresentationPreference } =
+          useWorkspaceStore.getState();
 
-        const docId = createDocument('Test Doc');
+        const docId = createDocument("Test Doc");
         setDocumentPresentationPreference(docId, true);
 
         // Verify it persists by checking localStorage (using correct prefix)
@@ -628,31 +647,34 @@ describe('workspaceStore', () => {
         expect(parsed.preferPresentationMode).toBe(true);
       });
 
-      it('should handle invalid document ID gracefully', () => {
-        const { setDocumentPresentationPreference } = useWorkspaceStore.getState();
+      it("should handle invalid document ID gracefully", () => {
+        const { setDocumentPresentationPreference } =
+          useWorkspaceStore.getState();
 
         // Should not throw error
-        expect(() => setDocumentPresentationPreference('invalid', true)).not.toThrow();
+        expect(() =>
+          setDocumentPresentationPreference("invalid", true),
+        ).not.toThrow();
       });
     });
   });
 
-  describe('Tangible Management', () => {
+  describe("Tangible Management", () => {
     let documentId: string;
 
     beforeEach(() => {
-      documentId = useWorkspaceStore.getState().createDocument('Test Doc');
+      documentId = useWorkspaceStore.getState().createDocument("Test Doc");
     });
 
-    describe('addTangibleToDocument', () => {
-      it('should add tangible to document', () => {
+    describe("addTangibleToDocument", () => {
+      it("should add tangible to document", () => {
         const { addTangibleToDocument } = useWorkspaceStore.getState();
 
         const tangible = {
-          name: 'Red Block',
-          mode: 'filter' as const,
-          filterLabels: ['label-1'],
-          hardwareId: 'token-001',
+          name: "Red Block",
+          mode: "filter" as const,
+          filterLabels: ["label-1"],
+          hardwareId: "token-001",
         };
 
         addTangibleToDocument(documentId, tangible as TangibleConfig);
@@ -660,17 +682,17 @@ describe('workspaceStore', () => {
         const doc = useWorkspaceStore.getState().documents.get(documentId);
         expect(doc?.tangibles).toHaveLength(1);
         expect(doc?.tangibles?.[0].id).toMatch(/^tangible_\d+_[a-z0-9]+$/); // Random ID format
-        expect(doc?.tangibles?.[0].name).toBe('Red Block');
-        expect(doc?.tangibles?.[0].hardwareId).toBe('token-001');
+        expect(doc?.tangibles?.[0].name).toBe("Red Block");
+        expect(doc?.tangibles?.[0].hardwareId).toBe("token-001");
       });
 
-      it('should allow duplicate tangible names', () => {
+      it("should allow duplicate tangible names", () => {
         const { addTangibleToDocument } = useWorkspaceStore.getState();
 
         const tangible = {
-          name: 'Red Block',
-          mode: 'filter' as const,
-          filterLabels: ['label-1'],
+          name: "Red Block",
+          mode: "filter" as const,
+          filterLabels: ["label-1"],
         };
 
         addTangibleToDocument(documentId, tangible as TangibleConfig);
@@ -681,82 +703,89 @@ describe('workspaceStore', () => {
         expect(doc?.tangibles?.[0].id).not.toBe(doc?.tangibles?.[1].id); // Different IDs
       });
 
-
-      it('should handle invalid document ID', () => {
+      it("should handle invalid document ID", () => {
         const { addTangibleToDocument } = useWorkspaceStore.getState();
 
         const tangible = {
-          name: 'Red Block',
-          mode: 'filter' as const,
+          name: "Red Block",
+          mode: "filter" as const,
           filterLabels: [],
         };
 
         // Should not throw
-        expect(() => addTangibleToDocument('invalid-id', tangible as TangibleConfig)).not.toThrow();
+        expect(() =>
+          addTangibleToDocument("invalid-id", tangible as TangibleConfig),
+        ).not.toThrow();
       });
     });
 
-    describe('updateTangibleInDocument', () => {
+    describe("updateTangibleInDocument", () => {
       beforeEach(() => {
         const { addTangibleToDocument } = useWorkspaceStore.getState();
         addTangibleToDocument(documentId, {
-          name: 'Original',
-          mode: 'filter' as const,
-          filterLabels: ['label-1'],
+          name: "Original",
+          mode: "filter" as const,
+          filterLabels: ["label-1"],
         } as TangibleConfig);
       });
 
-      it('should update tangible in document', () => {
+      it("should update tangible in document", () => {
         const { updateTangibleInDocument } = useWorkspaceStore.getState();
 
         // Get the auto-generated ID
         const doc = useWorkspaceStore.getState().documents.get(documentId);
-        const tangibleId = doc?.tangibles?.[0].id!;
+        const tangibleId = doc!.tangibles![0].id!;
 
-        updateTangibleInDocument(documentId, tangibleId, { name: 'Updated', hardwareId: 'token-002' });
+        updateTangibleInDocument(documentId, tangibleId, {
+          name: "Updated",
+          hardwareId: "token-002",
+        });
 
-        const updatedDoc = useWorkspaceStore.getState().documents.get(documentId);
-        expect(updatedDoc?.tangibles?.[0].name).toBe('Updated');
-        expect(updatedDoc?.tangibles?.[0].hardwareId).toBe('token-002');
+        const updatedDoc = useWorkspaceStore
+          .getState()
+          .documents.get(documentId);
+        expect(updatedDoc?.tangibles?.[0].name).toBe("Updated");
+        expect(updatedDoc?.tangibles?.[0].hardwareId).toBe("token-002");
       });
     });
 
-    describe('deleteTangibleFromDocument', () => {
+    describe("deleteTangibleFromDocument", () => {
       beforeEach(() => {
         const { addTangibleToDocument } = useWorkspaceStore.getState();
         addTangibleToDocument(documentId, {
-          name: 'T1',
-          mode: 'filter' as const,
-          filterLabels: ['label-1'],
+          name: "T1",
+          mode: "filter" as const,
+          filterLabels: ["label-1"],
         } as TangibleConfig);
         addTangibleToDocument(documentId, {
-          name: 'T2',
-          mode: 'state' as const,
-          stateId: 's1',
+          name: "T2",
+          mode: "state" as const,
+          stateId: "s1",
         } as TangibleConfig);
       });
 
-      it('should delete tangible from document', () => {
+      it("should delete tangible from document", () => {
         const { deleteTangibleFromDocument } = useWorkspaceStore.getState();
 
         // Get the first tangible's ID
         const doc = useWorkspaceStore.getState().documents.get(documentId);
-        const firstTangibleId = doc?.tangibles?.[0].id!;
-        const secondTangibleId = doc?.tangibles?.[1].id!;
+        const firstTangibleId = doc!.tangibles![0].id!;
+        const secondTangibleId = doc!.tangibles![1].id!;
 
         deleteTangibleFromDocument(documentId, firstTangibleId);
 
-        const updatedDoc = useWorkspaceStore.getState().documents.get(documentId);
+        const updatedDoc = useWorkspaceStore
+          .getState()
+          .documents.get(documentId);
         expect(updatedDoc?.tangibles).toHaveLength(1);
         expect(updatedDoc?.tangibles?.[0].id).toBe(secondTangibleId);
-        expect(updatedDoc?.tangibles?.[0].name).toBe('T2');
+        expect(updatedDoc?.tangibles?.[0].name).toBe("T2");
       });
-
     });
   });
 
-  describe('Edge Cases', () => {
-    it('should handle rapid document creation', () => {
+  describe("Edge Cases", () => {
+    it("should handle rapid document creation", () => {
       const { createDocument } = useWorkspaceStore.getState();
 
       const ids = [];
@@ -774,21 +803,27 @@ describe('workspaceStore', () => {
       expect(uniqueIds.size).toBe(10);
     });
 
-    it('should handle document operations with invalid IDs', () => {
-      const { renameDocument, saveDocument, deleteDocument } = useWorkspaceStore.getState();
+    it("should handle document operations with invalid IDs", () => {
+      const { renameDocument, saveDocument, deleteDocument } =
+        useWorkspaceStore.getState();
 
       // Should not throw errors
-      expect(() => renameDocument('invalid', 'New Name')).not.toThrow();
-      expect(() => saveDocument('invalid')).not.toThrow();
-      expect(() => deleteDocument('invalid')).not.toThrow();
+      expect(() => renameDocument("invalid", "New Name")).not.toThrow();
+      expect(() => saveDocument("invalid")).not.toThrow();
+      expect(() => deleteDocument("invalid")).not.toThrow();
     });
 
-    it('should maintain data integrity across operations', () => {
-      const { createDocument, renameDocument, duplicateDocument, deleteDocument } = useWorkspaceStore.getState();
+    it("should maintain data integrity across operations", () => {
+      const {
+        createDocument,
+        renameDocument,
+        duplicateDocument,
+        deleteDocument,
+      } = useWorkspaceStore.getState();
 
-      const doc1 = createDocument('Doc 1');
-      const doc2 = createDocument('Doc 2');
-      renameDocument(doc1, 'Renamed');
+      const doc1 = createDocument("Doc 1");
+      const doc2 = createDocument("Doc 2");
+      renameDocument(doc1, "Renamed");
       duplicateDocument(doc1);
       deleteDocument(doc2);
 

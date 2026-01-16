@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useGraphStore } from './graphStore';
-import type { Actor, Relation, Group, NodeTypeConfig, EdgeTypeConfig, LabelConfig, NodeShape } from '../types';
+import type { Actor, Relation, Group, NodeTypeConfig, EdgeTypeConfig, LabelConfig, TangibleConfig, NodeShape } from '../types';
 import { MINIMIZED_GROUP_WIDTH, MINIMIZED_GROUP_HEIGHT } from '../constants';
 
 // Helper to create a mock node
@@ -66,6 +66,7 @@ describe('graphStore', () => {
         { id: 'reports-to', label: 'Reports To', color: '#10b981', style: 'solid' },
       ],
       labels: [],
+      tangibles: [],
     });
   });
 
@@ -885,6 +886,203 @@ describe('graphStore', () => {
         const edgeLabels = state.edges[0].data?.labels;
         expect(edgeLabels).toBeDefined();
         expect(edgeLabels).toHaveLength(0);
+      });
+    });
+  });
+
+  describe('Tangible Management', () => {
+    describe('addTangible', () => {
+      it('should add a tangible', () => {
+        const { addTangible } = useGraphStore.getState();
+
+        const tangible: TangibleConfig = {
+          id: 'tangible-1',
+          name: 'Red Block',
+          mode: 'filter',
+          filterLabels: ['label-1'],
+        };
+
+        addTangible(tangible);
+
+        const state = useGraphStore.getState();
+        expect(state.tangibles).toHaveLength(1);
+        expect(state.tangibles[0]).toEqual(tangible);
+      });
+
+      it('should add multiple tangibles', () => {
+        const { addTangible } = useGraphStore.getState();
+
+        addTangible({ id: 't1', name: 'T1', mode: 'filter', filterLabels: [] });
+        addTangible({ id: 't2', name: 'T2', mode: 'state', stateId: 's1' });
+
+        const state = useGraphStore.getState();
+        expect(state.tangibles).toHaveLength(2);
+      });
+    });
+
+    describe('updateTangible', () => {
+      beforeEach(() => {
+        const { addTangible } = useGraphStore.getState();
+        addTangible({
+          id: 'tangible-1',
+          name: 'Original',
+          mode: 'filter',
+          filterLabels: ['label-1'],
+        });
+      });
+
+      it('should update tangible name', () => {
+        const { updateTangible } = useGraphStore.getState();
+
+        updateTangible('tangible-1', { name: 'Updated' });
+
+        const state = useGraphStore.getState();
+        expect(state.tangibles[0].name).toBe('Updated');
+      });
+
+      it('should update tangible mode', () => {
+        const { updateTangible } = useGraphStore.getState();
+
+        updateTangible('tangible-1', {
+          mode: 'state',
+          stateId: 'state-1',
+          filterLabels: undefined,
+        });
+
+        const state = useGraphStore.getState();
+        expect(state.tangibles[0].mode).toBe('state');
+        expect(state.tangibles[0].stateId).toBe('state-1');
+      });
+
+      it('should update tangible description', () => {
+        const { updateTangible } = useGraphStore.getState();
+
+        updateTangible('tangible-1', { description: 'New description' });
+
+        const state = useGraphStore.getState();
+        expect(state.tangibles[0].description).toBe('New description');
+      });
+    });
+
+    describe('deleteTangible', () => {
+      beforeEach(() => {
+        const { addTangible } = useGraphStore.getState();
+        addTangible({ id: 't1', name: 'T1', mode: 'filter', filterLabels: [] });
+        addTangible({ id: 't2', name: 'T2', mode: 'state', stateId: 's1' });
+      });
+
+      it('should delete a tangible', () => {
+        const { deleteTangible } = useGraphStore.getState();
+
+        deleteTangible('t1');
+
+        const state = useGraphStore.getState();
+        expect(state.tangibles).toHaveLength(1);
+        expect(state.tangibles[0].id).toBe('t2');
+      });
+
+      it('should delete correct tangible when multiple exist', () => {
+        const { deleteTangible } = useGraphStore.getState();
+
+        deleteTangible('t2');
+
+        const state = useGraphStore.getState();
+        expect(state.tangibles).toHaveLength(1);
+        expect(state.tangibles[0].id).toBe('t1');
+      });
+    });
+
+    describe('setTangibles', () => {
+      it('should replace all tangibles', () => {
+        const { setTangibles } = useGraphStore.getState();
+        const newTangibles: TangibleConfig[] = [
+          { id: 't1', name: 'T1', mode: 'filter', filterLabels: [] },
+          { id: 't2', name: 'T2', mode: 'state', stateId: 's1' },
+        ];
+
+        setTangibles(newTangibles);
+
+        const state = useGraphStore.getState();
+        expect(state.tangibles).toEqual(newTangibles);
+      });
+
+      it('should clear tangibles when set to empty array', () => {
+        const { addTangible, setTangibles } = useGraphStore.getState();
+        addTangible({ id: 't1', name: 'T1', mode: 'filter', filterLabels: [] });
+
+        setTangibles([]);
+
+        const state = useGraphStore.getState();
+        expect(state.tangibles).toHaveLength(0);
+      });
+    });
+
+    describe('deleteLabel cascade cleanup', () => {
+      beforeEach(() => {
+        const { addLabel, addTangible } = useGraphStore.getState();
+
+        addLabel({ id: 'label-1', name: 'Label 1', color: '#000', appliesTo: 'both' });
+        addLabel({ id: 'label-2', name: 'Label 2', color: '#111', appliesTo: 'both' });
+
+        addTangible({
+          id: 't1',
+          name: 'Filter Both',
+          mode: 'filter',
+          filterLabels: ['label-1', 'label-2'],
+        });
+        addTangible({
+          id: 't2',
+          name: 'Filter One',
+          mode: 'filter',
+          filterLabels: ['label-1'],
+        });
+      });
+
+      it('should remove deleted label from tangible filterLabels', () => {
+        const { deleteLabel } = useGraphStore.getState();
+
+        deleteLabel('label-1');
+
+        const state = useGraphStore.getState();
+        const t1 = state.tangibles.find((t) => t.id === 't1');
+        const t2 = state.tangibles.find((t) => t.id === 't2');
+
+        expect(t1?.filterLabels).toEqual(['label-2']);
+        expect(t2?.filterLabels).toEqual([]);
+      });
+
+      it('should not affect state mode tangibles', () => {
+        const { addTangible, deleteLabel } = useGraphStore.getState();
+
+        addTangible({
+          id: 't3',
+          name: 'State Mode',
+          mode: 'state',
+          stateId: 'state-1',
+        });
+
+        deleteLabel('label-1');
+
+        const state = useGraphStore.getState();
+        const t3 = state.tangibles.find((t) => t.id === 't3');
+
+        expect(t3).toBeDefined();
+        expect(t3?.mode).toBe('state');
+        expect(t3?.stateId).toBe('state-1');
+      });
+
+      it('should handle multiple labels being deleted', () => {
+        const { deleteLabel } = useGraphStore.getState();
+
+        deleteLabel('label-1');
+        deleteLabel('label-2');
+
+        const state = useGraphStore.getState();
+        const t1 = state.tangibles.find((t) => t.id === 't1');
+        const t2 = state.tangibles.find((t) => t.id === 't2');
+
+        expect(t1?.filterLabels).toEqual([]);
+        expect(t2?.filterLabels).toEqual([]);
       });
     });
   });

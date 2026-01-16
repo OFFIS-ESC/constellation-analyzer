@@ -8,6 +8,7 @@ import DocumentManager from '../Workspace/DocumentManager';
 import NodeTypeConfigModal from '../Config/NodeTypeConfig';
 import EdgeTypeConfigModal from '../Config/EdgeTypeConfig';
 import LabelConfigModal from '../Config/LabelConfig';
+import TangibleConfigModal from '../Config/TangibleConfig';
 import BibliographyConfigModal from '../Config/BibliographyConfig';
 import InputDialog from '../Common/InputDialog';
 import { useConfirm } from '../../hooks/useConfirm';
@@ -36,6 +37,7 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) =>
   const [showNodeConfig, setShowNodeConfig] = useState(false);
   const [showEdgeConfig, setShowEdgeConfig] = useState(false);
   const [showLabelConfig, setShowLabelConfig] = useState(false);
+  const [showTangibleConfig, setShowTangibleConfig] = useState(false);
   const [showBibliographyConfig, setShowBibliographyConfig] = useState(false);
   const [showNewDocDialog, setShowNewDocDialog] = useState(false);
   const [showNewFromTemplateDialog, setShowNewFromTemplateDialog] = useState(false);
@@ -181,6 +183,11 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) =>
 
   const handleConfigureLabels = useCallback(() => {
     setShowLabelConfig(true);
+    closeMenu();
+  }, [closeMenu]);
+
+  const handleConfigureTangibles = useCallback(() => {
+    setShowTangibleConfig(true);
     closeMenu();
   }, [closeMenu]);
 
@@ -396,6 +403,12 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) =>
                   Configure Labels
                 </button>
                 <button
+                  onClick={handleConfigureTangibles}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  Configure Tangibles
+                </button>
+                <button
                   onClick={handleManageBibliography}
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                 >
@@ -508,6 +521,10 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) =>
       <LabelConfigModal
         isOpen={showLabelConfig}
         onClose={() => setShowLabelConfig(false)}
+      />
+      <TangibleConfigModal
+        isOpen={showTangibleConfig}
+        onClose={() => setShowTangibleConfig(false)}
       />
       <BibliographyConfigModal
         isOpen={showBibliographyConfig}

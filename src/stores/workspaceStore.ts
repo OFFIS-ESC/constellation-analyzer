@@ -1402,6 +1402,7 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
 
     // Capture original state for rollback
     const originalLabels = [...doc.labels];
+    const originalTangibles = doc.tangibles ? [...doc.tangibles] : [];
     const originalIsDirty = state.documentMetadata.get(documentId)?.isDirty;
 
     // Capture original timeline for rollback (shallow copy of the entire timeline)
@@ -1414,7 +1415,20 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
         // 1. Remove from document's labels
         doc.labels = (doc.labels || []).filter((label) => label.id !== labelId);
 
-        // 2. Remove label from all nodes and edges in all timeline states (IMMUTABLE)
+        // 2. Remove label from tangible filterLabels arrays
+        if (doc.tangibles) {
+          doc.tangibles = doc.tangibles.map((tangible) => {
+            if (tangible.mode === 'filter' && tangible.filterLabels) {
+              return {
+                ...tangible,
+                filterLabels: tangible.filterLabels.filter((id) => id !== labelId),
+              };
+            }
+            return tangible;
+          });
+        }
+
+        // 3. Remove label from all nodes and edges in all timeline states (IMMUTABLE)
         if (timeline) {
           // ✅ Build new states Map with cleaned labels (immutable update)
           const newStates = new Map();
@@ -1480,20 +1494,22 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
           }
         }
 
-        // 3. Save document to storage (can throw QuotaExceededError)
+        // 4. Save document to storage (can throw QuotaExceededError)
         saveDocumentToStorage(documentId, doc);
 
-        // 4. Mark as dirty
+        // 5. Mark as dirty
         get().markDocumentDirty(documentId);
 
-        // 5. If this is the active document, sync to graphStore
+        // 6. If this is the active document, sync to graphStore
         if (documentId === state.activeDocumentId) {
           useGraphStore.getState().setLabels(doc.labels);
+          useGraphStore.getState().setTangibles(doc.tangibles || []);
         }
       },
       () => {
         // Rollback on failure
         doc.labels = originalLabels;
+        doc.tangibles = originalTangibles;
 
         // Restore entire timeline (atomic rollback)
         if (originalTimeline) {
@@ -1517,12 +1533,183 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
           metadata.isDirty = originalIsDirty;
         }
 
-        // Sync labels to graphStore if active
+        // Sync labels and tangibles to graphStore if active
         if (documentId === state.activeDocumentId) {
           useGraphStore.getState().setLabels(doc.labels);
+          useGraphStore.getState().setTangibles(doc.tangibles || []);
         }
       },
       'delete label'
+    );
+  },
+
+  // ===========================
+  // Tangible Management
+  // ===========================
+
+  addTangibleToDocument: (documentId: string, tangible) => {
+    const state = get();
+    const doc = state.documents.get(documentId);
+
+    if (!doc) {
+      console.error(`Document ${documentId} not found`);
+      return;
+    }
+
+    // Initialize tangibles array if it doesn't exist (backward compatibility)
+    if (!doc.tangibles) {
+      doc.tangibles = [];
+    }
+
+    // Auto-generate internal ID with random value (like nodes/documents/states)
+    const id = `tangible_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Validate unique hardware ID (if provided)
+    if (tangible.hardwareId && doc.tangibles.some((t) => t.hardwareId === tangible.hardwareId)) {
+      useToastStore.getState().showToast('This hardware ID is already assigned to another tangible', 'error');
+      return;
+    }
+
+    // Validate mode-specific fields
+    if (tangible.mode === 'filter' && (!tangible.filterLabels || tangible.filterLabels.length === 0)) {
+      useToastStore.getState().showToast('Filter mode requires at least one label', 'error');
+      return;
+    }
+    if ((tangible.mode === 'state' || tangible.mode === 'stateDial') && !tangible.stateId) {
+      useToastStore.getState().showToast('State mode requires a state selection', 'error');
+      return;
+    }
+
+    // Create tangible with auto-generated ID
+    const newTangible = { ...tangible, id };
+
+    // Capture original state for rollback
+    const originalTangibles = [...doc.tangibles];
+    const originalIsDirty = state.documentMetadata.get(documentId)?.isDirty;
+
+    get().executeTypeTransaction(
+      () => {
+        doc.tangibles = [...(doc.tangibles || []), newTangible];
+        saveDocumentToStorage(documentId, doc);
+        get().markDocumentDirty(documentId);
+        if (documentId === state.activeDocumentId) {
+          useGraphStore.getState().setTangibles(doc.tangibles);
+        }
+      },
+      () => {
+        doc.tangibles = originalTangibles;
+        const metadata = state.documentMetadata.get(documentId);
+        if (metadata && originalIsDirty !== undefined) {
+          metadata.isDirty = originalIsDirty;
+        }
+        if (documentId === state.activeDocumentId) {
+          useGraphStore.getState().setTangibles(doc.tangibles);
+        }
+      },
+      'add tangible'
+    );
+  },
+
+  updateTangibleInDocument: (documentId: string, tangibleId: string, updates) => {
+    const state = get();
+    const doc = state.documents.get(documentId);
+
+    if (!doc) {
+      console.error(`Document ${documentId} not found`);
+      return;
+    }
+
+    // Initialize tangibles array if it doesn't exist (backward compatibility)
+    if (!doc.tangibles) {
+      doc.tangibles = [];
+    }
+
+    // Validate unique hardware ID if being updated
+    if (updates.hardwareId !== undefined && updates.hardwareId) {
+      const existingWithHardwareId = doc.tangibles.find((t) => t.hardwareId === updates.hardwareId && t.id !== tangibleId);
+      if (existingWithHardwareId) {
+        useToastStore.getState().showToast('This hardware ID is already assigned to another tangible', 'error');
+        return;
+      }
+    }
+
+    // Validate mode-specific fields if mode is being updated
+    if (updates.mode === 'filter' && (!updates.filterLabels || updates.filterLabels.length === 0)) {
+      useToastStore.getState().showToast('Filter mode requires at least one label', 'error');
+      return;
+    }
+    if ((updates.mode === 'state' || updates.mode === 'stateDial') && !updates.stateId) {
+      useToastStore.getState().showToast('State mode requires a state selection', 'error');
+      return;
+    }
+
+    // Capture original state for rollback
+    const originalTangibles = [...doc.tangibles];
+    const originalIsDirty = state.documentMetadata.get(documentId)?.isDirty;
+
+    get().executeTypeTransaction(
+      () => {
+        doc.tangibles = (doc.tangibles || []).map((tangible) =>
+          tangible.id === tangibleId ? { ...tangible, ...updates } : tangible
+        );
+        saveDocumentToStorage(documentId, doc);
+        get().markDocumentDirty(documentId);
+        if (documentId === state.activeDocumentId) {
+          useGraphStore.getState().setTangibles(doc.tangibles);
+        }
+      },
+      () => {
+        doc.tangibles = originalTangibles;
+        const metadata = state.documentMetadata.get(documentId);
+        if (metadata && originalIsDirty !== undefined) {
+          metadata.isDirty = originalIsDirty;
+        }
+        if (documentId === state.activeDocumentId) {
+          useGraphStore.getState().setTangibles(doc.tangibles);
+        }
+      },
+      'update tangible'
+    );
+  },
+
+  deleteTangibleFromDocument: (documentId: string, tangibleId: string) => {
+    const state = get();
+    const doc = state.documents.get(documentId);
+
+    if (!doc) {
+      console.error(`Document ${documentId} not found`);
+      return;
+    }
+
+    // Initialize tangibles array if it doesn't exist (backward compatibility)
+    if (!doc.tangibles) {
+      doc.tangibles = [];
+    }
+
+    // Capture original state for rollback
+    const originalTangibles = [...doc.tangibles];
+    const originalIsDirty = state.documentMetadata.get(documentId)?.isDirty;
+
+    get().executeTypeTransaction(
+      () => {
+        doc.tangibles = (doc.tangibles || []).filter((tangible) => tangible.id !== tangibleId);
+        saveDocumentToStorage(documentId, doc);
+        get().markDocumentDirty(documentId);
+        if (documentId === state.activeDocumentId) {
+          useGraphStore.getState().setTangibles(doc.tangibles);
+        }
+      },
+      () => {
+        doc.tangibles = originalTangibles;
+        const metadata = state.documentMetadata.get(documentId);
+        if (metadata && originalIsDirty !== undefined) {
+          metadata.isDirty = originalIsDirty;
+        }
+        if (documentId === state.activeDocumentId) {
+          useGraphStore.getState().setTangibles(doc.tangibles);
+        }
+      },
+      'delete tangible'
     );
   },
 }));

@@ -1,5 +1,5 @@
 import type { ConstellationDocument } from '../persistence/types';
-import type { NodeTypeConfig, EdgeTypeConfig, LabelConfig } from '../../types';
+import type { NodeTypeConfig, EdgeTypeConfig, LabelConfig, TangibleConfig } from '../../types';
 
 /**
  * Workspace Types
@@ -100,6 +100,11 @@ export interface WorkspaceActions {
   addLabelToDocument: (documentId: string, label: LabelConfig) => void;
   updateLabelInDocument: (documentId: string, labelId: string, updates: Partial<Omit<LabelConfig, 'id'>>) => void;
   deleteLabelFromDocument: (documentId: string, labelId: string) => void;
+
+  // Tangible management (document-level)
+  addTangibleToDocument: (documentId: string, tangible: TangibleConfig) => void;
+  updateTangibleInDocument: (documentId: string, tangibleId: string, updates: Partial<Omit<TangibleConfig, 'id'>>) => void;
+  deleteTangibleFromDocument: (documentId: string, tangibleId: string) => void;
 
   // Viewport operations
   saveViewport: (documentId: string, viewport: { x: number; y: number; zoom: number }) => void;

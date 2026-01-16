@@ -1,4 +1,4 @@
-import type { ActorData, RelationData, GroupData, NodeTypeConfig, EdgeTypeConfig, LabelConfig } from '../../types';
+import type { ActorData, RelationData, GroupData, NodeTypeConfig, EdgeTypeConfig, LabelConfig, TangibleConfig } from '../../types';
 import type { ConstellationState } from '../../types/timeline';
 import type { Bibliography } from '../../types/bibliography';
 
@@ -59,6 +59,8 @@ export interface ConstellationDocument {
   labels?: LabelConfig[];
   // Global bibliography for the entire document (optional for backward compatibility)
   bibliography?: Bibliography;
+  // Global tangibles for the entire document (optional for backward compatibility)
+  tangibles?: TangibleConfig[];
   // Timeline with multiple states - every document has this
   // The graph is stored within each state (nodes and edges only, not types)
   timeline: {

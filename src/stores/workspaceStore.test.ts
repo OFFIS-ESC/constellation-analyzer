@@ -6,6 +6,7 @@ import {
   clearWorkspaceStorage,
 } from './workspace/persistence';
 import { mockNodeTypes, mockEdgeTypes } from '../test-utils/mocks';
+import type { TangibleConfig } from '../types';
 
 // Create a mock showToast that we can track
 const mockShowToast = vi.fn();
@@ -38,9 +39,11 @@ vi.mock('./graphStore', () => ({
       nodeTypes: [],
       edgeTypes: [],
       labels: [],
+      tangibles: [],
       setNodeTypes: vi.fn(),
       setEdgeTypes: vi.fn(),
       setLabels: vi.fn(),
+      setTangibles: vi.fn(),
       loadGraphState: vi.fn(),
     }),
     setState: vi.fn(),
@@ -631,6 +634,124 @@ describe('workspaceStore', () => {
         // Should not throw error
         expect(() => setDocumentPresentationPreference('invalid', true)).not.toThrow();
       });
+    });
+  });
+
+  describe('Tangible Management', () => {
+    let documentId: string;
+
+    beforeEach(() => {
+      documentId = useWorkspaceStore.getState().createDocument('Test Doc');
+    });
+
+    describe('addTangibleToDocument', () => {
+      it('should add tangible to document', () => {
+        const { addTangibleToDocument } = useWorkspaceStore.getState();
+
+        const tangible = {
+          name: 'Red Block',
+          mode: 'filter' as const,
+          filterLabels: ['label-1'],
+          hardwareId: 'token-001',
+        };
+
+        addTangibleToDocument(documentId, tangible as TangibleConfig);
+
+        const doc = useWorkspaceStore.getState().documents.get(documentId);
+        expect(doc?.tangibles).toHaveLength(1);
+        expect(doc?.tangibles?.[0].id).toMatch(/^tangible_\d+_[a-z0-9]+$/); // Random ID format
+        expect(doc?.tangibles?.[0].name).toBe('Red Block');
+        expect(doc?.tangibles?.[0].hardwareId).toBe('token-001');
+      });
+
+      it('should allow duplicate tangible names', () => {
+        const { addTangibleToDocument } = useWorkspaceStore.getState();
+
+        const tangible = {
+          name: 'Red Block',
+          mode: 'filter' as const,
+          filterLabels: ['label-1'],
+        };
+
+        addTangibleToDocument(documentId, tangible as TangibleConfig);
+        addTangibleToDocument(documentId, tangible as TangibleConfig); // Same name is allowed (IDs are unique)
+
+        const doc = useWorkspaceStore.getState().documents.get(documentId);
+        expect(doc?.tangibles).toHaveLength(2); // Both added
+        expect(doc?.tangibles?.[0].id).not.toBe(doc?.tangibles?.[1].id); // Different IDs
+      });
+
+
+      it('should handle invalid document ID', () => {
+        const { addTangibleToDocument } = useWorkspaceStore.getState();
+
+        const tangible = {
+          name: 'Red Block',
+          mode: 'filter' as const,
+          filterLabels: [],
+        };
+
+        // Should not throw
+        expect(() => addTangibleToDocument('invalid-id', tangible as TangibleConfig)).not.toThrow();
+      });
+    });
+
+    describe('updateTangibleInDocument', () => {
+      beforeEach(() => {
+        const { addTangibleToDocument } = useWorkspaceStore.getState();
+        addTangibleToDocument(documentId, {
+          name: 'Original',
+          mode: 'filter' as const,
+          filterLabels: ['label-1'],
+        } as TangibleConfig);
+      });
+
+      it('should update tangible in document', () => {
+        const { updateTangibleInDocument } = useWorkspaceStore.getState();
+
+        // Get the auto-generated ID
+        const doc = useWorkspaceStore.getState().documents.get(documentId);
+        const tangibleId = doc?.tangibles?.[0].id!;
+
+        updateTangibleInDocument(documentId, tangibleId, { name: 'Updated', hardwareId: 'token-002' });
+
+        const updatedDoc = useWorkspaceStore.getState().documents.get(documentId);
+        expect(updatedDoc?.tangibles?.[0].name).toBe('Updated');
+        expect(updatedDoc?.tangibles?.[0].hardwareId).toBe('token-002');
+      });
+    });
+
+    describe('deleteTangibleFromDocument', () => {
+      beforeEach(() => {
+        const { addTangibleToDocument } = useWorkspaceStore.getState();
+        addTangibleToDocument(documentId, {
+          name: 'T1',
+          mode: 'filter' as const,
+          filterLabels: ['label-1'],
+        } as TangibleConfig);
+        addTangibleToDocument(documentId, {
+          name: 'T2',
+          mode: 'state' as const,
+          stateId: 's1',
+        } as TangibleConfig);
+      });
+
+      it('should delete tangible from document', () => {
+        const { deleteTangibleFromDocument } = useWorkspaceStore.getState();
+
+        // Get the first tangible's ID
+        const doc = useWorkspaceStore.getState().documents.get(documentId);
+        const firstTangibleId = doc?.tangibles?.[0].id!;
+        const secondTangibleId = doc?.tangibles?.[1].id!;
+
+        deleteTangibleFromDocument(documentId, firstTangibleId);
+
+        const updatedDoc = useWorkspaceStore.getState().documents.get(documentId);
+        expect(updatedDoc?.tangibles).toHaveLength(1);
+        expect(updatedDoc?.tangibles?.[0].id).toBe(secondTangibleId);
+        expect(updatedDoc?.tangibles?.[0].name).toBe('T2');
+      });
+
     });
   });
 

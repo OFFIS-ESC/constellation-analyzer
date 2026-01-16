@@ -7,6 +7,7 @@ import type {
   NodeTypeConfig,
   EdgeTypeConfig,
   LabelConfig,
+  TangibleConfig,
   RelationData,
   GroupData,
   GraphActions
@@ -34,6 +35,7 @@ interface GraphStore {
   nodeTypes: NodeTypeConfig[];
   edgeTypes: EdgeTypeConfig[];
   labels: LabelConfig[];
+  tangibles: TangibleConfig[];
 }
 
 // Default node types with semantic shape assignments
@@ -60,6 +62,7 @@ const initialState: GraphStore = {
   nodeTypes: defaultNodeTypes,
   edgeTypes: defaultEdgeTypes,
   labels: [],
+  tangibles: [],
 };
 
 export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
@@ -69,6 +72,7 @@ export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
   nodeTypes: initialState.nodeTypes,
   edgeTypes: initialState.edgeTypes,
   labels: initialState.labels,
+  tangibles: initialState.tangibles,
 
   // Node operations
   addNode: (node: Actor) =>
@@ -217,11 +221,46 @@ export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
           : edge.data,
       }));
 
+      // Remove label from tangible filterLabels arrays
+      const updatedTangibles = state.tangibles.map((tangible) => {
+        if (tangible.mode === 'filter' && tangible.filterLabels) {
+          return {
+            ...tangible,
+            filterLabels: tangible.filterLabels.filter((labelId) => labelId !== id),
+          };
+        }
+        return tangible;
+      });
+
       return {
         labels: state.labels.filter((label) => label.id !== id),
         nodes: updatedNodes,
         edges: updatedEdges,
+        tangibles: updatedTangibles,
       };
+    }),
+
+  // Tangible operations
+  addTangible: (tangible: TangibleConfig) =>
+    set((state) => ({
+      tangibles: [...state.tangibles, tangible],
+    })),
+
+  updateTangible: (id: string, updates: Partial<Omit<TangibleConfig, 'id'>>) =>
+    set((state) => ({
+      tangibles: state.tangibles.map((tangible) =>
+        tangible.id === id ? { ...tangible, ...updates } : tangible
+      ),
+    })),
+
+  deleteTangible: (id: string) =>
+    set((state) => ({
+      tangibles: state.tangibles.filter((tangible) => tangible.id !== id),
+    })),
+
+  setTangibles: (tangibles: TangibleConfig[]) =>
+    set({
+      tangibles,
     }),
 
   // Group operations
@@ -558,6 +597,7 @@ export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
       nodeTypes: data.nodeTypes,
       edgeTypes: data.edgeTypes,
       labels: data.labels || [],
+      tangibles: data.tangibles || [],
     });
   },
 }));

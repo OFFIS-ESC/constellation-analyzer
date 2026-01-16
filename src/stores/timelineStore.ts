@@ -308,6 +308,7 @@ export const useTimelineStore = create<TimelineStore & TimelineActions>(
         nodeTypes: graphStore.nodeTypes,
         edgeTypes: graphStore.edgeTypes,
         labels: graphStore.labels,
+        tangibles: graphStore.tangibles,
       });
     },
 
@@ -406,6 +407,33 @@ export const useTimelineStore = create<TimelineStore & TimelineActions>(
 
       // Push to history BEFORE making changes
       pushDocumentHistory(activeDocumentId, `Delete State: ${stateName}`);
+
+      // Delete tangibles that reference this state
+      const workspaceStore = useWorkspaceStore.getState();
+      const doc = workspaceStore.documents.get(activeDocumentId);
+      if (doc && doc.tangibles) {
+        const tangiblesBefore = doc.tangibles.length;
+        doc.tangibles = doc.tangibles.filter(
+          (tangible) =>
+            !(
+              (tangible.mode === 'state' || tangible.mode === 'stateDial') &&
+              tangible.stateId === stateId
+            )
+        );
+        const tangiblesDeleted = tangiblesBefore - doc.tangibles.length;
+
+        if (tangiblesDeleted > 0) {
+          // Sync to graphStore if active
+          if (activeDocumentId === workspaceStore.activeDocumentId) {
+            useGraphStore.getState().setTangibles(doc.tangibles);
+          }
+
+          useToastStore.getState().showToast(
+            `Deleted ${tangiblesDeleted} tangible(s) referencing this state`,
+            'info'
+          );
+        }
+      }
 
       set((state) => {
         const newTimelines = new Map(state.timelines);

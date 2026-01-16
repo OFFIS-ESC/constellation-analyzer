@@ -66,6 +66,19 @@ export interface LabelConfig {
   description?: string;
 }
 
+// Tangible Configuration
+export type TangibleMode = 'filter' | 'state' | 'stateDial';
+
+export interface TangibleConfig {
+  id: string;                   // Internal unique identifier (auto-generated from name)
+  name: string;
+  mode: TangibleMode;
+  description?: string;
+  hardwareId?: string;          // Hardware token/device ID (editable, must be unique if present)
+  filterLabels?: string[];      // For filter mode: array of LabelConfig IDs
+  stateId?: string;             // For state/stateDial mode: ConstellationState ID
+}
+
 // Group Types
 export interface GroupData extends Record<string, unknown> {
   label: string;
@@ -86,6 +99,7 @@ export interface GraphState {
   nodeTypes: NodeTypeConfig[];
   edgeTypes: EdgeTypeConfig[];
   labels: LabelConfig[];
+  tangibles: TangibleConfig[];
 }
 
 // Editor Settings
@@ -114,6 +128,10 @@ export interface GraphActions {
   addLabel: (label: LabelConfig) => void;
   updateLabel: (id: string, updates: Partial<Omit<LabelConfig, 'id'>>) => void;
   deleteLabel: (id: string) => void;
+  addTangible: (tangible: TangibleConfig) => void;
+  updateTangible: (id: string, updates: Partial<Omit<TangibleConfig, 'id'>>) => void;
+  deleteTangible: (id: string) => void;
+  setTangibles: (tangibles: TangibleConfig[]) => void;
   addGroup: (group: Group) => void;
   updateGroup: (id: string, updates: Partial<GroupData>) => void;
   deleteGroup: (id: string, ungroupActors?: boolean) => void;
@@ -129,7 +147,7 @@ export interface GraphActions {
   setLabels: (labels: LabelConfig[]) => void;
   // NOTE: exportToFile and importFromFile have been removed
   // Import/export is now handled by the workspace-level system (workspaceStore)
-  loadGraphState: (data: { nodes: Actor[]; edges: Relation[]; groups?: Group[]; nodeTypes: NodeTypeConfig[]; edgeTypes: EdgeTypeConfig[]; labels?: LabelConfig[] }) => void;
+  loadGraphState: (data: { nodes: Actor[]; edges: Relation[]; groups?: Group[]; nodeTypes: NodeTypeConfig[]; edgeTypes: EdgeTypeConfig[]; labels?: LabelConfig[]; tangibles?: TangibleConfig[] }) => void;
 }
 
 export interface EditorActions {

@@ -2,7 +2,7 @@ import { useCallback, useRef, useEffect } from 'react';
 import { useGraphStore } from '../stores/graphStore';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useDocumentHistory } from './useDocumentHistory';
-import type { Actor, Relation, Group, NodeTypeConfig, EdgeTypeConfig, LabelConfig, RelationData, GroupData } from '../types';
+import type { Actor, Relation, Group, NodeTypeConfig, EdgeTypeConfig, LabelConfig, TangibleConfig, RelationData, GroupData } from '../types';
 
 /**
  * useGraphWithHistory Hook
@@ -22,11 +22,12 @@ import type { Actor, Relation, Group, NodeTypeConfig, EdgeTypeConfig, LabelConfi
  * - Group operations: addGroup, updateGroup, deleteGroup, addActorToGroup, removeActorFromGroup
  * - Type operations: addNodeType, updateNodeType, deleteNodeType, addEdgeType, updateEdgeType, deleteEdgeType
  * - Label operations: addLabel, updateLabel, deleteLabel
+ * - Tangible operations: addTangible, updateTangible, deleteTangible
  * - Utility: clearGraph
  *
  * Read-only pass-through operations (no history):
- * - setNodes, setEdges, setGroups, setLabels (used for bulk updates during undo/redo/document loading)
- * - nodes, edges, groups, nodeTypes, edgeTypes, labels (state access)
+ * - setNodes, setEdges, setGroups, setLabels, setTangibles (used for bulk updates during undo/redo/document loading)
+ * - nodes, edges, groups, nodeTypes, edgeTypes, labels, tangibles (state access)
  * - loadGraphState
  *
  * Usage:
@@ -51,6 +52,9 @@ export function useGraphWithHistory() {
   const addLabelToDocument = useWorkspaceStore((state) => state.addLabelToDocument);
   const updateLabelInDocument = useWorkspaceStore((state) => state.updateLabelInDocument);
   const deleteLabelFromDocument = useWorkspaceStore((state) => state.deleteLabelFromDocument);
+  const addTangibleToDocument = useWorkspaceStore((state) => state.addTangibleToDocument);
+  const updateTangibleInDocument = useWorkspaceStore((state) => state.updateTangibleInDocument);
+  const deleteTangibleFromDocument = useWorkspaceStore((state) => state.deleteTangibleFromDocument);
   const { pushToHistory } = useDocumentHistory();
 
   // Track if we're currently restoring from history to prevent recursive history pushes
@@ -339,6 +343,56 @@ export function useGraphWithHistory() {
     [activeDocumentId, graphStore, pushToHistory, deleteLabelFromDocument]
   );
 
+  // Tangible operations
+  const addTangible = useCallback(
+    (tangible: TangibleConfig) => {
+      if (!activeDocumentId) {
+        console.warn('No active document');
+        return;
+      }
+      if (isRestoringRef.current) {
+        graphStore.addTangible(tangible);
+        return;
+      }
+      pushToHistory(`Add Tangible: ${tangible.name}`); // Synchronous push BEFORE mutation
+      addTangibleToDocument(activeDocumentId, tangible);
+    },
+    [activeDocumentId, graphStore, pushToHistory, addTangibleToDocument]
+  );
+
+  const updateTangible = useCallback(
+    (id: string, updates: Partial<Omit<TangibleConfig, 'id'>>) => {
+      if (!activeDocumentId) {
+        console.warn('No active document');
+        return;
+      }
+      if (isRestoringRef.current) {
+        graphStore.updateTangible(id, updates);
+        return;
+      }
+      pushToHistory('Update Tangible'); // Synchronous push BEFORE mutation
+      updateTangibleInDocument(activeDocumentId, id, updates);
+    },
+    [activeDocumentId, graphStore, pushToHistory, updateTangibleInDocument]
+  );
+
+  const deleteTangible = useCallback(
+    (id: string) => {
+      if (!activeDocumentId) {
+        console.warn('No active document');
+        return;
+      }
+      if (isRestoringRef.current) {
+        graphStore.deleteTangible(id);
+        return;
+      }
+      const tangible = graphStore.tangibles.find((t) => t.id === id);
+      pushToHistory(`Delete Tangible: ${tangible?.name || id}`); // Synchronous push BEFORE mutation
+      deleteTangibleFromDocument(activeDocumentId, id);
+    },
+    [activeDocumentId, graphStore, pushToHistory, deleteTangibleFromDocument]
+  );
+
   // Group operations
   const addGroup = useCallback(
     (group: Group) => {
@@ -495,6 +549,9 @@ export function useGraphWithHistory() {
     addLabel,
     updateLabel,
     deleteLabel,
+    addTangible,
+    updateTangible,
+    deleteTangible,
     clearGraph,
 
     // Pass through read-only operations
@@ -504,12 +561,14 @@ export function useGraphWithHistory() {
     nodeTypes: graphStore.nodeTypes,
     edgeTypes: graphStore.edgeTypes,
     labels: graphStore.labels,
+    tangibles: graphStore.tangibles,
     setNodes: graphStore.setNodes,
     setEdges: graphStore.setEdges,
     setGroups: graphStore.setGroups,
     setNodeTypes: graphStore.setNodeTypes,
     setEdgeTypes: graphStore.setEdgeTypes,
     setLabels: graphStore.setLabels,
+    setTangibles: graphStore.setTangibles,
     loadGraphState: graphStore.loadGraphState,
 
     // NOTE: exportToFile and importFromFile have been removed

@@ -9,6 +9,7 @@ import NodeTypeConfigModal from '../Config/NodeTypeConfig';
 import EdgeTypeConfigModal from '../Config/EdgeTypeConfig';
 import LabelConfigModal from '../Config/LabelConfig';
 import TangibleConfigModal from '../Config/TangibleConfig';
+import TuioConnectionConfig from '../Config/TuioConnectionConfig';
 import BibliographyConfigModal from '../Config/BibliographyConfig';
 import InputDialog from '../Common/InputDialog';
 import { useConfirm } from '../../hooks/useConfirm';
@@ -38,6 +39,7 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) =>
   const [showEdgeConfig, setShowEdgeConfig] = useState(false);
   const [showLabelConfig, setShowLabelConfig] = useState(false);
   const [showTangibleConfig, setShowTangibleConfig] = useState(false);
+  const [showTuioConfig, setShowTuioConfig] = useState(false);
   const [showBibliographyConfig, setShowBibliographyConfig] = useState(false);
   const [showNewDocDialog, setShowNewDocDialog] = useState(false);
   const [showNewFromTemplateDialog, setShowNewFromTemplateDialog] = useState(false);
@@ -467,6 +469,19 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) =>
                   <span>Presentation Mode</span>
                   <span className="text-xs text-gray-400">F11</span>
                 </button>
+
+                <div className="border-t border-gray-200 my-1" />
+
+                {/* TUIO Connection Settings */}
+                <button
+                  onClick={() => {
+                    setShowTuioConfig(true);
+                    closeMenu();
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  TUIO Connection Settings...
+                </button>
               </div>
             )}
           </div>
@@ -525,6 +540,10 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) =>
       <TangibleConfigModal
         isOpen={showTangibleConfig}
         onClose={() => setShowTangibleConfig(false)}
+      />
+      <TuioConnectionConfig
+        isOpen={showTuioConfig}
+        onClose={() => setShowTuioConfig(false)}
       />
       <BibliographyConfigModal
         isOpen={showBibliographyConfig}

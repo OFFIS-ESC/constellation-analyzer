@@ -12,6 +12,7 @@ import ToastContainer from "./components/Common/ToastContainer";
 import { KeyboardShortcutProvider } from "./contexts/KeyboardShortcutContext";
 import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
 import { useDocumentHistory } from "./hooks/useDocumentHistory";
+import { useTuioIntegration } from "./hooks/useTuioIntegration";
 import { useWorkspaceStore } from "./stores/workspaceStore";
 import { usePanelStore } from "./stores/panelStore";
 import { useSettingsStore } from "./stores/settingsStore";
@@ -96,6 +97,9 @@ function AppContent() {
     onFitView: handleFitView,
     onFocusSearch: () => leftPanelRef.current?.focusSearch(),
   });
+
+  // Setup TUIO integration for tangible detection
+  useTuioIntegration();
 
   // Escape key to close property panels
   useEffect(() => {

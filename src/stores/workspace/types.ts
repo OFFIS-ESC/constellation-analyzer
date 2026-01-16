@@ -117,6 +117,7 @@ export interface WorkspaceActions {
   executeTypeTransaction: <T>(
     operation: () => T,
     rollback: () => void,
-    operationName: string
+    operationName: string,
+    documentId?: string
   ) => T | null;
 }

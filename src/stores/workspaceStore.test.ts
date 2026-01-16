@@ -784,6 +784,159 @@ describe("workspaceStore", () => {
     });
   });
 
+  describe("Auto-save behavior for type operations", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("should trigger auto-save after updating a label", async () => {
+      const { createDocument, addLabelToDocument, updateLabelInDocument } =
+        useWorkspaceStore.getState();
+
+      const docId = createDocument("Test Doc");
+      
+      // Add a label
+      addLabelToDocument(docId, {
+        id: "test-label",
+        name: "Test Label",
+        color: "#ff0000",
+        appliesTo: "both",
+      });
+
+      // Clear the dirty flag before updating
+      const metadata = useWorkspaceStore.getState().documentMetadata.get(docId);
+      if (metadata) {
+        metadata.isDirty = false;
+      }
+
+      // Update the label
+      updateLabelInDocument(docId, "test-label", {
+        name: "Updated Label",
+      });
+
+      // Check that document is marked dirty
+      const metadataAfterUpdate = useWorkspaceStore.getState().documentMetadata.get(docId);
+      expect(metadataAfterUpdate?.isDirty).toBe(true);
+
+      // Fast-forward 1 second to trigger auto-save
+      vi.advanceTimersByTime(1000);
+
+      // Check that document is no longer dirty (auto-save completed)
+      const metadataAfterSave = useWorkspaceStore.getState().documentMetadata.get(docId);
+      expect(metadataAfterSave?.isDirty).toBe(false);
+    });
+
+    it("should trigger auto-save after updating a tangible", async () => {
+      const { createDocument, addTangibleToDocument, updateTangibleInDocument } =
+        useWorkspaceStore.getState();
+
+      const docId = createDocument("Test Doc");
+      
+      // Add a tangible
+      addTangibleToDocument(docId, {
+        name: "Test Tangible",
+        mode: "filter",
+        filterLabels: ["label-1"],
+      } as TangibleConfig);
+
+      // Get the tangible ID
+      const doc = useWorkspaceStore.getState().documents.get(docId);
+      const tangibleId = doc!.tangibles![0].id!;
+
+      // Clear the dirty flag before updating
+      const metadata = useWorkspaceStore.getState().documentMetadata.get(docId);
+      if (metadata) {
+        metadata.isDirty = false;
+      }
+
+      // Update the tangible
+      updateTangibleInDocument(docId, tangibleId, {
+        name: "Updated Tangible",
+      });
+
+      // Check that document is marked dirty
+      const metadataAfterUpdate = useWorkspaceStore.getState().documentMetadata.get(docId);
+      expect(metadataAfterUpdate?.isDirty).toBe(true);
+
+      // Fast-forward 1 second to trigger auto-save
+      vi.advanceTimersByTime(1000);
+
+      // Check that document is no longer dirty (auto-save completed)
+      const metadataAfterSave = useWorkspaceStore.getState().documentMetadata.get(docId);
+      expect(metadataAfterSave?.isDirty).toBe(false);
+    });
+
+    it("should trigger auto-save after adding a node type", async () => {
+      const { createDocument, addNodeTypeToDocument } =
+        useWorkspaceStore.getState();
+
+      const docId = createDocument("Test Doc");
+      
+      // Clear the dirty flag
+      const metadata = useWorkspaceStore.getState().documentMetadata.get(docId);
+      if (metadata) {
+        metadata.isDirty = false;
+      }
+
+      // Add a node type
+      addNodeTypeToDocument(docId, {
+        id: "test-type",
+        label: "Test Type",
+        color: "#00ff00",
+        shape: "circle",
+        icon: "Person",
+      });
+
+      // Check that document is marked dirty
+      const metadataAfterUpdate = useWorkspaceStore.getState().documentMetadata.get(docId);
+      expect(metadataAfterUpdate?.isDirty).toBe(true);
+
+      // Fast-forward 1 second to trigger auto-save
+      vi.advanceTimersByTime(1000);
+
+      // Check that document is no longer dirty (auto-save completed)
+      const metadataAfterSave = useWorkspaceStore.getState().documentMetadata.get(docId);
+      expect(metadataAfterSave?.isDirty).toBe(false);
+    });
+
+    it("should trigger auto-save after updating an edge type", async () => {
+      const { createDocument, updateEdgeTypeInDocument } =
+        useWorkspaceStore.getState();
+
+      const docId = createDocument("Test Doc");
+      
+      // Get the first edge type from default types
+      const doc = useWorkspaceStore.getState().documents.get(docId);
+      const edgeTypeId = doc!.edgeTypes[0].id;
+
+      // Clear the dirty flag
+      const metadata = useWorkspaceStore.getState().documentMetadata.get(docId);
+      if (metadata) {
+        metadata.isDirty = false;
+      }
+
+      // Update the edge type
+      updateEdgeTypeInDocument(docId, edgeTypeId, {
+        label: "Updated Type",
+      });
+
+      // Check that document is marked dirty
+      const metadataAfterUpdate = useWorkspaceStore.getState().documentMetadata.get(docId);
+      expect(metadataAfterUpdate?.isDirty).toBe(true);
+
+      // Fast-forward 1 second to trigger auto-save
+      vi.advanceTimersByTime(1000);
+
+      // Check that document is no longer dirty (auto-save completed)
+      const metadataAfterSave = useWorkspaceStore.getState().documentMetadata.get(docId);
+      expect(metadataAfterSave?.isDirty).toBe(false);
+    });
+  });
+
   describe("Edge Cases", () => {
     it("should handle rapid document creation", () => {
       const { createDocument } = useWorkspaceStore.getState();

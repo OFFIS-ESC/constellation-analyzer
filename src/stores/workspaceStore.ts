@@ -1005,15 +1005,25 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
    * @param operation - Function that performs the operation (can throw)
    * @param rollback - Function to rollback changes on failure
    * @param operationName - Human-readable name for error messages
+   * @param documentId - Document ID to trigger auto-save for
    * @returns Operation result or null on failure
    */
   executeTypeTransaction: <T>(
     operation: () => T,
     rollback: () => void,
-    operationName: string
+    operationName: string,
+    documentId?: string
   ): T | null => {
     try {
       const result = operation();
+      
+      // Trigger auto-save after successful operation (consistent with undo/redo)
+      if (documentId) {
+        setTimeout(() => {
+          get().saveDocument(documentId);
+        }, 1000);
+      }
+      
       return result;
     } catch (error) {
       console.error(`${operationName} failed:`, error);
@@ -1095,7 +1105,8 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
           useGraphStore.getState().setNodeTypes(doc.nodeTypes);
         }
       },
-      'add node type'
+      'add node type',
+      documentId
     );
   },
 
@@ -1142,7 +1153,8 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
           useGraphStore.getState().setNodeTypes(doc.nodeTypes);
         }
       },
-      'update node type'
+      'update node type',
+      documentId
     );
   },
 
@@ -1187,7 +1199,8 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
           useGraphStore.getState().setNodeTypes(doc.nodeTypes);
         }
       },
-      'delete node type'
+      'delete node type',
+      documentId
     );
   },
 
@@ -1223,7 +1236,8 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
           useGraphStore.getState().setEdgeTypes(doc.edgeTypes);
         }
       },
-      'add edge type'
+      'add edge type',
+      documentId
     );
   },
 
@@ -1261,7 +1275,8 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
           useGraphStore.getState().setEdgeTypes(doc.edgeTypes);
         }
       },
-      'update edge type'
+      'update edge type',
+      documentId
     );
   },
 
@@ -1297,7 +1312,8 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
           useGraphStore.getState().setEdgeTypes(doc.edgeTypes);
         }
       },
-      'delete edge type'
+      'delete edge type',
+      documentId
     );
   },
 
@@ -1339,7 +1355,8 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
           useGraphStore.getState().setLabels(doc.labels);
         }
       },
-      'add label'
+      'add label',
+      documentId
     );
   },
 
@@ -1382,7 +1399,8 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
           useGraphStore.getState().setLabels(doc.labels);
         }
       },
-      'update label'
+      'update label',
+      documentId
     );
   },
 
@@ -1539,7 +1557,8 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
           useGraphStore.getState().setTangibles(doc.tangibles || []);
         }
       },
-      'delete label'
+      'delete label',
+      documentId
     );
   },
 
@@ -1606,7 +1625,8 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
           useGraphStore.getState().setTangibles(doc.tangibles);
         }
       },
-      'add tangible'
+      'add tangible',
+      documentId
     );
   },
 
@@ -1668,7 +1688,8 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
           useGraphStore.getState().setTangibles(doc.tangibles);
         }
       },
-      'update tangible'
+      'update tangible',
+      documentId
     );
   },
 
@@ -1709,7 +1730,8 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
           useGraphStore.getState().setTangibles(doc.tangibles);
         }
       },
-      'delete tangible'
+      'delete tangible',
+      documentId
     );
   },
 }));

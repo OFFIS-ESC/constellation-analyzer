@@ -1,5 +1,6 @@
-import DeleteIcon from '@mui/icons-material/Delete';
-import type { TangibleConfig, LabelConfig, ConstellationState } from '../../types';
+import DeleteIcon from "@mui/icons-material/Delete";
+import type { TangibleConfig, LabelConfig } from "../../types";
+import type { ConstellationState } from "../../types/timeline";
 
 interface Props {
   tangibles: TangibleConfig[];
@@ -9,7 +10,12 @@ interface Props {
   onDelete: (id: string) => void;
 }
 
-const TangibleManagementList = ({ tangibles, states, onEdit, onDelete }: Props) => {
+const TangibleManagementList = ({
+  tangibles,
+  states,
+  onEdit,
+  onDelete,
+}: Props) => {
   if (tangibles.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500">
@@ -21,17 +27,17 @@ const TangibleManagementList = ({ tangibles, states, onEdit, onDelete }: Props) 
 
   const getModeDisplay = (tangible: TangibleConfig) => {
     switch (tangible.mode) {
-      case 'filter': {
+      case "filter": {
         const labelCount = tangible.filterLabels?.length || 0;
-        return `Filter (${labelCount} label${labelCount !== 1 ? 's' : ''})`;
+        return `Filter (${labelCount} label${labelCount !== 1 ? "s" : ""})`;
       }
-      case 'state': {
-        const state = states.find(s => s.id === tangible.stateId);
-        return `State: ${state?.label || 'Unknown'}`;
+      case "state": {
+        const state = states.find((s) => s.id === tangible.stateId);
+        return `State: ${state?.label || "Unknown"}`;
       }
-      case 'stateDial': {
-        const dialState = states.find(s => s.id === tangible.stateId);
-        return `State Dial: ${dialState?.label || 'Unknown'}`;
+      case "stateDial": {
+        const dialState = states.find((s) => s.id === tangible.stateId);
+        return `State Dial: ${dialState?.label || "Unknown"}`;
       }
       default:
         return tangible.mode;
@@ -48,7 +54,7 @@ const TangibleManagementList = ({ tangibles, states, onEdit, onDelete }: Props) 
           role="button"
           tabIndex={0}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
+            if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
               onEdit(tangible);
             }
@@ -62,7 +68,10 @@ const TangibleManagementList = ({ tangibles, states, onEdit, onDelete }: Props) 
               </h4>
               {tangible.hardwareId && (
                 <p className="text-xs text-gray-600 mt-1">
-                  Hardware: <code className="bg-gray-100 px-1 rounded">{tangible.hardwareId}</code>
+                  Hardware:{" "}
+                  <code className="bg-gray-100 px-1 rounded">
+                    {tangible.hardwareId}
+                  </code>
                 </p>
               )}
               <p className="text-xs text-gray-500 mt-1">

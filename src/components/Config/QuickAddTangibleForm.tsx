@@ -1,6 +1,7 @@
-import { useState, useRef, KeyboardEvent } from 'react';
-import TangibleForm from './TangibleForm';
-import type { TangibleMode, LabelConfig, ConstellationState } from '../../types';
+import { useState, useRef, KeyboardEvent } from "react";
+import TangibleForm from "./TangibleForm";
+import type { TangibleMode, LabelConfig } from "../../types";
+import type { ConstellationState } from "../../types/timeline";
 
 interface Props {
   labels: LabelConfig[];
@@ -16,12 +17,12 @@ interface Props {
 }
 
 const QuickAddTangibleForm = ({ labels, states, onAdd }: Props) => {
-  const [name, setName] = useState('');
-  const [hardwareId, setHardwareId] = useState('');
-  const [mode, setMode] = useState<TangibleMode>('filter');
-  const [description, setDescription] = useState('');
+  const [name, setName] = useState("");
+  const [hardwareId, setHardwareId] = useState("");
+  const [mode, setMode] = useState<TangibleMode>("filter");
+  const [description, setDescription] = useState("");
   const [filterLabels, setFilterLabels] = useState<string[]>([]);
-  const [stateId, setStateId] = useState('');
+  const [stateId, setStateId] = useState("");
 
   const nameInputRef = useRef<HTMLInputElement>(null);
 
@@ -32,12 +33,12 @@ const QuickAddTangibleForm = ({ labels, states, onAdd }: Props) => {
     }
 
     // Validate mode-specific fields
-    if (mode === 'filter' && filterLabels.length === 0) {
-      alert('Filter mode requires at least one label');
+    if (mode === "filter" && filterLabels.length === 0) {
+      alert("Filter mode requires at least one label");
       return;
     }
-    if ((mode === 'state' || mode === 'stateDial') && !stateId) {
-      alert('State mode requires a state selection');
+    if ((mode === "state" || mode === "stateDial") && !stateId) {
+      alert("State mode requires a state selection");
       return;
     }
 
@@ -46,33 +47,33 @@ const QuickAddTangibleForm = ({ labels, states, onAdd }: Props) => {
       mode,
       description,
       hardwareId: hardwareId.trim() || undefined,
-      filterLabels: mode === 'filter' ? filterLabels : undefined,
-      stateId: (mode === 'state' || mode === 'stateDial') ? stateId : undefined,
+      filterLabels: mode === "filter" ? filterLabels : undefined,
+      stateId: mode === "state" || mode === "stateDial" ? stateId : undefined,
     });
 
     // Reset form
-    setName('');
-    setHardwareId('');
-    setMode('filter');
-    setDescription('');
+    setName("");
+    setHardwareId("");
+    setMode("filter");
+    setDescription("");
     setFilterLabels([]);
-    setStateId('');
+    setStateId("");
 
     nameInputRef.current?.focus();
   };
 
   const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
-    } else if (e.key === 'Escape') {
+    } else if (e.key === "Escape") {
       e.preventDefault();
-      setName('');
-      setHardwareId('');
-      setMode('filter');
-      setDescription('');
+      setName("");
+      setHardwareId("");
+      setMode("filter");
+      setDescription("");
       setFilterLabels([]);
-      setStateId('');
+      setStateId("");
       nameInputRef.current?.blur();
     }
   };

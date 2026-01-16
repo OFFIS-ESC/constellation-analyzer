@@ -1,7 +1,8 @@
-import { useState, useEffect, KeyboardEvent } from 'react';
-import SaveIcon from '@mui/icons-material/Save';
-import TangibleForm from './TangibleForm';
-import type { TangibleConfig, TangibleMode, LabelConfig, ConstellationState } from '../../types';
+import { useState, useEffect, KeyboardEvent } from "react";
+import SaveIcon from "@mui/icons-material/Save";
+import TangibleForm from "./TangibleForm";
+import type { TangibleConfig, TangibleMode, LabelConfig } from "../../types";
+import type { ConstellationState } from "../../types/timeline";
 
 interface Props {
   tangible: TangibleConfig;
@@ -16,28 +17,34 @@ interface Props {
       hardwareId?: string;
       filterLabels?: string[];
       stateId?: string;
-    }
+    },
   ) => void;
   onCancel: () => void;
 }
 
-const EditTangibleInline = ({ tangible, labels, states, onSave, onCancel }: Props) => {
-  const [name, setName] = useState('');
-  const [mode, setMode] = useState<TangibleMode>('filter');
-  const [description, setDescription] = useState('');
-  const [hardwareId, setHardwareId] = useState('');
+const EditTangibleInline = ({
+  tangible,
+  labels,
+  states,
+  onSave,
+  onCancel,
+}: Props) => {
+  const [name, setName] = useState("");
+  const [mode, setMode] = useState<TangibleMode>("filter");
+  const [description, setDescription] = useState("");
+  const [hardwareId, setHardwareId] = useState("");
   const [filterLabels, setFilterLabels] = useState<string[]>([]);
-  const [stateId, setStateId] = useState('');
+  const [stateId, setStateId] = useState("");
 
   // Sync state with tangible prop
   useEffect(() => {
     if (tangible) {
       setName(tangible.name);
       setMode(tangible.mode);
-      setDescription(tangible.description || '');
-      setHardwareId(tangible.hardwareId || '');
+      setDescription(tangible.description || "");
+      setHardwareId(tangible.hardwareId || "");
       setFilterLabels(tangible.filterLabels || []);
-      setStateId(tangible.stateId || '');
+      setStateId(tangible.stateId || "");
     }
   }, [tangible]);
 
@@ -45,12 +52,12 @@ const EditTangibleInline = ({ tangible, labels, states, onSave, onCancel }: Prop
     if (!name.trim()) return;
 
     // Validate mode-specific fields
-    if (mode === 'filter' && filterLabels.length === 0) {
-      alert('Filter mode requires at least one label');
+    if (mode === "filter" && filterLabels.length === 0) {
+      alert("Filter mode requires at least one label");
       return;
     }
-    if ((mode === 'state' || mode === 'stateDial') && !stateId) {
-      alert('State mode requires a state selection');
+    if ((mode === "state" || mode === "stateDial") && !stateId) {
+      alert("State mode requires a state selection");
       return;
     }
 
@@ -59,16 +66,16 @@ const EditTangibleInline = ({ tangible, labels, states, onSave, onCancel }: Prop
       mode,
       description: description.trim() || undefined,
       hardwareId: hardwareId.trim() || undefined,
-      filterLabels: mode === 'filter' ? filterLabels : undefined,
-      stateId: (mode === 'state' || mode === 'stateDial') ? stateId : undefined,
+      filterLabels: mode === "filter" ? filterLabels : undefined,
+      stateId: mode === "state" || mode === "stateDial" ? stateId : undefined,
     });
   };
 
   const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       handleSave();
-    } else if (e.key === 'Escape') {
+    } else if (e.key === "Escape") {
       e.preventDefault();
       onCancel();
     }
@@ -117,9 +124,13 @@ const EditTangibleInline = ({ tangible, labels, states, onSave, onCancel }: Prop
         {/* Keyboard Shortcut Hint */}
         <div className="text-xs text-gray-500 text-center">
           <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs">
-            {navigator.platform.includes('Mac') ? 'Cmd' : 'Ctrl'}+Enter
-          </kbd>{' '}
-          to save, <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs">Esc</kbd> to cancel
+            {navigator.platform.includes("Mac") ? "Cmd" : "Ctrl"}+Enter
+          </kbd>{" "}
+          to save,{" "}
+          <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs">
+            Esc
+          </kbd>{" "}
+          to cancel
         </div>
       </div>
     </div>

@@ -1,4 +1,5 @@
-import type { TangibleMode, LabelConfig, ConstellationState } from '../../types';
+import type { TangibleMode, LabelConfig } from "../../types";
+import type { ConstellationState } from "../../types/timeline";
 
 interface Props {
   name: string;
@@ -74,49 +75,60 @@ const TangibleForm = ({
               type="radio"
               name="mode"
               value="filter"
-              checked={mode === 'filter'}
+              checked={mode === "filter"}
               onChange={(e) => onModeChange(e.target.value as TangibleMode)}
               className="mr-2"
             />
-            <span className="text-sm text-gray-700">Filter mode (activate label filters)</span>
+            <span className="text-sm text-gray-700">
+              Filter mode (activate label filters)
+            </span>
           </label>
           <label className="flex items-center cursor-pointer">
             <input
               type="radio"
               name="mode"
               value="state"
-              checked={mode === 'state'}
+              checked={mode === "state"}
               onChange={(e) => onModeChange(e.target.value as TangibleMode)}
               className="mr-2"
             />
-            <span className="text-sm text-gray-700">State mode (switch to timeline state)</span>
+            <span className="text-sm text-gray-700">
+              State mode (switch to timeline state)
+            </span>
           </label>
           <label className="flex items-center cursor-pointer">
             <input
               type="radio"
               name="mode"
               value="stateDial"
-              checked={mode === 'stateDial'}
+              checked={mode === "stateDial"}
               onChange={(e) => onModeChange(e.target.value as TangibleMode)}
               className="mr-2"
             />
-            <span className="text-sm text-gray-700">State dial mode (clock-like, deferred)</span>
+            <span className="text-sm text-gray-700">
+              State dial mode (clock-like, deferred)
+            </span>
           </label>
         </div>
       </div>
 
       {/* Mode-specific fields */}
-      {mode === 'filter' && (
+      {mode === "filter" && (
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">
             Filter Labels * (select one or more)
           </label>
           <div className="border border-gray-300 rounded-md p-2 max-h-40 overflow-y-auto">
             {labels.length === 0 ? (
-              <p className="text-xs text-gray-500 italic">No labels available</p>
+              <p className="text-xs text-gray-500 italic">
+                No labels available
+              </p>
             ) : (
               labels.map((label) => (
-                <label key={label.id} className="flex items-center py-1 cursor-pointer">
+                <label
+                  key={label.id}
+                  className="flex items-center py-1 cursor-pointer"
+                >
                   <input
                     type="checkbox"
                     checked={filterLabels.includes(label.id)}
@@ -124,7 +136,9 @@ const TangibleForm = ({
                       if (e.target.checked) {
                         onFilterLabelsChange([...filterLabels, label.id]);
                       } else {
-                        onFilterLabelsChange(filterLabels.filter((id) => id !== label.id));
+                        onFilterLabelsChange(
+                          filterLabels.filter((id) => id !== label.id),
+                        );
                       }
                     }}
                     className="mr-2"
@@ -141,7 +155,7 @@ const TangibleForm = ({
         </div>
       )}
 
-      {(mode === 'state' || mode === 'stateDial') && (
+      {(mode === "state" || mode === "stateDial") && (
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">
             Timeline State *

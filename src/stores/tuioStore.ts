@@ -29,12 +29,14 @@ interface TuioState {
 
   // Active tangibles (runtime only - not persisted)
   activeTangibles: Map<string, TuioTangibleInfo>;
-  lastStateChangeSource: string | null;
+  activeStateTangibles: string[]; // Hardware IDs of active state tangibles in order
   addActiveTangible: (hardwareId: string, info: TuioTangibleInfo) => void;
   updateActiveTangible: (hardwareId: string, info: TuioTangibleInfo) => void;
   removeActiveTangible: (hardwareId: string) => void;
   clearActiveTangibles: () => void;
-  setLastStateChangeSource: (hardwareId: string | null) => void;
+  addActiveStateTangible: (hardwareId: string) => void;
+  removeActiveStateTangible: (hardwareId: string) => void;
+  clearActiveStateTangibles: () => void;
 }
 
 const DEFAULT_WEBSOCKET_URL = 'ws://localhost:3333';
@@ -60,7 +62,7 @@ export const useTuioStore = create<TuioState>()(
 
       // Active tangibles
       activeTangibles: new Map(),
-      lastStateChangeSource: null,
+      activeStateTangibles: [],
 
       addActiveTangible: (hardwareId: string, info: TuioTangibleInfo) =>
         set((state) => {
@@ -88,11 +90,27 @@ export const useTuioStore = create<TuioState>()(
       clearActiveTangibles: () =>
         set({
           activeTangibles: new Map(),
-          lastStateChangeSource: null,
+          activeStateTangibles: [],
         }),
 
-      setLastStateChangeSource: (hardwareId: string | null) =>
-        set({ lastStateChangeSource: hardwareId }),
+      addActiveStateTangible: (hardwareId: string) =>
+        set((state) => {
+          // Add to end of list if not already present
+          if (!state.activeStateTangibles.includes(hardwareId)) {
+            return { activeStateTangibles: [...state.activeStateTangibles, hardwareId] };
+          }
+          return state;
+        }),
+
+      removeActiveStateTangible: (hardwareId: string) =>
+        set((state) => {
+          return {
+            activeStateTangibles: state.activeStateTangibles.filter((id) => id !== hardwareId),
+          };
+        }),
+
+      clearActiveStateTangibles: () =>
+        set({ activeStateTangibles: [] }),
     }),
     {
       name: 'constellation-tuio-settings',

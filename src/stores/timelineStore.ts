@@ -11,6 +11,7 @@ import { useGraphStore } from "./graphStore";
 import { useWorkspaceStore } from "./workspaceStore";
 import { useToastStore } from "./toastStore";
 import { useHistoryStore } from "./historyStore";
+import { useTuioStore } from "./tuioStore";
 
 /**
  * Timeline Store
@@ -235,7 +236,7 @@ export const useTimelineStore = create<TimelineStore & TimelineActions>(
       return newStateId;
     },
 
-    switchToState: (stateId: StateId) => {
+    switchToState: (stateId: StateId, fromTangible: boolean = false) => {
       const state = get();
       const { activeDocumentId } = state;
 
@@ -255,6 +256,12 @@ export const useTimelineStore = create<TimelineStore & TimelineActions>(
         console.error(`State ${stateId} not found`);
         useToastStore.getState().showToast("State not found", "error");
         return;
+      }
+
+      // If this is a manual state switch (not from tangible), clear active state tangibles
+      if (!fromTangible) {
+        console.log('[Timeline] Manual state switch detected, clearing active state tangibles');
+        useTuioStore.getState().clearActiveStateTangibles();
       }
 
       // Don't push history if already on this state

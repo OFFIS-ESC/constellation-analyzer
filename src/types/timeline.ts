@@ -70,7 +70,7 @@ export interface TimelineActions {
   createState: (label: string, description?: string, cloneFromCurrent?: boolean) => StateId;
 
   // Switch to different state
-  switchToState: (stateId: StateId) => void;
+  switchToState: (stateId: StateId, fromTangible?: boolean) => void;
 
   // Update state metadata
   updateState: (stateId: StateId, updates: Partial<Pick<ConstellationState, 'label' | 'description' | 'metadata'>>) => void;

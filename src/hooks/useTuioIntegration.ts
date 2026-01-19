@@ -136,8 +136,9 @@ function handleTangibleRemove(hardwareId: string): void {
   // Handle removal based on tangible mode
   if (tangibleConfig.mode === 'filter') {
     removeFilterTangible(tangibleConfig);
+  } else if (tangibleConfig.mode === 'state' || tangibleConfig.mode === 'stateDial') {
+    removeStateTangible(hardwareId);
   }
-  // State mode: Don't revert on removal (stay in current state)
 }
 
 /**
@@ -199,17 +200,44 @@ function applyStateTangible(tangible: TangibleConfig, hardwareId: string): void 
     return;
   }
 
-  const { lastStateChangeSource } = useTuioStore.getState();
+  console.log('[TUIO Integration] Applying state tangible:', hardwareId, 'stateId:', tangible.stateId);
 
-  // Only switch if this is a different tangible than the last state change
-  // (Last added wins strategy)
-  if (lastStateChangeSource === hardwareId) {
-    return; // Same tangible, don't re-switch
+  // Add to active state tangibles list (at the end)
+  useTuioStore.getState().addActiveStateTangible(hardwareId);
+
+  // Always switch to this tangible's state (last added wins)
+  // Pass fromTangible=true to prevent clearing the active state tangibles list
+  useTimelineStore.getState().switchToState(tangible.stateId, true);
+
+  console.log('[TUIO Integration] Active state tangibles:', useTuioStore.getState().activeStateTangibles);
+}
+
+/**
+ * Remove state tangible - switch to next active state tangible if any
+ */
+function removeStateTangible(hardwareId: string): void {
+  console.log('[TUIO Integration] Removing state tangible:', hardwareId);
+
+  // Remove from active state tangibles list
+  useTuioStore.getState().removeActiveStateTangible(hardwareId);
+
+  const activeStateTangibles = useTuioStore.getState().activeStateTangibles;
+  console.log('[TUIO Integration] Remaining active state tangibles:', activeStateTangibles);
+
+  // If there are other state tangibles still active, switch to the last one
+  if (activeStateTangibles.length > 0) {
+    const lastActiveHwId = activeStateTangibles[activeStateTangibles.length - 1];
+    console.log('[TUIO Integration] Switching to last active state tangible:', lastActiveHwId);
+
+    // Find the tangible config for this hardware ID
+    const tangibles = useGraphStore.getState().tangibles;
+    const tangibleConfig = tangibles.find((t) => t.hardwareId === lastActiveHwId);
+
+    if (tangibleConfig && tangibleConfig.stateId) {
+      // Pass fromTangible=true to prevent clearing the active state tangibles list
+      useTimelineStore.getState().switchToState(tangibleConfig.stateId, true);
+    }
+  } else {
+    console.log('[TUIO Integration] No more active state tangibles, staying in current state');
   }
-
-  // Switch to state
-  useTimelineStore.getState().switchToState(tangible.stateId);
-
-  // Track this as the last state change source
-  useTuioStore.getState().setLastStateChangeSource(hardwareId);
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useGraphWithHistory } from '../../hooks/useGraphWithHistory';
 import { useConfirm } from '../../hooks/useConfirm';
 import { useToastStore } from '../../stores/toastStore';
@@ -18,12 +18,18 @@ const TangibleConfigModal = ({ isOpen, onClose, initialEditingTangibleId }: Prop
   const { tangibles, labels, addTangible, updateTangible, deleteTangible } = useGraphWithHistory();
   const { confirm, ConfirmDialogComponent } = useConfirm();
   const { showToast } = useToastStore();
-  const { getAllStates } = useTimelineStore();
 
   const [editingTangible, setEditingTangible] = useState<TangibleConfigType | null>(null);
 
   // Get all available states for state mode
-  const availableStates = useMemo(() => getAllStates(), [getAllStates]);
+  // Use Zustand selector to properly subscribe to state changes
+  const availableStates = useTimelineStore((state) => {
+    const { activeDocumentId } = state;
+    if (!activeDocumentId) return [];
+    const timeline = state.timelines.get(activeDocumentId);
+    if (!timeline) return [];
+    return Array.from(timeline.states.values());
+  });
 
   // Set editing tangible when initialEditingTangibleId changes
   useEffect(() => {

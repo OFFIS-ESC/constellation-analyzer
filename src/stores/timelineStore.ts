@@ -225,6 +225,11 @@ export const useTimelineStore = create<TimelineStore & TimelineActions>(
       // Mark document as dirty
       useWorkspaceStore.getState().markDocumentDirty(activeDocumentId);
 
+      // Trigger auto-save after 1 second (consistent with other operations)
+      setTimeout(() => {
+        useWorkspaceStore.getState().saveDocument(activeDocumentId);
+      }, 1000);
+
       useToastStore.getState().showToast(`State "${label}" created`, "success");
 
       return newStateId;
@@ -365,6 +370,11 @@ export const useTimelineStore = create<TimelineStore & TimelineActions>(
 
       // Mark document as dirty
       useWorkspaceStore.getState().markDocumentDirty(activeDocumentId);
+
+      // Trigger auto-save after 1 second (consistent with other operations)
+      setTimeout(() => {
+        useWorkspaceStore.getState().saveDocument(activeDocumentId);
+      }, 1000);
     },
 
     deleteState: (stateId: StateId) => {
@@ -452,6 +462,11 @@ export const useTimelineStore = create<TimelineStore & TimelineActions>(
 
       // Mark document as dirty
       useWorkspaceStore.getState().markDocumentDirty(activeDocumentId);
+
+      // Trigger auto-save after 1 second (consistent with other operations)
+      setTimeout(() => {
+        useWorkspaceStore.getState().saveDocument(activeDocumentId);
+      }, 1000);
 
       useToastStore
         .getState()

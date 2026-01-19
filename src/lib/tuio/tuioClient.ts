@@ -35,6 +35,8 @@ export class TuioClientManager implements Tuio11Listener, Tuio20Listener {
   async connect(url: string): Promise<void> {
     return new Promise((resolve, reject) => {
       try {
+        console.log(`[TUIO] Connecting to ${url} with protocol version ${this.protocolVersion}`);
+
         // Parse WebSocket URL
         const wsUrl = new URL(url);
         const host = wsUrl.hostname;
@@ -47,9 +49,11 @@ export class TuioClientManager implements Tuio11Listener, Tuio20Listener {
 
         // Create appropriate client based on protocol version
         if (this.protocolVersion === '1.1') {
+          console.log('[TUIO] Creating TUIO 1.1 client');
           this.client11 = new Tuio11Client(this.receiver);
           this.client20 = null;
         } else {
+          console.log('[TUIO] Creating TUIO 2.0 client');
           this.client20 = new Tuio20Client(this.receiver);
           this.client11 = null;
         }
@@ -57,6 +61,7 @@ export class TuioClientManager implements Tuio11Listener, Tuio20Listener {
         // Set up connection event handlers
         this.receiver.setOnOpen(() => {
           // Connection successful
+          console.log('[TUIO] Connection successful');
           this.callbacks.onConnectionChange(true);
           resolve();
         });
@@ -80,10 +85,14 @@ export class TuioClientManager implements Tuio11Listener, Tuio20Listener {
 
         // Add this manager as a listener
         if (this.client11) {
+          console.log('[TUIO] Adding listener to TUIO 1.1 client');
           this.client11.addTuioListener(this);
+          console.log('[TUIO] Connecting TUIO 1.1 client');
           this.client11.connect();
         } else if (this.client20) {
+          console.log('[TUIO] Adding listener to TUIO 2.0 client');
           this.client20.addTuioListener(this);
+          console.log('[TUIO] Connecting TUIO 2.0 client');
           this.client20.connect();
         }
       } catch (error) {
@@ -139,7 +148,16 @@ export class TuioClientManager implements Tuio11Listener, Tuio20Listener {
    * Called when a TUIO 1.1 object is added (tangible placed on surface)
    */
   addTuioObject(tuioObject: Tuio11Object): void {
+    console.log('[TUIO] 1.1 Object added - raw object:', tuioObject);
+
+    // Validate symbolId exists
+    if (tuioObject.symbolId === undefined || tuioObject.symbolId === null) {
+      console.warn('[TUIO] 1.1 Object has no symbolId, ignoring');
+      return;
+    }
+
     const info = this.extractTangibleInfo11(tuioObject);
+    console.log('[TUIO] 1.1 Object added - extracted info:', info);
     this.callbacks.onTangibleAdd(info.hardwareId, info);
   }
 
@@ -147,7 +165,16 @@ export class TuioClientManager implements Tuio11Listener, Tuio20Listener {
    * Called when a TUIO 1.1 object is updated (position/rotation changed)
    */
   updateTuioObject(tuioObject: Tuio11Object): void {
+    console.log('[TUIO] 1.1 Object updated - raw object:', tuioObject);
+
+    // Validate symbolId exists
+    if (tuioObject.symbolId === undefined || tuioObject.symbolId === null) {
+      console.warn('[TUIO] 1.1 Object has no symbolId, ignoring');
+      return;
+    }
+
     const info = this.extractTangibleInfo11(tuioObject);
+    console.log('[TUIO] 1.1 Object updated - extracted info:', info);
     this.callbacks.onTangibleUpdate(info.hardwareId, info);
   }
 
@@ -155,7 +182,16 @@ export class TuioClientManager implements Tuio11Listener, Tuio20Listener {
    * Called when a TUIO 1.1 object is removed (tangible removed from surface)
    */
   removeTuioObject(tuioObject: Tuio11Object): void {
+    console.log('[TUIO] 1.1 Object removed - raw object:', tuioObject);
+
+    // Validate symbolId exists
+    if (tuioObject.symbolId === undefined || tuioObject.symbolId === null) {
+      console.warn('[TUIO] 1.1 Object has no symbolId, ignoring');
+      return;
+    }
+
     const hardwareId = String(tuioObject.symbolId);
+    console.log('[TUIO] 1.1 Object removed - hardwareId:', hardwareId);
     this.callbacks.onTangibleRemove(hardwareId);
   }
 
@@ -163,6 +199,7 @@ export class TuioClientManager implements Tuio11Listener, Tuio20Listener {
    * Called when a TUIO 1.1 cursor is added (not used for tangibles)
    */
   addTuioCursor(): void {
+    console.log('[TUIO] 1.1 Cursor added (ignored)');
     // Ignore cursors (touch points)
   }
 
@@ -170,6 +207,7 @@ export class TuioClientManager implements Tuio11Listener, Tuio20Listener {
    * Called when a TUIO 1.1 cursor is updated (not used for tangibles)
    */
   updateTuioCursor(): void {
+    console.log('[TUIO] 1.1 Cursor updated (ignored)');
     // Ignore cursors
   }
 
@@ -177,6 +215,7 @@ export class TuioClientManager implements Tuio11Listener, Tuio20Listener {
    * Called when a TUIO 1.1 cursor is removed (not used for tangibles)
    */
   removeTuioCursor(): void {
+    console.log('[TUIO] 1.1 Cursor removed (ignored)');
     // Ignore cursors
   }
 
@@ -184,6 +223,7 @@ export class TuioClientManager implements Tuio11Listener, Tuio20Listener {
    * Called when a TUIO 1.1 blob is added (not used for tangibles)
    */
   addTuioBlob(): void {
+    console.log('[TUIO] 1.1 Blob added (ignored)');
     // Ignore blobs
   }
 
@@ -191,6 +231,7 @@ export class TuioClientManager implements Tuio11Listener, Tuio20Listener {
    * Called when a TUIO 1.1 blob is updated (not used for tangibles)
    */
   updateTuioBlob(): void {
+    console.log('[TUIO] 1.1 Blob updated (ignored)');
     // Ignore blobs
   }
 
@@ -198,6 +239,7 @@ export class TuioClientManager implements Tuio11Listener, Tuio20Listener {
    * Called when a TUIO 1.1 blob is removed (not used for tangibles)
    */
   removeTuioBlob(): void {
+    console.log('[TUIO] 1.1 Blob removed (ignored)');
     // Ignore blobs
   }
 
@@ -205,6 +247,7 @@ export class TuioClientManager implements Tuio11Listener, Tuio20Listener {
    * Called on TUIO 1.1 frame refresh (time sync)
    */
   refresh(): void {
+    console.log('[TUIO] 1.1 Frame refresh (ignored)');
     // Ignore refresh events
   }
 
@@ -215,9 +258,13 @@ export class TuioClientManager implements Tuio11Listener, Tuio20Listener {
    */
   tuioAdd(tuioObject: Tuio20Object): void {
     const token = tuioObject.token;
-    if (!token) return; // Only handle tokens (tangibles), not pointers
+    if (!token) {
+      console.log('[TUIO] 2.0 Add event ignored (not a token)');
+      return; // Only handle tokens (tangibles), not pointers
+    }
 
     const info = this.extractTangibleInfo(tuioObject);
+    console.log('[TUIO] 2.0 Token added:', info);
     this.callbacks.onTangibleAdd(info.hardwareId, info);
   }
 
@@ -226,9 +273,13 @@ export class TuioClientManager implements Tuio11Listener, Tuio20Listener {
    */
   tuioUpdate(tuioObject: Tuio20Object): void {
     const token = tuioObject.token;
-    if (!token) return;
+    if (!token) {
+      console.log('[TUIO] 2.0 Update event ignored (not a token)');
+      return;
+    }
 
     const info = this.extractTangibleInfo(tuioObject);
+    console.log('[TUIO] 2.0 Token updated:', info);
     this.callbacks.onTangibleUpdate(info.hardwareId, info);
   }
 
@@ -237,9 +288,13 @@ export class TuioClientManager implements Tuio11Listener, Tuio20Listener {
    */
   tuioRemove(tuioObject: Tuio20Object): void {
     const token = tuioObject.token;
-    if (!token) return;
+    if (!token) {
+      console.log('[TUIO] 2.0 Remove event ignored (not a token)');
+      return;
+    }
 
     const hardwareId = String(token.cId);
+    console.log('[TUIO] 2.0 Token removed:', hardwareId);
     this.callbacks.onTangibleRemove(hardwareId);
   }
 

@@ -72,13 +72,16 @@ const TuioConnectionConfig = ({ isOpen, onClose }: Props) => {
       const client = new TuioClientManager(
         {
           onTangibleAdd: (hardwareId: string, info: TuioTangibleInfo) => {
+          console.log('[TUIO Config] Tangible added callback:', hardwareId, info);
           setTestActiveTangibles((prev) => {
             const newMap = new Map(prev);
             newMap.set(hardwareId, info);
+            console.log('[TUIO Config] Active tangibles count:', newMap.size);
             return newMap;
           });
         },
         onTangibleUpdate: (hardwareId: string, info: TuioTangibleInfo) => {
+          console.log('[TUIO Config] Tangible updated callback:', hardwareId, info);
           setTestActiveTangibles((prev) => {
             const newMap = new Map(prev);
             if (newMap.has(hardwareId)) {
@@ -88,13 +91,16 @@ const TuioConnectionConfig = ({ isOpen, onClose }: Props) => {
           });
         },
         onTangibleRemove: (hardwareId: string) => {
+          console.log('[TUIO Config] Tangible removed callback:', hardwareId);
           setTestActiveTangibles((prev) => {
             const newMap = new Map(prev);
             newMap.delete(hardwareId);
+            console.log('[TUIO Config] Active tangibles count:', newMap.size);
             return newMap;
           });
         },
         onConnectionChange: (connected: boolean, error?: string) => {
+          console.log('[TUIO Config] Connection state changed:', connected, error);
           setTestConnected(connected);
           if (error) {
             setTestConnectionError(error);
@@ -177,10 +183,16 @@ const TuioConnectionConfig = ({ isOpen, onClose }: Props) => {
 
   if (!isOpen) return null;
 
-  // Get active tangible configs from test connection
-  const activeTangibleConfigs = Array.from(testActiveTangibles.keys())
-    .map((hwId) => tangibles.find((t) => t.hardwareId === hwId))
-    .filter((t): t is NonNullable<typeof t> => t !== undefined);
+  // Get all detected tangibles with their config status
+  const detectedTangibles = Array.from(testActiveTangibles.entries()).map(([hwId, info]) => {
+    const config = tangibles.find((t) => t.hardwareId === hwId);
+    return {
+      hardwareId: hwId,
+      info,
+      config,
+      isConfigured: config !== undefined,
+    };
+  });
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -292,37 +304,56 @@ const TuioConnectionConfig = ({ isOpen, onClose }: Props) => {
               </span>
             </label>
             <div className="border border-gray-200 rounded-md divide-y divide-gray-200 min-h-[100px]">
-              {activeTangibleConfigs.length > 0 ? (
-                activeTangibleConfigs.map((tangible) => {
-                  const info = testActiveTangibles.get(tangible.hardwareId!);
-                  return (
-                    <div key={tangible.id} className="px-4 py-3 bg-gray-50">
-                      <div className="flex items-center justify-between">
-                        <div>
+              {detectedTangibles.length > 0 ? (
+                detectedTangibles.map((tangible) => (
+                  <div
+                    key={tangible.hardwareId}
+                    className={`px-4 py-3 ${tangible.isConfigured ? 'bg-green-50' : 'bg-yellow-50'}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
                           <p className="text-sm font-medium text-gray-900">
-                            {tangible.name}
+                            {tangible.config?.name || `Hardware ID: ${tangible.hardwareId}`}
                           </p>
-                          <p className="text-xs text-gray-600">
-                            Hardware ID: {tangible.hardwareId} • Mode: {tangible.mode}
-                          </p>
+                          <span
+                            className={`px-2 py-0.5 text-xs rounded-full ${
+                              tangible.isConfigured
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-yellow-100 text-yellow-800'
+                            }`}
+                          >
+                            {tangible.isConfigured ? 'Configured' : 'Not Configured'}
+                          </span>
                         </div>
-                        {info && (
-                          <div className="text-xs text-gray-500">
-                            Position: ({info.x.toFixed(2)}, {info.y.toFixed(2)})
-                          </div>
-                        )}
+                        <p className="text-xs text-gray-600 mt-1">
+                          Hardware ID: {tangible.hardwareId}
+                          {tangible.config && ` • Mode: ${tangible.config.mode}`}
+                        </p>
+                      </div>
+                      <div className="text-xs text-gray-500 text-right">
+                        <div>Position: ({tangible.info.x.toFixed(2)}, {tangible.info.y.toFixed(2)})</div>
+                        <div>Angle: {(tangible.info.angle * 180 / Math.PI).toFixed(1)}°</div>
                       </div>
                     </div>
-                  );
-                })
+                  </div>
+                ))
               ) : (
                 <div className="px-4 py-6 text-center text-sm text-gray-500">
                   {testConnected
-                    ? 'No tangibles detected. Place a configured tangible on the TUIO surface.'
+                    ? 'No tangibles detected. Place a tangible on the TUIO surface.'
                     : 'Connect to TUIO server to detect tangibles.'}
                 </div>
               )}
             </div>
+            {detectedTangibles.some((t) => !t.isConfigured) && (
+              <p className="text-xs text-yellow-700 mt-2 flex items-start gap-1">
+                <span className="font-bold">⚠️</span>
+                <span>
+                  Some detected tangibles are not configured. Go to Tangible Configuration to set up hardware IDs.
+                </span>
+              </p>
+            )}
           </div>
         </div>
 

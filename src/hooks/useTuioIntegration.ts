@@ -29,12 +29,15 @@ export function useTuioIntegration() {
     if (!presentationMode) {
       // Disconnect if we're leaving presentation mode
       if (clientRef.current) {
+        console.log('[TUIO Integration] Presentation mode disabled, disconnecting');
         clientRef.current.disconnect();
         clientRef.current = null;
         useTuioStore.getState().clearActiveTangibles();
       }
       return;
     }
+
+    console.log('[TUIO Integration] Presentation mode enabled, connecting to TUIO server');
 
     // Create TUIO client if in presentation mode
     const client = new TuioClientManager(
@@ -43,6 +46,7 @@ export function useTuioIntegration() {
         onTangibleUpdate: handleTangibleUpdate,
         onTangibleRemove: handleTangibleRemove,
         onConnectionChange: (connected, error) => {
+          console.log('[TUIO Integration] Connection state changed:', connected, error);
           useTuioStore.getState().setConnectionState(connected, error);
         },
       },
@@ -55,12 +59,13 @@ export function useTuioIntegration() {
     client
       .connect(websocketUrl)
       .catch((error) => {
-        console.error('Failed to connect to TUIO server:', error);
+        console.error('[TUIO Integration] Failed to connect to TUIO server:', error);
       });
 
     // Cleanup on unmount or when presentation mode changes
     return () => {
       if (clientRef.current) {
+        console.log('[TUIO Integration] Cleaning up, disconnecting');
         clientRef.current.disconnect();
         clientRef.current = null;
         useTuioStore.getState().clearActiveTangibles();
@@ -73,6 +78,8 @@ export function useTuioIntegration() {
  * Handle tangible add event
  */
 function handleTangibleAdd(hardwareId: string, info: TuioTangibleInfo): void {
+  console.log('[TUIO Integration] Tangible added:', hardwareId, info);
+
   // Update TUIO store
   useTuioStore.getState().addActiveTangible(hardwareId, info);
 
@@ -82,8 +89,11 @@ function handleTangibleAdd(hardwareId: string, info: TuioTangibleInfo): void {
 
   if (!tangibleConfig) {
     // Unknown hardware ID - silently ignore
+    console.log('[TUIO Integration] No configuration found for hardware ID:', hardwareId);
     return;
   }
+
+  console.log('[TUIO Integration] Tangible configuration found:', tangibleConfig.name, 'mode:', tangibleConfig.mode);
 
   // Trigger action based on tangible mode
   if (tangibleConfig.mode === 'filter') {
@@ -99,6 +109,7 @@ function handleTangibleAdd(hardwareId: string, info: TuioTangibleInfo): void {
  * Currently just updates position/angle in store (for future stateDial support)
  */
 function handleTangibleUpdate(hardwareId: string, info: TuioTangibleInfo): void {
+  console.log('[TUIO Integration] Tangible updated:', hardwareId, info);
   useTuioStore.getState().updateActiveTangible(hardwareId, info);
 }
 
@@ -106,6 +117,8 @@ function handleTangibleUpdate(hardwareId: string, info: TuioTangibleInfo): void 
  * Handle tangible remove event
  */
 function handleTangibleRemove(hardwareId: string): void {
+  console.log('[TUIO Integration] Tangible removed:', hardwareId);
+
   // Remove from TUIO store
   useTuioStore.getState().removeActiveTangible(hardwareId);
 
@@ -114,8 +127,11 @@ function handleTangibleRemove(hardwareId: string): void {
   const tangibleConfig = tangibles.find((t) => t.hardwareId === hardwareId);
 
   if (!tangibleConfig) {
+    console.log('[TUIO Integration] No configuration found for removed tangible:', hardwareId);
     return;
   }
+
+  console.log('[TUIO Integration] Handling removal for configured tangible:', tangibleConfig.name);
 
   // Handle removal based on tangible mode
   if (tangibleConfig.mode === 'filter') {

@@ -163,19 +163,6 @@ const TangibleConfigModal = ({ isOpen, onClose, initialEditingTangibleId }: Prop
                       onAdd={handleAddTangible}
                     />
                   </div>
-
-                  {/* Helper Text */}
-                  <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <h4 className="text-sm font-semibold text-blue-900 mb-1">About Tangibles</h4>
-                    <ul className="text-xs text-blue-800 space-y-1">
-                      <li>• Tangibles are physical objects used in presentation mode</li>
-                      <li>• Filter mode: activates filters on selected labels</li>
-                      <li>• State mode: switches to a specific timeline state</li>
-                      <li>• Internal IDs are auto-generated from names</li>
-                      <li>• Hardware IDs map configurations to physical tokens/devices</li>
-                      <li>• You can change hardware IDs to swap physical tokens</li>
-                    </ul>
-                  </div>
                 </div>
 
                 {/* Right Column - Management (40%) */}

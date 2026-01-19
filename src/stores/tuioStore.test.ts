@@ -13,7 +13,7 @@ describe('tuioStore', () => {
       isConnected: false,
       connectionError: null,
       activeTangibles: new Map(),
-      lastStateChangeSource: null,
+      activeStateTangibles: [],
     });
   });
 
@@ -25,7 +25,7 @@ describe('tuioStore', () => {
       expect(state.isConnected).toBe(false);
       expect(state.connectionError).toBe(null);
       expect(state.activeTangibles.size).toBe(0);
-      expect(state.lastStateChangeSource).toBe(null);
+      expect(state.activeStateTangibles).toEqual([]);
     });
   });
 
@@ -365,15 +365,15 @@ describe('tuioStore', () => {
       expect(state.activeTangibles.size).toBe(0);
     });
 
-    it('should reset lastStateChangeSource', () => {
-      const { setLastStateChangeSource, clearActiveTangibles } = useTuioStore.getState();
+    it('should reset activeStateTangibles', () => {
+      const { addActiveStateTangible, clearActiveTangibles } = useTuioStore.getState();
 
-      setLastStateChangeSource('42');
-      expect(useTuioStore.getState().lastStateChangeSource).toBe('42');
+      addActiveStateTangible('42');
+      expect(useTuioStore.getState().activeStateTangibles).toEqual(['42']);
 
       clearActiveTangibles();
 
-      expect(useTuioStore.getState().lastStateChangeSource).toBe(null);
+      expect(useTuioStore.getState().activeStateTangibles).toEqual([]);
     });
 
     it('should handle clearing empty tangibles map', () => {
@@ -386,32 +386,46 @@ describe('tuioStore', () => {
     });
   });
 
-  describe('setLastStateChangeSource', () => {
-    it('should set last state change source', () => {
-      const { setLastStateChangeSource } = useTuioStore.getState();
+  describe('activeStateTangibles', () => {
+    it('should add active state tangible', () => {
+      const { addActiveStateTangible } = useTuioStore.getState();
 
-      setLastStateChangeSource('42');
+      addActiveStateTangible('42');
 
-      expect(useTuioStore.getState().lastStateChangeSource).toBe('42');
+      expect(useTuioStore.getState().activeStateTangibles).toEqual(['42']);
     });
 
-    it('should clear last state change source', () => {
-      const { setLastStateChangeSource } = useTuioStore.getState();
+    it('should remove active state tangible', () => {
+      const { addActiveStateTangible, removeActiveStateTangible } = useTuioStore.getState();
 
-      setLastStateChangeSource('42');
-      setLastStateChangeSource(null);
+      addActiveStateTangible('42');
+      addActiveStateTangible('13');
+      expect(useTuioStore.getState().activeStateTangibles).toEqual(['42', '13']);
 
-      expect(useTuioStore.getState().lastStateChangeSource).toBe(null);
+      removeActiveStateTangible('42');
+      expect(useTuioStore.getState().activeStateTangibles).toEqual(['13']);
     });
 
-    it('should update last state change source', () => {
-      const { setLastStateChangeSource } = useTuioStore.getState();
+    it('should track multiple state tangibles in order', () => {
+      const { addActiveStateTangible } = useTuioStore.getState();
 
-      setLastStateChangeSource('42');
-      expect(useTuioStore.getState().lastStateChangeSource).toBe('42');
+      addActiveStateTangible('42');
+      expect(useTuioStore.getState().activeStateTangibles).toEqual(['42']);
 
-      setLastStateChangeSource('13');
-      expect(useTuioStore.getState().lastStateChangeSource).toBe('13');
+      addActiveStateTangible('13');
+      expect(useTuioStore.getState().activeStateTangibles).toEqual(['42', '13']);
+
+      addActiveStateTangible('99');
+      expect(useTuioStore.getState().activeStateTangibles).toEqual(['42', '13', '99']);
+    });
+
+    it('should not add duplicate tangibles', () => {
+      const { addActiveStateTangible } = useTuioStore.getState();
+
+      addActiveStateTangible('42');
+      addActiveStateTangible('42');
+
+      expect(useTuioStore.getState().activeStateTangibles).toEqual(['42']);
     });
   });
 

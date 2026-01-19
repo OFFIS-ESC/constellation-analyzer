@@ -308,14 +308,14 @@ describe('TUIO Integration', () => {
       const config = useGraphStore.getState().tangibles.find((t) => t.hardwareId === '99');
 
       if (config?.stateId) {
-        useTimelineStore.getState().switchToState(config.stateId);
-        useTuioStore.getState().setLastStateChangeSource('99');
+        useTuioStore.getState().addActiveStateTangible('99');
+        useTimelineStore.getState().switchToState(config.stateId, true);
       }
 
       // Verify state was switched
       const currentStateId = useTimelineStore.getState().timelines.get(docId)?.currentStateId;
       expect(currentStateId).toBe(stateId);
-      expect(useTuioStore.getState().lastStateChangeSource).toBe('99');
+      expect(useTuioStore.getState().activeStateTangibles).toContain('99');
     });
 
     it('should not revert state when state tangible is removed', () => {
@@ -333,11 +333,12 @@ describe('TUIO Integration', () => {
       } as TangibleConfig);
 
       // Switch to new state
-      useTimelineStore.getState().switchToState(newStateId);
-      useTuioStore.getState().setLastStateChangeSource('100');
+      useTuioStore.getState().addActiveStateTangible('100');
+      useTimelineStore.getState().switchToState(newStateId, true);
 
       // Remove tangible
       useTuioStore.getState().removeActiveTangible('100');
+      useTuioStore.getState().removeActiveStateTangible('100');
 
       // State should NOT revert
       const currentStateId = useTimelineStore.getState().timelines.get(docId)?.currentStateId;

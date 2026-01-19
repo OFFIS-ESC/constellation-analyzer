@@ -1,12 +1,15 @@
 import { useState, useEffect, KeyboardEvent } from "react";
 import SaveIcon from "@mui/icons-material/Save";
 import TangibleForm from "./TangibleForm";
-import type { TangibleConfig, TangibleMode, LabelConfig } from "../../types";
+import type { TangibleConfig, TangibleMode, LabelConfig, FilterConfig, NodeTypeConfig, EdgeTypeConfig } from "../../types";
 import type { ConstellationState } from "../../types/timeline";
+import { migrateTangibleConfig } from "../../utils/tangibleMigration";
 
 interface Props {
   tangible: TangibleConfig;
   labels: LabelConfig[];
+  nodeTypes: NodeTypeConfig[];
+  edgeTypes: EdgeTypeConfig[];
   states: ConstellationState[];
   onSave: (
     id: string,
@@ -15,7 +18,7 @@ interface Props {
       mode: TangibleMode;
       description?: string;
       hardwareId?: string;
-      filterLabels?: string[];
+      filters?: FilterConfig;
       stateId?: string;
     },
   ) => void;
@@ -25,6 +28,8 @@ interface Props {
 const EditTangibleInline = ({
   tangible,
   labels,
+  nodeTypes,
+  edgeTypes,
   states,
   onSave,
   onCancel,
@@ -33,18 +38,38 @@ const EditTangibleInline = ({
   const [mode, setMode] = useState<TangibleMode>("filter");
   const [description, setDescription] = useState("");
   const [hardwareId, setHardwareId] = useState("");
-  const [filterLabels, setFilterLabels] = useState<string[]>([]);
+  const [filters, setFilters] = useState<FilterConfig>({
+    labels: [],
+    actorTypes: [],
+    relationTypes: [],
+    combineMode: 'OR'
+  });
   const [stateId, setStateId] = useState("");
 
   // Sync state with tangible prop
   useEffect(() => {
     if (tangible) {
-      setName(tangible.name);
-      setMode(tangible.mode);
-      setDescription(tangible.description || "");
-      setHardwareId(tangible.hardwareId || "");
-      setFilterLabels(tangible.filterLabels || []);
-      setStateId(tangible.stateId || "");
+      // Apply migration for backward compatibility
+      const migratedTangible = migrateTangibleConfig(tangible);
+
+      setName(migratedTangible.name);
+      setMode(migratedTangible.mode);
+      setDescription(migratedTangible.description || "");
+      setHardwareId(migratedTangible.hardwareId || "");
+      setFilters(migratedTangible.filters || {
+        labels: [],
+        actorTypes: [],
+        relationTypes: [],
+        combineMode: 'OR'
+      });
+      // Ensure combineMode is set (default to OR for backward compatibility)
+      if (migratedTangible.filters && !migratedTangible.filters.combineMode) {
+        setFilters({
+          ...migratedTangible.filters,
+          combineMode: 'OR'
+        });
+      }
+      setStateId(migratedTangible.stateId || "");
     }
   }, [tangible]);
 
@@ -52,9 +77,16 @@ const EditTangibleInline = ({
     if (!name.trim()) return;
 
     // Validate mode-specific fields
-    if (mode === "filter" && filterLabels.length === 0) {
-      alert("Filter mode requires at least one label");
-      return;
+    if (mode === "filter") {
+      const hasFilters =
+        (filters.labels && filters.labels.length > 0) ||
+        (filters.actorTypes && filters.actorTypes.length > 0) ||
+        (filters.relationTypes && filters.relationTypes.length > 0);
+
+      if (!hasFilters) {
+        alert("Filter mode requires at least one filter (labels, actor types, or relation types)");
+        return;
+      }
     }
     if ((mode === "state" || mode === "stateDial") && !stateId) {
       alert("State mode requires a state selection");
@@ -66,7 +98,7 @@ const EditTangibleInline = ({
       mode,
       description: description.trim() || undefined,
       hardwareId: hardwareId.trim() || undefined,
-      filterLabels: mode === "filter" ? filterLabels : undefined,
+      filters: mode === "filter" ? filters : undefined,
       stateId: mode === "state" || mode === "stateDial" ? stateId : undefined,
     });
   };
@@ -90,15 +122,17 @@ const EditTangibleInline = ({
           mode={mode}
           description={description}
           hardwareId={hardwareId}
-          filterLabels={filterLabels}
+          filters={filters}
           stateId={stateId}
           labels={labels}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
           states={states}
           onNameChange={setName}
           onModeChange={setMode}
           onDescriptionChange={setDescription}
           onHardwareIdChange={setHardwareId}
-          onFilterLabelsChange={setFilterLabels}
+          onFiltersChange={setFilters}
           onStateIdChange={setStateId}
         />
       </div>

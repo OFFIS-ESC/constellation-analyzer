@@ -7,11 +7,11 @@ import {
   useNodes,
 } from '@xyflow/react';
 import { useGraphStore } from '../../stores/graphStore';
-import { useSearchStore } from '../../stores/searchStore';
 import type { Relation } from '../../types';
 import type { Group } from '../../types';
 import LabelBadge from '../Common/LabelBadge';
 import { getFloatingEdgeParams } from '../../utils/edgeUtils';
+import { useActiveFilters, edgeMatchesFilters } from '../../hooks/useActiveFilters';
 
 /**
  * CustomEdge - Represents a relation between actors in the constellation graph
@@ -41,7 +41,9 @@ const CustomEdge = ({
 }: EdgeProps<Relation>) => {
   const edgeTypes = useGraphStore((state) => state.edgeTypes);
   const labels = useGraphStore((state) => state.labels);
-  const { searchText, selectedRelationTypes, selectedLabels } = useSearchStore();
+
+  // Get active filters based on mode (editing vs presentation)
+  const filters = useActiveFilters();
 
   // Get all nodes to check if source/target are minimized groups
   const nodes = useNodes();
@@ -124,42 +126,20 @@ const CustomEdge = ({
 
   // Check if this edge matches the filter criteria
   const isMatch = useMemo(() => {
-    // Check relation type filter (POSITIVE: if types selected, edge must be one of them)
-    const edgeType = data?.type || '';
-    if (selectedRelationTypes.length > 0) {
-      if (!selectedRelationTypes.includes(edgeType)) {
-        return false;
-      }
-    }
-
-    // Check label filter (POSITIVE: if labels selected, edge must have at least one)
-    if (selectedLabels.length > 0) {
-      const edgeLabels = data?.labels || [];
-      const hasSelectedLabel = edgeLabels.some((labelId) =>
-        selectedLabels.includes(labelId)
-      );
-      if (!hasSelectedLabel) {
-        return false;
-      }
-    }
-
-    // Check search text match
-    if (searchText.trim()) {
-      const searchLower = searchText.toLowerCase();
-      const label = data?.label?.toLowerCase() || '';
-      const typeName = edgeTypeConfig?.label?.toLowerCase() || '';
-
-      return label.includes(searchLower) || typeName.includes(searchLower);
-    }
-
-    return true;
-  }, [searchText, selectedRelationTypes, selectedLabels, data?.type, data?.label, data?.labels, edgeTypeConfig?.label]);
+    return edgeMatchesFilters(
+      data?.type || '',
+      data?.labels || [],
+      data?.label || '',
+      edgeTypeConfig?.label || '',
+      filters
+    );
+  }, [data?.type, data?.labels, data?.label, edgeTypeConfig?.label, filters]);
 
   // Determine if filters are active
   const hasActiveFilters =
-    searchText.trim() !== '' ||
-    selectedRelationTypes.length > 0 ||
-    selectedLabels.length > 0;
+    filters.searchText.trim() !== '' ||
+    filters.selectedRelationTypes.length > 0 ||
+    filters.selectedLabels.length > 0;
 
   // Calculate opacity based on visibility
   const edgeOpacity = hasActiveFilters && !isMatch ? 0.2 : 1.0;

@@ -69,13 +69,26 @@ export interface LabelConfig {
 // Tangible Configuration
 export type TangibleMode = 'filter' | 'state' | 'stateDial';
 
+export type FilterCombineMode = 'AND' | 'OR';
+
+export interface FilterConfig {
+  labels?: string[];           // Array of LabelConfig IDs
+  actorTypes?: string[];       // Array of NodeTypeConfig IDs
+  relationTypes?: string[];    // Array of EdgeTypeConfig IDs
+  combineMode?: FilterCombineMode;  // How to combine filter categories (default: 'OR' for tangibles, 'AND' for editing)
+}
+
 export interface TangibleConfig {
   id: string;                   // Internal unique identifier (auto-generated from name)
   name: string;
   mode: TangibleMode;
   description?: string;
   hardwareId?: string;          // Hardware token/device ID (editable, must be unique if present)
-  filterLabels?: string[];      // For filter mode: array of LabelConfig IDs
+  /**
+   * @deprecated Use filters instead. This field is kept for backward compatibility.
+   */
+  filterLabels?: string[];      // For filter mode: array of LabelConfig IDs (deprecated, use filters.labels)
+  filters?: FilterConfig;       // For filter mode: filter configuration for labels, actor types, and relation types
   stateId?: string;             // For state/stateDial mode: ConstellationState ID
 }
 

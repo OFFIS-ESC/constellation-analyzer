@@ -1,7 +1,6 @@
 import { memo, useMemo } from "react";
 import { Handle, Position, NodeProps, useConnection } from "@xyflow/react";
 import { useGraphStore } from "../../stores/graphStore";
-import { useSearchStore } from "../../stores/searchStore";
 import {
   getContrastColor,
   adjustColorBrightness,
@@ -10,6 +9,7 @@ import { getIconComponent } from "../../utils/iconUtils";
 import type { Actor } from "../../types";
 import NodeShapeRenderer from "./Shapes/NodeShapeRenderer";
 import LabelBadge from "../Common/LabelBadge";
+import { useActiveFilters, nodeMatchesFilters } from "../../hooks/useActiveFilters";
 
 /**
  * CustomNode - Represents an actor in the constellation graph
@@ -25,7 +25,9 @@ import LabelBadge from "../Common/LabelBadge";
 const CustomNode = ({ data, selected }: NodeProps<Actor>) => {
   const nodeTypes = useGraphStore((state) => state.nodeTypes);
   const labels = useGraphStore((state) => state.labels);
-  const { searchText, selectedActorTypes, selectedLabels } = useSearchStore();
+
+  // Get active filters based on mode (editing vs presentation)
+  const filters = useActiveFilters();
 
   // Check if any connection is being made (to show handles)
   const connection = useConnection();
@@ -47,57 +49,30 @@ const CustomNode = ({ data, selected }: NodeProps<Actor>) => {
   // Show handles when selected or when connecting
   const showHandles = selected || isConnecting;
 
-  // Check if this node matches the search and filter criteria
+  // Check if this node matches the filter criteria
   const isMatch = useMemo(() => {
-    // Check actor type filter (POSITIVE: if types selected, node must be one of them)
-    if (selectedActorTypes.length > 0) {
-      if (!selectedActorTypes.includes(data.type)) {
-        return false;
-      }
-    }
-
-    // Check label filter (POSITIVE: if labels selected, node must have at least one)
-    if (selectedLabels.length > 0) {
-      const nodeLabels = data.labels || [];
-      const hasSelectedLabel = nodeLabels.some((labelId) =>
-        selectedLabels.includes(labelId)
-      );
-      if (!hasSelectedLabel) {
-        return false;
-      }
-    }
-
-    // Check search text match
-    if (searchText.trim()) {
-      const searchLower = searchText.toLowerCase();
-      const label = data.label?.toLowerCase() || "";
-      const description = data.description?.toLowerCase() || "";
-      const typeName = nodeLabel.toLowerCase();
-
-      return (
-        label.includes(searchLower) ||
-        description.includes(searchLower) ||
-        typeName.includes(searchLower)
-      );
-    }
-
-    return true;
+    return nodeMatchesFilters(
+      data.type,
+      data.labels || [],
+      data.label || "",
+      data.description || "",
+      nodeLabel,
+      filters
+    );
   }, [
-    searchText,
-    selectedActorTypes,
-    selectedLabels,
     data.type,
-    data.label,
     data.labels,
+    data.label,
     data.description,
     nodeLabel,
+    filters,
   ]);
 
   // Determine if filters are active
   const hasActiveFilters =
-    searchText.trim() !== "" ||
-    selectedActorTypes.length > 0 ||
-    selectedLabels.length > 0;
+    filters.searchText.trim() !== "" ||
+    filters.selectedActorTypes.length > 0 ||
+    filters.selectedLabels.length > 0;
 
   // Calculate opacity based on match status
   const nodeOpacity = hasActiveFilters && !isMatch ? 0.2 : 1.0;

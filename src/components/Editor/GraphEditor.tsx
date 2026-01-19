@@ -25,11 +25,11 @@ import "@xyflow/react/dist/style.css";
 import { useGraphWithHistory } from "../../hooks/useGraphWithHistory";
 import { useDocumentHistory } from "../../hooks/useDocumentHistory";
 import { useEditorStore } from "../../stores/editorStore";
-import { useSearchStore } from "../../stores/searchStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useActiveDocument } from "../../stores/workspace/useActiveDocument";
 import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { useCreateDocument } from "../../hooks/useCreateDocument";
+import { useActiveFilters, nodeMatchesFilters } from "../../hooks/useActiveFilters";
 import CustomNode from "../Nodes/CustomNode";
 import GroupNode from "../Nodes/GroupNode";
 import CustomEdge from "../Edges/CustomEdge";
@@ -124,13 +124,8 @@ const GraphEditor = ({ presentationMode = false, onNodeSelect, onEdgeSelect, onG
     fitView,
   } = useReactFlow();
 
-  // Search and filter state for auto-zoom
-  const {
-    searchText,
-    selectedActorTypes,
-    selectedRelationTypes,
-    selectedLabels,
-  } = useSearchStore();
+  // Get active filters (respects presentation vs editing mode)
+  const filters = useActiveFilters();
 
   // Settings for auto-zoom
   const { autoZoomEnabled } = useSettingsStore();
@@ -443,59 +438,30 @@ const GraphEditor = ({ presentationMode = false, onNodeSelect, onEdgeSelect, onG
     if (nodes.length === 0) return;
 
     // Check if any filters are active
-    const hasSearchText = searchText.trim() !== '';
-    const hasTypeFilters = selectedActorTypes.length > 0 || selectedRelationTypes.length > 0;
-    const hasLabelFilters = selectedLabels.length > 0;
+    const hasSearchText = filters.searchText.trim() !== '';
+    const hasTypeFilters = filters.selectedActorTypes.length > 0;
+    const hasLabelFilters = filters.selectedLabels.length > 0;
 
     // Skip if no filters are active
     if (!hasSearchText && !hasTypeFilters && !hasLabelFilters) return;
 
     // Debounce to avoid excessive viewport changes while typing
     const timeoutId = setTimeout(() => {
-      const searchLower = searchText.toLowerCase().trim();
-
-      // Calculate matching nodes (same logic as LeftPanel and CustomNode)
+      // Calculate matching nodes using the centralized filter logic
       const matchingNodeIds = nodes
         .filter((node) => {
           const actor = node as Actor;
           const actorType = actor.data?.type || '';
+          const nodeTypeConfig = nodeTypeConfigs.find((nt) => nt.id === actorType);
 
-          // Filter by actor type (POSITIVE: if types selected, node must be one of them)
-          if (selectedActorTypes.length > 0) {
-            if (!selectedActorTypes.includes(actorType)) {
-              return false;
-            }
-          }
-
-          // Filter by label (POSITIVE: if labels selected, node must have at least one)
-          if (selectedLabels.length > 0) {
-            const nodeLabels = actor.data?.labels || [];
-            const hasSelectedLabel = nodeLabels.some((labelId) =>
-              selectedLabels.includes(labelId)
-            );
-            if (!hasSelectedLabel) {
-              return false;
-            }
-          }
-
-          // Filter by search text
-          if (searchLower) {
-            const label = actor.data?.label?.toLowerCase() || '';
-            const description = actor.data?.description?.toLowerCase() || '';
-            const nodeTypeConfig = nodeTypeConfigs.find((nt) => nt.id === actorType);
-            const typeName = nodeTypeConfig?.label?.toLowerCase() || '';
-
-            const matches =
-              label.includes(searchLower) ||
-              description.includes(searchLower) ||
-              typeName.includes(searchLower);
-
-            if (!matches) {
-              return false;
-            }
-          }
-
-          return true;
+          return nodeMatchesFilters(
+            actorType,
+            actor.data?.labels || [],
+            actor.data?.label || '',
+            actor.data?.description || '',
+            nodeTypeConfig?.label || '',
+            filters
+          );
         })
         .map((node) => node.id);
 
@@ -513,10 +479,7 @@ const GraphEditor = ({ presentationMode = false, onNodeSelect, onEdgeSelect, onG
 
     return () => clearTimeout(timeoutId);
   }, [
-    searchText,
-    selectedActorTypes,
-    selectedRelationTypes,
-    selectedLabels,
+    filters,
     autoZoomEnabled,
     nodes,
     nodeTypeConfigs,

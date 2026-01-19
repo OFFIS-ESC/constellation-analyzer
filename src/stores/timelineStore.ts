@@ -260,7 +260,6 @@ export const useTimelineStore = create<TimelineStore & TimelineActions>(
 
       // If this is a manual state switch (not from tangible), clear active state tangibles
       if (!fromTangible) {
-        console.log('[Timeline] Manual state switch detected, clearing active state tangibles');
         useTuioStore.getState().clearActiveStateTangibles();
       }
 

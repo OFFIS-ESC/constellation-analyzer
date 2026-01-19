@@ -32,6 +32,7 @@ import { getCurrentGraphFromDocument } from './workspace/documentUtils';
 import { Cite } from '@citation-js/core';
 import type { CSLReference } from '../types/bibliography';
 import { needsStorageCleanup, cleanupAllStorage } from '../utils/cleanupStorage';
+import { migrateTangibleConfigs } from '../utils/tangibleMigration';
 
 /**
  * Workspace Store
@@ -83,6 +84,11 @@ function initializeWorkspace(): Workspace {
     if (savedState.activeDocumentId) {
       const doc = loadDocumentFromStorage(savedState.activeDocumentId);
       if (doc) {
+        // Apply tangible migration for backward compatibility
+        if (doc.tangibles) {
+          doc.tangibles = migrateTangibleConfigs(doc.tangibles);
+        }
+
         documents.set(savedState.activeDocumentId, doc);
 
         // Load timeline if it exists
@@ -305,6 +311,11 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
     if (!doc) {
       console.error(`Document ${documentId} not found`);
       return;
+    }
+
+    // Apply tangible migration for backward compatibility
+    if (doc.tangibles) {
+      doc.tangibles = migrateTangibleConfigs(doc.tangibles);
     }
 
     // Load timeline if it exists
@@ -609,6 +620,11 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
           importedDoc.metadata.documentId = documentId;
           importedDoc.metadata.title = importedDoc.metadata.title || 'Imported Analysis';
           importedDoc.metadata.updatedAt = now;
+
+          // Apply tangible migration for backward compatibility
+          if (importedDoc.tangibles) {
+            importedDoc.tangibles = migrateTangibleConfigs(importedDoc.tangibles);
+          }
 
           const metadata: DocumentMetadata = {
             id: documentId,
@@ -917,6 +933,11 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
 
           // Save all documents
           documents.forEach((doc, docId) => {
+            // Apply tangible migration for backward compatibility
+            if (doc.tangibles) {
+              doc.tangibles = migrateTangibleConfigs(doc.tangibles);
+            }
+
             saveDocumentToStorage(docId, doc);
 
             const metadata = {
@@ -1433,14 +1454,26 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
         // 1. Remove from document's labels
         doc.labels = (doc.labels || []).filter((label) => label.id !== labelId);
 
-        // 2. Remove label from tangible filterLabels arrays
+        // 2. Remove label from tangible filterLabels arrays (old format) and filters.labels (new format)
         if (doc.tangibles) {
           doc.tangibles = doc.tangibles.map((tangible) => {
-            if (tangible.mode === 'filter' && tangible.filterLabels) {
-              return {
-                ...tangible,
-                filterLabels: tangible.filterLabels.filter((id) => id !== labelId),
-              };
+            if (tangible.mode === 'filter') {
+              const updates: Partial<typeof tangible> = {};
+
+              // Handle old format
+              if (tangible.filterLabels) {
+                updates.filterLabels = tangible.filterLabels.filter((id) => id !== labelId);
+              }
+
+              // Handle new format
+              if (tangible.filters?.labels) {
+                updates.filters = {
+                  ...tangible.filters,
+                  labels: tangible.filters.labels.filter((id) => id !== labelId),
+                };
+              }
+
+              return { ...tangible, ...updates };
             }
             return tangible;
           });
@@ -1590,9 +1623,20 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
     }
 
     // Validate mode-specific fields
-    if (tangible.mode === 'filter' && (!tangible.filterLabels || tangible.filterLabels.length === 0)) {
-      useToastStore.getState().showToast('Filter mode requires at least one label', 'error');
-      return;
+    if (tangible.mode === 'filter') {
+      // Check new format first
+      const hasNewFilters = tangible.filters && (
+        (tangible.filters.labels && tangible.filters.labels.length > 0) ||
+        (tangible.filters.actorTypes && tangible.filters.actorTypes.length > 0) ||
+        (tangible.filters.relationTypes && tangible.filters.relationTypes.length > 0)
+      );
+      // Check old format for backward compatibility
+      const hasOldFilters = tangible.filterLabels && tangible.filterLabels.length > 0;
+
+      if (!hasNewFilters && !hasOldFilters) {
+        useToastStore.getState().showToast('Filter mode requires at least one filter (labels, actor types, or relation types)', 'error');
+        return;
+      }
     }
     if ((tangible.mode === 'state' || tangible.mode === 'stateDial') && !tangible.stateId) {
       useToastStore.getState().showToast('State mode requires a state selection', 'error');
@@ -1654,9 +1698,20 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
     }
 
     // Validate mode-specific fields if mode is being updated
-    if (updates.mode === 'filter' && (!updates.filterLabels || updates.filterLabels.length === 0)) {
-      useToastStore.getState().showToast('Filter mode requires at least one label', 'error');
-      return;
+    if (updates.mode === 'filter') {
+      // Check new format first
+      const hasNewFilters = updates.filters && (
+        (updates.filters.labels && updates.filters.labels.length > 0) ||
+        (updates.filters.actorTypes && updates.filters.actorTypes.length > 0) ||
+        (updates.filters.relationTypes && updates.filters.relationTypes.length > 0)
+      );
+      // Check old format for backward compatibility
+      const hasOldFilters = updates.filterLabels && updates.filterLabels.length > 0;
+
+      if (!hasNewFilters && !hasOldFilters) {
+        useToastStore.getState().showToast('Filter mode requires at least one filter (labels, actor types, or relation types)', 'error');
+        return;
+      }
     }
     if ((updates.mode === 'state' || updates.mode === 'stateDial') && !updates.stateId) {
       useToastStore.getState().showToast('State mode requires a state selection', 'error');

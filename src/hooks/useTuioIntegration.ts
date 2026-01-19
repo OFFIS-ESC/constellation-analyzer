@@ -2,11 +2,11 @@ import { useEffect, useRef } from 'react';
 import { useTuioStore } from '../stores/tuioStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import { useGraphStore } from '../stores/graphStore';
-import { useSearchStore } from '../stores/searchStore';
 import { useTimelineStore } from '../stores/timelineStore';
 import { TuioClientManager } from '../lib/tuio/tuioClient';
 import type { TuioTangibleInfo } from '../lib/tuio/types';
 import type { TangibleConfig } from '../types';
+import { migrateTangibleConfig } from '../utils/tangibleMigration';
 
 /**
  * TUIO Integration Hook
@@ -29,7 +29,6 @@ export function useTuioIntegration() {
     if (!presentationMode) {
       // Disconnect if we're leaving presentation mode
       if (clientRef.current) {
-        console.log('[TUIO Integration] Presentation mode disabled, disconnecting');
         clientRef.current.disconnect();
         clientRef.current = null;
         useTuioStore.getState().clearActiveTangibles();
@@ -37,7 +36,6 @@ export function useTuioIntegration() {
       return;
     }
 
-    console.log('[TUIO Integration] Presentation mode enabled, connecting to TUIO server');
 
     // Create TUIO client if in presentation mode
     const client = new TuioClientManager(
@@ -46,7 +44,6 @@ export function useTuioIntegration() {
         onTangibleUpdate: handleTangibleUpdate,
         onTangibleRemove: handleTangibleRemove,
         onConnectionChange: (connected, error) => {
-          console.log('[TUIO Integration] Connection state changed:', connected, error);
           useTuioStore.getState().setConnectionState(connected, error);
         },
       },
@@ -58,14 +55,13 @@ export function useTuioIntegration() {
     // Connect to TUIO server
     client
       .connect(websocketUrl)
-      .catch((error) => {
-        console.error('[TUIO Integration] Failed to connect to TUIO server:', error);
+      .catch(() => {
+        // Connection errors are handled by onConnectionChange callback
       });
 
     // Cleanup on unmount or when presentation mode changes
     return () => {
       if (clientRef.current) {
-        console.log('[TUIO Integration] Cleaning up, disconnecting');
         clientRef.current.disconnect();
         clientRef.current = null;
         useTuioStore.getState().clearActiveTangibles();
@@ -78,7 +74,6 @@ export function useTuioIntegration() {
  * Handle tangible add event
  */
 function handleTangibleAdd(hardwareId: string, info: TuioTangibleInfo): void {
-  console.log('[TUIO Integration] Tangible added:', hardwareId, info);
 
   // Update TUIO store
   useTuioStore.getState().addActiveTangible(hardwareId, info);
@@ -89,15 +84,13 @@ function handleTangibleAdd(hardwareId: string, info: TuioTangibleInfo): void {
 
   if (!tangibleConfig) {
     // Unknown hardware ID - silently ignore
-    console.log('[TUIO Integration] No configuration found for hardware ID:', hardwareId);
     return;
   }
 
-  console.log('[TUIO Integration] Tangible configuration found:', tangibleConfig.name, 'mode:', tangibleConfig.mode);
 
   // Trigger action based on tangible mode
   if (tangibleConfig.mode === 'filter') {
-    applyFilterTangible(tangibleConfig);
+    applyFilterTangible();
   } else if (tangibleConfig.mode === 'state') {
     applyStateTangible(tangibleConfig, hardwareId);
   }
@@ -109,7 +102,6 @@ function handleTangibleAdd(hardwareId: string, info: TuioTangibleInfo): void {
  * Currently just updates position/angle in store (for future stateDial support)
  */
 function handleTangibleUpdate(hardwareId: string, info: TuioTangibleInfo): void {
-  console.log('[TUIO Integration] Tangible updated:', hardwareId, info);
   useTuioStore.getState().updateActiveTangible(hardwareId, info);
 }
 
@@ -117,7 +109,6 @@ function handleTangibleUpdate(hardwareId: string, info: TuioTangibleInfo): void 
  * Handle tangible remove event
  */
 function handleTangibleRemove(hardwareId: string): void {
-  console.log('[TUIO Integration] Tangible removed:', hardwareId);
 
   // Remove from TUIO store
   useTuioStore.getState().removeActiveTangible(hardwareId);
@@ -127,69 +118,78 @@ function handleTangibleRemove(hardwareId: string): void {
   const tangibleConfig = tangibles.find((t) => t.hardwareId === hardwareId);
 
   if (!tangibleConfig) {
-    console.log('[TUIO Integration] No configuration found for removed tangible:', hardwareId);
     return;
   }
 
-  console.log('[TUIO Integration] Handling removal for configured tangible:', tangibleConfig.name);
 
   // Handle removal based on tangible mode
   if (tangibleConfig.mode === 'filter') {
-    removeFilterTangible(tangibleConfig);
+    removeFilterTangible();
   } else if (tangibleConfig.mode === 'state' || tangibleConfig.mode === 'stateDial') {
     removeStateTangible(hardwareId);
   }
 }
 
 /**
- * Apply filter tangible - add its labels to selected labels
+ * Recalculate and update presentation mode filters based on all active filter tangibles.
+ * This combines filters from all active tangibles (union/OR across tangibles).
+ * The combineMode of individual tangibles is preserved for filtering logic.
  */
-function applyFilterTangible(tangible: TangibleConfig): void {
-  if (!tangible.filterLabels || tangible.filterLabels.length === 0) {
-    return;
-  }
-
-  const { selectedLabels, toggleSelectedLabel } = useSearchStore.getState();
-
-  // Add labels that aren't already selected
-  tangible.filterLabels.forEach((labelId) => {
-    if (!selectedLabels.includes(labelId)) {
-      toggleSelectedLabel(labelId);
-    }
-  });
-}
-
-/**
- * Remove filter tangible - remove its labels if no other active tangible uses them
- */
-function removeFilterTangible(tangible: TangibleConfig): void {
-  if (!tangible.filterLabels || tangible.filterLabels.length === 0) {
-    return;
-  }
-
-  // Get all remaining active filter tangibles
+function updatePresentationFilters(): void {
   const activeTangibles = useTuioStore.getState().activeTangibles;
   const allTangibles = useGraphStore.getState().tangibles;
 
-  // Build set of labels still in use by other active filter tangibles
-  const labelsStillActive = new Set<string>();
+  // Collect all filters from active filter tangibles
+  const allLabels = new Set<string>();
+  const allActorTypes = new Set<string>();
+  const allRelationTypes = new Set<string>();
+  let combinedMode: 'AND' | 'OR' = 'OR'; // Default to OR
+
   activeTangibles.forEach((_, hwId) => {
     const config = allTangibles.find(
       (t) => t.hardwareId === hwId && t.mode === 'filter'
     );
-    if (config && config.filterLabels) {
-      config.filterLabels.forEach((labelId) => labelsStillActive.add(labelId));
+    if (config) {
+      // Apply migration to ensure we have filters
+      const migratedConfig = migrateTangibleConfig(config);
+      const filters = migratedConfig.filters;
+
+      if (filters) {
+        // Collect all filter IDs (union across tangibles)
+        filters.labels?.forEach((id) => allLabels.add(id));
+        filters.actorTypes?.forEach((id) => allActorTypes.add(id));
+        filters.relationTypes?.forEach((id) => allRelationTypes.add(id));
+
+        // Use the combine mode from the first tangible (or could be configurable)
+        // For multiple tangibles, we use OR between tangibles, but preserve individual combine modes
+        if (filters.combineMode) {
+          combinedMode = filters.combineMode;
+        }
+      }
     }
   });
 
-  // Remove labels that are no longer active
-  const { selectedLabels, toggleSelectedLabel } = useSearchStore.getState();
-
-  tangible.filterLabels.forEach((labelId) => {
-    if (selectedLabels.includes(labelId) && !labelsStillActive.has(labelId)) {
-      toggleSelectedLabel(labelId);
-    }
+  // Update presentation filters in tuioStore
+  useTuioStore.getState().setPresentationFilters({
+    labels: Array.from(allLabels),
+    actorTypes: Array.from(allActorTypes),
+    relationTypes: Array.from(allRelationTypes),
+    combineMode: combinedMode,
   });
+}
+
+/**
+ * Apply filter tangible - recalculate presentation filters
+ */
+function applyFilterTangible(): void {
+  updatePresentationFilters();
+}
+
+/**
+ * Remove filter tangible - recalculate presentation filters
+ */
+function removeFilterTangible(): void {
+  updatePresentationFilters();
 }
 
 /**
@@ -200,7 +200,6 @@ function applyStateTangible(tangible: TangibleConfig, hardwareId: string): void 
     return;
   }
 
-  console.log('[TUIO Integration] Applying state tangible:', hardwareId, 'stateId:', tangible.stateId);
 
   // Add to active state tangibles list (at the end)
   useTuioStore.getState().addActiveStateTangible(hardwareId);
@@ -209,25 +208,21 @@ function applyStateTangible(tangible: TangibleConfig, hardwareId: string): void 
   // Pass fromTangible=true to prevent clearing the active state tangibles list
   useTimelineStore.getState().switchToState(tangible.stateId, true);
 
-  console.log('[TUIO Integration] Active state tangibles:', useTuioStore.getState().activeStateTangibles);
 }
 
 /**
  * Remove state tangible - switch to next active state tangible if any
  */
 function removeStateTangible(hardwareId: string): void {
-  console.log('[TUIO Integration] Removing state tangible:', hardwareId);
 
   // Remove from active state tangibles list
   useTuioStore.getState().removeActiveStateTangible(hardwareId);
 
   const activeStateTangibles = useTuioStore.getState().activeStateTangibles;
-  console.log('[TUIO Integration] Remaining active state tangibles:', activeStateTangibles);
 
   // If there are other state tangibles still active, switch to the last one
   if (activeStateTangibles.length > 0) {
     const lastActiveHwId = activeStateTangibles[activeStateTangibles.length - 1];
-    console.log('[TUIO Integration] Switching to last active state tangible:', lastActiveHwId);
 
     // Find the tangible config for this hardware ID
     const tangibles = useGraphStore.getState().tangibles;
@@ -237,7 +232,6 @@ function removeStateTangible(hardwareId: string): void {
       // Pass fromTangible=true to prevent clearing the active state tangibles list
       useTimelineStore.getState().switchToState(tangibleConfig.stateId, true);
     }
-  } else {
-    console.log('[TUIO Integration] No more active state tangibles, staying in current state');
   }
+  // If no active state tangibles remain, stay in current state
 }

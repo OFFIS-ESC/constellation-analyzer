@@ -15,7 +15,7 @@ interface Props {
 }
 
 const TangibleConfigModal = ({ isOpen, onClose, initialEditingTangibleId }: Props) => {
-  const { tangibles, labels, addTangible, updateTangible, deleteTangible } = useGraphWithHistory();
+  const { tangibles, labels, nodeTypes, edgeTypes, addTangible, updateTangible, deleteTangible } = useGraphWithHistory();
   const { confirm, ConfirmDialogComponent } = useConfirm();
   const { showToast } = useToastStore();
 
@@ -48,13 +48,21 @@ const TangibleConfigModal = ({ isOpen, onClose, initialEditingTangibleId }: Prop
     mode: TangibleMode;
     description: string;
     hardwareId?: string;
-    filterLabels?: string[];
+    filters?: import('../../types').FilterConfig;
     stateId?: string;
   }) => {
     // Validate mode-specific fields
-    if (tangible.mode === 'filter' && (!tangible.filterLabels || tangible.filterLabels.length === 0)) {
-      showToast('Filter mode requires at least one label', 'error');
-      return;
+    if (tangible.mode === 'filter') {
+      const hasFilters =
+        tangible.filters &&
+        ((tangible.filters.labels && tangible.filters.labels.length > 0) ||
+         (tangible.filters.actorTypes && tangible.filters.actorTypes.length > 0) ||
+         (tangible.filters.relationTypes && tangible.filters.relationTypes.length > 0));
+
+      if (!hasFilters) {
+        showToast('Filter mode requires at least one filter (labels, actor types, or relation types)', 'error');
+        return;
+      }
     }
     if ((tangible.mode === 'state' || tangible.mode === 'stateDial') && !tangible.stateId) {
       showToast('State mode requires a state selection', 'error');
@@ -66,7 +74,7 @@ const TangibleConfigModal = ({ isOpen, onClose, initialEditingTangibleId }: Prop
       mode: tangible.mode,
       description: tangible.description || undefined,
       hardwareId: tangible.hardwareId,
-      filterLabels: tangible.filterLabels,
+      filters: tangible.filters,
       stateId: tangible.stateId,
     };
 
@@ -96,7 +104,7 @@ const TangibleConfigModal = ({ isOpen, onClose, initialEditingTangibleId }: Prop
 
   const handleSaveEdit = (
     id: string,
-    updates: { name: string; mode: TangibleMode; description?: string; hardwareId?: string; filterLabels?: string[]; stateId?: string }
+    updates: { name: string; mode: TangibleMode; description?: string; hardwareId?: string; filters?: import('../../types').FilterConfig; stateId?: string }
   ) => {
     updateTangible(id, updates);
     setEditingTangible(null);
@@ -131,6 +139,8 @@ const TangibleConfigModal = ({ isOpen, onClose, initialEditingTangibleId }: Prop
                   <EditTangibleInline
                     tangible={editingTangible}
                     labels={labels}
+                    nodeTypes={nodeTypes}
+                    edgeTypes={edgeTypes}
                     states={availableStates}
                     onSave={handleSaveEdit}
                     onCancel={handleCancelEdit}
@@ -147,6 +157,8 @@ const TangibleConfigModal = ({ isOpen, onClose, initialEditingTangibleId }: Prop
                     </h3>
                     <QuickAddTangibleForm
                       labels={labels}
+                      nodeTypes={nodeTypes}
+                      edgeTypes={edgeTypes}
                       states={availableStates}
                       onAdd={handleAddTangible}
                     />

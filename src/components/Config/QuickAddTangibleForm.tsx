@@ -1,27 +1,34 @@
 import { useState, useRef, KeyboardEvent } from "react";
 import TangibleForm from "./TangibleForm";
-import type { TangibleMode, LabelConfig } from "../../types";
+import type { TangibleMode, LabelConfig, FilterConfig, NodeTypeConfig, EdgeTypeConfig } from "../../types";
 import type { ConstellationState } from "../../types/timeline";
 
 interface Props {
   labels: LabelConfig[];
+  nodeTypes: NodeTypeConfig[];
+  edgeTypes: EdgeTypeConfig[];
   states: ConstellationState[];
   onAdd: (tangible: {
     name: string;
     mode: TangibleMode;
     description: string;
     hardwareId?: string;
-    filterLabels?: string[];
+    filters?: FilterConfig;
     stateId?: string;
   }) => void;
 }
 
-const QuickAddTangibleForm = ({ labels, states, onAdd }: Props) => {
+const QuickAddTangibleForm = ({ labels, nodeTypes, edgeTypes, states, onAdd }: Props) => {
   const [name, setName] = useState("");
   const [hardwareId, setHardwareId] = useState("");
   const [mode, setMode] = useState<TangibleMode>("filter");
   const [description, setDescription] = useState("");
-  const [filterLabels, setFilterLabels] = useState<string[]>([]);
+  const [filters, setFilters] = useState<FilterConfig>({
+    labels: [],
+    actorTypes: [],
+    relationTypes: [],
+    combineMode: 'OR' // Default to OR for tangibles
+  });
   const [stateId, setStateId] = useState("");
 
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -33,9 +40,16 @@ const QuickAddTangibleForm = ({ labels, states, onAdd }: Props) => {
     }
 
     // Validate mode-specific fields
-    if (mode === "filter" && filterLabels.length === 0) {
-      alert("Filter mode requires at least one label");
-      return;
+    if (mode === "filter") {
+      const hasFilters =
+        (filters.labels && filters.labels.length > 0) ||
+        (filters.actorTypes && filters.actorTypes.length > 0) ||
+        (filters.relationTypes && filters.relationTypes.length > 0);
+
+      if (!hasFilters) {
+        alert("Filter mode requires at least one filter (labels, actor types, or relation types)");
+        return;
+      }
     }
     if ((mode === "state" || mode === "stateDial") && !stateId) {
       alert("State mode requires a state selection");
@@ -47,7 +61,7 @@ const QuickAddTangibleForm = ({ labels, states, onAdd }: Props) => {
       mode,
       description,
       hardwareId: hardwareId.trim() || undefined,
-      filterLabels: mode === "filter" ? filterLabels : undefined,
+      filters: mode === "filter" ? filters : undefined,
       stateId: mode === "state" || mode === "stateDial" ? stateId : undefined,
     });
 
@@ -56,7 +70,12 @@ const QuickAddTangibleForm = ({ labels, states, onAdd }: Props) => {
     setHardwareId("");
     setMode("filter");
     setDescription("");
-    setFilterLabels([]);
+    setFilters({
+      labels: [],
+      actorTypes: [],
+      relationTypes: [],
+      combineMode: 'OR'
+    });
     setStateId("");
 
     nameInputRef.current?.focus();
@@ -72,7 +91,12 @@ const QuickAddTangibleForm = ({ labels, states, onAdd }: Props) => {
       setHardwareId("");
       setMode("filter");
       setDescription("");
-      setFilterLabels([]);
+      setFilters({
+        labels: [],
+        actorTypes: [],
+        relationTypes: [],
+        combineMode: 'OR'
+      });
       setStateId("");
       nameInputRef.current?.blur();
     }
@@ -85,15 +109,17 @@ const QuickAddTangibleForm = ({ labels, states, onAdd }: Props) => {
         hardwareId={hardwareId}
         mode={mode}
         description={description}
-        filterLabels={filterLabels}
+        filters={filters}
         stateId={stateId}
         labels={labels}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         states={states}
         onNameChange={setName}
         onHardwareIdChange={setHardwareId}
         onModeChange={setMode}
         onDescriptionChange={setDescription}
-        onFilterLabelsChange={setFilterLabels}
+        onFiltersChange={setFilters}
         onStateIdChange={setStateId}
       />
 

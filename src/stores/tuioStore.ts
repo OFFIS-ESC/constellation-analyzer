@@ -37,6 +37,21 @@ interface TuioState {
   addActiveStateTangible: (hardwareId: string) => void;
   removeActiveStateTangible: (hardwareId: string) => void;
   clearActiveStateTangibles: () => void;
+
+  // Presentation mode filters (runtime only - separate from editing mode filters)
+  presentationFilters: {
+    labels: string[];
+    actorTypes: string[];
+    relationTypes: string[];
+    combineMode: 'AND' | 'OR';
+  };
+  setPresentationFilters: (filters: {
+    labels: string[];
+    actorTypes: string[];
+    relationTypes: string[];
+    combineMode: 'AND' | 'OR';
+  }) => void;
+  clearPresentationFilters: () => void;
 }
 
 const DEFAULT_WEBSOCKET_URL = 'ws://localhost:3333';
@@ -111,6 +126,27 @@ export const useTuioStore = create<TuioState>()(
 
       clearActiveStateTangibles: () =>
         set({ activeStateTangibles: [] }),
+
+      // Presentation mode filters
+      presentationFilters: {
+        labels: [],
+        actorTypes: [],
+        relationTypes: [],
+        combineMode: 'OR', // Default to OR for presentation mode
+      },
+
+      setPresentationFilters: (filters) =>
+        set({ presentationFilters: filters }),
+
+      clearPresentationFilters: () =>
+        set({
+          presentationFilters: {
+            labels: [],
+            actorTypes: [],
+            relationTypes: [],
+            combineMode: 'OR',
+          },
+        }),
     }),
     {
       name: 'constellation-tuio-settings',

@@ -13,6 +13,7 @@ import type {
   GraphActions
 } from '../types';
 import { MINIMIZED_GROUP_WIDTH, MINIMIZED_GROUP_HEIGHT } from '../constants';
+import { migrateTangibleConfigs } from '../utils/tangibleMigration';
 
 /**
  * ⚠️ IMPORTANT: DO NOT USE THIS STORE DIRECTLY IN COMPONENTS ⚠️
@@ -165,9 +166,26 @@ export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
     })),
 
   deleteNodeType: (id: string) =>
-    set((state) => ({
-      nodeTypes: state.nodeTypes.filter((type) => type.id !== id),
-    })),
+    set((state) => {
+      // Remove node type ID from tangible filters.actorTypes arrays
+      const updatedTangibles = state.tangibles.map((tangible) => {
+        if (tangible.mode === 'filter' && tangible.filters?.actorTypes) {
+          return {
+            ...tangible,
+            filters: {
+              ...tangible.filters,
+              actorTypes: tangible.filters.actorTypes.filter((typeId) => typeId !== id),
+            },
+          };
+        }
+        return tangible;
+      });
+
+      return {
+        nodeTypes: state.nodeTypes.filter((type) => type.id !== id),
+        tangibles: updatedTangibles,
+      };
+    }),
 
   // Edge type operations
   addEdgeType: (edgeType: EdgeTypeConfig) =>
@@ -183,9 +201,26 @@ export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
     })),
 
   deleteEdgeType: (id: string) =>
-    set((state) => ({
-      edgeTypes: state.edgeTypes.filter((type) => type.id !== id),
-    })),
+    set((state) => {
+      // Remove edge type ID from tangible filters.relationTypes arrays
+      const updatedTangibles = state.tangibles.map((tangible) => {
+        if (tangible.mode === 'filter' && tangible.filters?.relationTypes) {
+          return {
+            ...tangible,
+            filters: {
+              ...tangible.filters,
+              relationTypes: tangible.filters.relationTypes.filter((typeId) => typeId !== id),
+            },
+          };
+        }
+        return tangible;
+      });
+
+      return {
+        edgeTypes: state.edgeTypes.filter((type) => type.id !== id),
+        tangibles: updatedTangibles,
+      };
+    }),
 
   // Label operations
   addLabel: (label: LabelConfig) =>
@@ -221,13 +256,25 @@ export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
           : edge.data,
       }));
 
-      // Remove label from tangible filterLabels arrays
+      // Remove label from tangible filterLabels arrays (old format) and filters.labels (new format)
       const updatedTangibles = state.tangibles.map((tangible) => {
-        if (tangible.mode === 'filter' && tangible.filterLabels) {
-          return {
-            ...tangible,
-            filterLabels: tangible.filterLabels.filter((labelId) => labelId !== id),
-          };
+        if (tangible.mode === 'filter') {
+          const updates: Partial<typeof tangible> = {};
+
+          // Handle old format
+          if (tangible.filterLabels) {
+            updates.filterLabels = tangible.filterLabels.filter((labelId) => labelId !== id);
+          }
+
+          // Handle new format
+          if (tangible.filters?.labels) {
+            updates.filters = {
+              ...tangible.filters,
+              labels: tangible.filters.labels.filter((labelId) => labelId !== id),
+            };
+          }
+
+          return { ...tangible, ...updates };
         }
         return tangible;
       });
@@ -589,6 +636,11 @@ export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
       return node;
     });
 
+    // Apply tangible migration for backward compatibility
+    const migratedTangibles = data.tangibles
+      ? migrateTangibleConfigs(data.tangibles)
+      : [];
+
     // Atomic update: all state changes happen in a single set() call
     set({
       nodes: sanitizedNodes,
@@ -597,7 +649,7 @@ export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
       nodeTypes: data.nodeTypes,
       edgeTypes: data.edgeTypes,
       labels: data.labels || [],
-      tangibles: data.tangibles || [],
+      tangibles: migratedTangibles,
     });
   },
 }));

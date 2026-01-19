@@ -36,8 +36,29 @@ export const useSettingsStore = create<SettingsState>()(
 
       // Presentation Mode Settings
       presentationMode: false,
-      setPresentationMode: (enabled: boolean) =>
-        set({ presentationMode: enabled }),
+      setPresentationMode: (enabled: boolean) => {
+        set({ presentationMode: enabled });
+
+        // Handle fullscreen mode
+        if (enabled) {
+          // Enter fullscreen
+          console.log('[Settings] Entering presentation mode, requesting fullscreen');
+          const docElement = document.documentElement;
+          if (docElement.requestFullscreen) {
+            docElement.requestFullscreen().catch((err) => {
+              console.warn('[Settings] Failed to enter fullscreen:', err);
+            });
+          }
+        } else {
+          // Exit fullscreen
+          console.log('[Settings] Exiting presentation mode, exiting fullscreen');
+          if (document.fullscreenElement && document.exitFullscreen) {
+            document.exitFullscreen().catch((err) => {
+              console.warn('[Settings] Failed to exit fullscreen:', err);
+            });
+          }
+        }
+      },
 
       // Future settings implementations go here
     }),

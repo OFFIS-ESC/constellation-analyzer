@@ -83,6 +83,22 @@ function AppContent() {
       );
   }, []);
 
+  // Sync presentation mode with fullscreen state
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      // If user exits fullscreen manually (e.g., ESC key), exit presentation mode too
+      if (!document.fullscreenElement && presentationMode) {
+        console.log('[App] Fullscreen exited manually, exiting presentation mode');
+        useSettingsStore.getState().setPresentationMode(false);
+      }
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, [presentationMode]);
+
   const handleFitView = useCallback(() => {
     fitView({ padding: 0.2, duration: 300 });
   }, [fitView]);

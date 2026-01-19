@@ -1,5 +1,6 @@
 import { useState, useEffect, KeyboardEvent } from "react";
 import SaveIcon from "@mui/icons-material/Save";
+import { useTuioStore } from "../../stores/tuioStore";
 import TangibleForm from "./TangibleForm";
 import type { TangibleConfig, TangibleMode, LabelConfig, FilterConfig, NodeTypeConfig, EdgeTypeConfig } from "../../types";
 import type { ConstellationState } from "../../types/timeline";
@@ -34,6 +35,11 @@ const EditTangibleInline = ({
   onSave,
   onCancel,
 }: Props) => {
+  // Get the last detected tangible ID from TUIO store
+  const activeTangibles = useTuioStore((state) => state.activeTangibles);
+  const suggestedHardwareId = activeTangibles.size > 0
+    ? Array.from(activeTangibles.keys()).pop()
+    : undefined;
   const [name, setName] = useState("");
   const [mode, setMode] = useState<TangibleMode>("filter");
   const [description, setDescription] = useState("");
@@ -128,6 +134,7 @@ const EditTangibleInline = ({
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           states={states}
+          suggestedHardwareId={suggestedHardwareId}
           onNameChange={setName}
           onModeChange={setMode}
           onDescriptionChange={setDescription}

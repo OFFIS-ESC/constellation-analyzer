@@ -1,4 +1,5 @@
 import { useState, useRef, KeyboardEvent } from "react";
+import { useTuioStore } from "../../stores/tuioStore";
 import TangibleForm from "./TangibleForm";
 import type { TangibleMode, LabelConfig, FilterConfig, NodeTypeConfig, EdgeTypeConfig } from "../../types";
 import type { ConstellationState } from "../../types/timeline";
@@ -19,6 +20,11 @@ interface Props {
 }
 
 const QuickAddTangibleForm = ({ labels, nodeTypes, edgeTypes, states, onAdd }: Props) => {
+  // Get the last detected tangible ID from TUIO store
+  const activeTangibles = useTuioStore((state) => state.activeTangibles);
+  const suggestedHardwareId = activeTangibles.size > 0
+    ? Array.from(activeTangibles.keys()).pop()
+    : undefined;
   const [name, setName] = useState("");
   const [hardwareId, setHardwareId] = useState("");
   const [mode, setMode] = useState<TangibleMode>("filter");
@@ -115,6 +121,7 @@ const QuickAddTangibleForm = ({ labels, nodeTypes, edgeTypes, states, onAdd }: P
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         states={states}
+        suggestedHardwareId={suggestedHardwareId}
         onNameChange={setName}
         onHardwareIdChange={setHardwareId}
         onModeChange={setMode}

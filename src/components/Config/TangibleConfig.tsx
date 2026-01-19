@@ -3,6 +3,7 @@ import { useGraphWithHistory } from '../../hooks/useGraphWithHistory';
 import { useConfirm } from '../../hooks/useConfirm';
 import { useToastStore } from '../../stores/toastStore';
 import { useTimelineStore } from '../../stores/timelineStore';
+import { useTuioConnection } from '../../hooks/useTuioConnection';
 import QuickAddTangibleForm from './QuickAddTangibleForm';
 import TangibleManagementList from './TangibleManagementList';
 import EditTangibleInline from './EditTangibleInline';
@@ -18,6 +19,9 @@ const TangibleConfigModal = ({ isOpen, onClose, initialEditingTangibleId }: Prop
   const { tangibles, labels, nodeTypes, edgeTypes, addTangible, updateTangible, deleteTangible } = useGraphWithHistory();
   const { confirm, ConfirmDialogComponent } = useConfirm();
   const { showToast } = useToastStore();
+
+  // Connect to TUIO when dialog is open
+  useTuioConnection(isOpen);
 
   const [editingTangible, setEditingTangible] = useState<TangibleConfigType | null>(null);
 

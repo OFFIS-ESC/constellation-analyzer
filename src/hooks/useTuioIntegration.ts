@@ -1,9 +1,8 @@
-import { useEffect, useRef } from 'react';
-import { useTuioStore } from '../stores/tuioStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import { useGraphStore } from '../stores/graphStore';
 import { useTimelineStore } from '../stores/timelineStore';
-import { TuioClientManager } from '../lib/tuio/tuioClient';
+import { useTuioStore } from '../stores/tuioStore';
+import { useTuioConnection } from './useTuioConnection';
 import type { TuioTangibleInfo } from '../lib/tuio/types';
 import type { TangibleConfig } from '../types';
 import { migrateTangibleConfig } from '../utils/tangibleMigration';
@@ -20,54 +19,14 @@ import { migrateTangibleConfig } from '../utils/tangibleMigration';
  * - State mode: Switches timeline state
  */
 export function useTuioIntegration() {
-  const clientRef = useRef<TuioClientManager | null>(null);
   const { presentationMode } = useSettingsStore();
-  const { websocketUrl, protocolVersion } = useTuioStore();
 
-  useEffect(() => {
-    // Only connect in presentation mode
-    if (!presentationMode) {
-      // Disconnect if we're leaving presentation mode
-      if (clientRef.current) {
-        clientRef.current.disconnect();
-        clientRef.current = null;
-        useTuioStore.getState().clearActiveTangibles();
-      }
-      return;
-    }
-
-
-    // Create TUIO client if in presentation mode
-    const client = new TuioClientManager(
-      {
-        onTangibleAdd: handleTangibleAdd,
-        onTangibleUpdate: handleTangibleUpdate,
-        onTangibleRemove: handleTangibleRemove,
-        onConnectionChange: (connected, error) => {
-          useTuioStore.getState().setConnectionState(connected, error);
-        },
-      },
-      protocolVersion
-    );
-
-    clientRef.current = client;
-
-    // Connect to TUIO server
-    client
-      .connect(websocketUrl)
-      .catch(() => {
-        // Connection errors are handled by onConnectionChange callback
-      });
-
-    // Cleanup on unmount or when presentation mode changes
-    return () => {
-      if (clientRef.current) {
-        clientRef.current.disconnect();
-        clientRef.current = null;
-        useTuioStore.getState().clearActiveTangibles();
-      }
-    };
-  }, [presentationMode, websocketUrl, protocolVersion]);
+  // Use the shared TUIO connection hook with presentation mode callbacks
+  useTuioConnection(presentationMode, {
+    onTangibleAdd: handleTangibleAdd,
+    onTangibleUpdate: handleTangibleUpdate,
+    onTangibleRemove: handleTangibleRemove,
+  });
 }
 
 /**

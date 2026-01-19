@@ -16,6 +16,7 @@ interface Props {
   nodeTypes: NodeTypeConfig[];
   edgeTypes: EdgeTypeConfig[];
   states: ConstellationState[];
+  suggestedHardwareId?: string;
   onNameChange: (value: string) => void;
   onModeChange: (value: TangibleMode) => void;
   onDescriptionChange: (value: string) => void;
@@ -39,6 +40,7 @@ const TangibleForm = ({
   nodeTypes,
   edgeTypes,
   states,
+  suggestedHardwareId,
   onNameChange,
   onModeChange,
   onDescriptionChange,
@@ -63,9 +65,21 @@ const TangibleForm = ({
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">
-            Hardware ID (optional)
-          </label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-xs font-medium text-gray-700">
+              Hardware ID (optional)
+            </label>
+            {suggestedHardwareId && (
+              <button
+                type="button"
+                onClick={() => onHardwareIdChange(suggestedHardwareId)}
+                className="text-xs text-blue-600 hover:text-blue-700 underline focus:outline-none"
+                title={`Use detected ID: ${suggestedHardwareId}`}
+              >
+                Use: {suggestedHardwareId.length > 8 ? suggestedHardwareId.substring(0, 8) + '...' : suggestedHardwareId}
+              </button>
+            )}
+          </div>
           <input
             type="text"
             value={hardwareId}

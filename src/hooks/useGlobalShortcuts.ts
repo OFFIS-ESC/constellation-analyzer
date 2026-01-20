@@ -143,19 +143,6 @@ export function useGlobalShortcuts(options: UseGlobalShortcutsOptions = {}) {
         priority: -1, // Lower priority than Ctrl+Y
       },
 
-      // Selection
-      {
-        id: "deselect-all",
-        description: "Deselect All",
-        key: "Escape",
-        handler: () => {
-          // This will be handled by GraphEditor
-          // Just documenting it here
-        },
-        category: "Selection",
-        enabled: false, // React Flow handles this internally
-      },
-
       // View
       {
         id: "fit-view",

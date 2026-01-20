@@ -20,7 +20,13 @@ export function useTuioConnection(
   }
 ) {
   const clientRef = useRef<TuioClientManager | null>(null);
+  const callbacksRef = useRef(callbacks);
   const { websocketUrl, protocolVersion } = useTuioStore();
+
+  // Keep callbacks ref up to date
+  useEffect(() => {
+    callbacksRef.current = callbacks;
+  }, [callbacks]);
 
   useEffect(() => {
     if (!shouldConnect) {
@@ -38,15 +44,15 @@ export function useTuioConnection(
       {
         onTangibleAdd: (hardwareId: string, info: TuioTangibleInfo) => {
           useTuioStore.getState().addActiveTangible(hardwareId, info);
-          callbacks?.onTangibleAdd?.(hardwareId, info);
+          callbacksRef.current?.onTangibleAdd?.(hardwareId, info);
         },
         onTangibleUpdate: (hardwareId: string, info: TuioTangibleInfo) => {
           useTuioStore.getState().updateActiveTangible(hardwareId, info);
-          callbacks?.onTangibleUpdate?.(hardwareId, info);
+          callbacksRef.current?.onTangibleUpdate?.(hardwareId, info);
         },
         onTangibleRemove: (hardwareId: string) => {
           useTuioStore.getState().removeActiveTangible(hardwareId);
-          callbacks?.onTangibleRemove?.(hardwareId);
+          callbacksRef.current?.onTangibleRemove?.(hardwareId);
         },
         onConnectionChange: (connected, error) => {
           useTuioStore.getState().setConnectionState(connected, error);
@@ -72,5 +78,5 @@ export function useTuioConnection(
         useTuioStore.getState().clearActiveTangibles();
       }
     };
-  }, [shouldConnect, websocketUrl, protocolVersion, callbacks]);
+  }, [shouldConnect, websocketUrl, protocolVersion]);
 }

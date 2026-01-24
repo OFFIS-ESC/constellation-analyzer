@@ -1,5 +1,6 @@
 import type { Relation, RelationData, NodeShape } from '../types';
 import type { Node } from '@xyflow/react';
+import { ROUNDED_RECTANGLE_RADIUS } from '../constants';
 
 /**
  * Generates a unique ID for edges
@@ -206,7 +207,7 @@ function getRoundedRectangleIntersection(
   height: number,
   targetX: number,
   targetY: number,
-  cornerRadius: number = 24,
+  cornerRadius: number = ROUNDED_RECTANGLE_RADIUS,
   offset: number = 2
 ): { x: number; y: number; angle: number } {
   const w = width / 2;
@@ -347,7 +348,7 @@ function getNodeIntersection(
       intersectionNodeHeight,
       targetCenterX,
       targetCenterY,
-      24, // Corner radius matches RoundedRectangleShape component
+      ROUNDED_RECTANGLE_RADIUS,
       offset
     );
   } else {

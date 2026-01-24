@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import { ROUNDED_RECTANGLE_RADIUS } from '../../../constants';
 
 interface RoundedRectangleShapeProps {
   color: string;
@@ -41,7 +42,7 @@ const RoundedRectangleShape = ({
         borderStyle: 'solid',
         borderColor: borderColor,
         color: textColor,
-        borderRadius: '24px', // More rounded than regular rectangle
+        borderRadius: `${ROUNDED_RECTANGLE_RADIUS}px`,
         boxShadow: shadowStyle,
       }}
     >

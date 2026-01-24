@@ -13,3 +13,8 @@ export const MINIMIZED_GROUP_HEIGHT = 80;
  */
 export const DEFAULT_ACTOR_WIDTH = 150;
 export const DEFAULT_ACTOR_HEIGHT = 80;
+
+/**
+ * Rounded rectangle corner radius (in pixels)
+ */
+export const ROUNDED_RECTANGLE_RADIUS = 24;

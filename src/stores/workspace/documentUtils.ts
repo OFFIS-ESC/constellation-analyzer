@@ -225,15 +225,18 @@ export function serializeActors(actors: Actor[]): SerializedActor[] {
  * Serialize relations for storage (strip React Flow internals)
  */
 export function serializeRelations(relations: Relation[]): SerializedRelation[] {
-  return relations.map(relation => ({
-    id: relation.id,
-    source: relation.source,
-    target: relation.target,
-    type: relation.type,
-    data: relation.data,
-    sourceHandle: relation.sourceHandle,
-    targetHandle: relation.targetHandle,
-  }));
+  return relations.map(relation => {
+    // Omit handle fields entirely - edges use floating calculations
+    // The handle IDs (like "top-source", "right-target") are only for defining
+    // clickable areas and should not be persisted
+    return {
+      id: relation.id,
+      source: relation.source,
+      target: relation.target,
+      type: relation.type,
+      data: relation.data,
+    };
+  });
 }
 
 /**

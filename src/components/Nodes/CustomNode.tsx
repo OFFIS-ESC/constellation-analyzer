@@ -1,5 +1,5 @@
 import { memo, useMemo } from "react";
-import { Handle, Position, NodeProps, useConnection } from "@xyflow/react";
+import { Handle, Position, NodeProps } from "@xyflow/react";
 import { useGraphStore } from "../../stores/graphStore";
 import {
   getContrastColor,
@@ -9,14 +9,17 @@ import { getIconComponent } from "../../utils/iconUtils";
 import type { Actor } from "../../types";
 import NodeShapeRenderer from "./Shapes/NodeShapeRenderer";
 import LabelBadge from "../Common/LabelBadge";
-import { useActiveFilters, nodeMatchesFilters } from "../../hooks/useActiveFilters";
+import {
+  useActiveFilters,
+  nodeMatchesFilters,
+} from "../../hooks/useActiveFilters";
 
 /**
  * CustomNode - Represents an actor in the constellation graph
  *
  * Features:
  * - Visual representation with type-based coloring
- * - Connection handles (top, right, bottom, left)
+ * - Easy-connect: whole node is connectable, edges auto-route to nearest border point
  * - Label display
  * - Type badge
  *
@@ -28,10 +31,6 @@ const CustomNode = ({ data, selected }: NodeProps<Actor>) => {
 
   // Get active filters based on mode (editing vs presentation)
   const filters = useActiveFilters();
-
-  // Check if any connection is being made (to show handles)
-  const connection = useConnection();
-  const isConnecting = !!connection.inProgress;
 
   // Find the node type configuration
   const nodeTypeConfig = nodeTypes.find((nt) => nt.id === data.type);
@@ -46,9 +45,6 @@ const CustomNode = ({ data, selected }: NodeProps<Actor>) => {
     ? adjustColorBrightness(nodeColor, -20)
     : nodeColor;
 
-  // Show handles when selected or when connecting
-  const showHandles = selected || isConnecting;
-
   // Check if this node matches the filter criteria
   const isMatch = useMemo(() => {
     return nodeMatchesFilters(
@@ -57,7 +53,7 @@ const CustomNode = ({ data, selected }: NodeProps<Actor>) => {
       data.label || "",
       data.description || "",
       nodeLabel,
-      filters
+      filters,
     );
   }, [
     data.type,
@@ -85,64 +81,150 @@ const CustomNode = ({ data, selected }: NodeProps<Actor>) => {
         opacity: nodeOpacity,
       }}
     >
-      {/* Connection handles - shown only when selected or connecting */}
+      {/* Invisible handles positioned around edges - center remains free for dragging */}
+      {/* Bidirectional handles (source + target overlapping at each edge) */}
+
+      {/* Top edge handles */}
+      <Handle
+        type="target"
+        position={Position.Top}
+        id="top-target"
+        isConnectable={true}
+        style={{
+          width: "100%",
+          height: "30px",
+          top: 0,
+          left: 0,
+          opacity: 0,
+          border: "none",
+          background: "transparent",
+          transform: "none",
+          cursor: "crosshair",
+        }}
+      />
       <Handle
         type="source"
         position={Position.Top}
-        id="top"
+        id="top-source"
         isConnectable={true}
-        isConnectableStart={true}
-        isConnectableEnd={true}
-        className="w-2 h-2 transition-opacity"
         style={{
-          background: adjustColorBrightness(nodeColor, -30),
-          opacity: showHandles ? 1 : 0,
-          border: `1px solid ${textColor}`,
+          width: "100%",
+          height: "30px",
+          top: 0,
+          left: 0,
+          opacity: 0,
+          border: "none",
+          background: "transparent",
+          transform: "none",
+          cursor: "crosshair",
         }}
       />
 
+      {/* Right edge handles */}
+      <Handle
+        type="target"
+        position={Position.Right}
+        id="right-target"
+        isConnectable={true}
+        style={{
+          width: "30px",
+          height: "100%",
+          top: 0,
+          right: 0,
+          opacity: 0,
+          border: "none",
+          background: "transparent",
+          transform: "none",
+          cursor: "crosshair",
+        }}
+      />
       <Handle
         type="source"
         position={Position.Right}
-        id="right"
+        id="right-source"
         isConnectable={true}
-        isConnectableStart={true}
-        isConnectableEnd={true}
-        className="w-2 h-2 transition-opacity"
         style={{
-          background: adjustColorBrightness(nodeColor, -30),
-          opacity: showHandles ? 1 : 0,
-          border: `1px solid ${textColor}`,
+          width: "30px",
+          height: "100%",
+          top: 0,
+          right: 0,
+          opacity: 0,
+          border: "none",
+          background: "transparent",
+          transform: "none",
+          cursor: "crosshair",
         }}
       />
 
+      {/* Bottom edge handles */}
+      <Handle
+        type="target"
+        position={Position.Bottom}
+        id="bottom-target"
+        isConnectable={true}
+        style={{
+          width: "100%",
+          height: "30px",
+          bottom: 0,
+          left: 0,
+          opacity: 0,
+          border: "none",
+          background: "transparent",
+          transform: "none",
+          cursor: "crosshair",
+        }}
+      />
       <Handle
         type="source"
         position={Position.Bottom}
-        id="bottom"
+        id="bottom-source"
         isConnectable={true}
-        isConnectableStart={true}
-        isConnectableEnd={true}
-        className="w-2 h-2 transition-opacity"
         style={{
-          background: adjustColorBrightness(nodeColor, -30),
-          opacity: showHandles ? 1 : 0,
-          border: `1px solid ${textColor}`,
+          width: "100%",
+          height: "30px",
+          bottom: 0,
+          left: 0,
+          opacity: 0,
+          border: "none",
+          background: "transparent",
+          transform: "none",
+          cursor: "crosshair",
         }}
       />
 
+      {/* Left edge handles */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="left-target"
+        isConnectable={true}
+        style={{
+          width: "30px",
+          height: "100%",
+          top: 0,
+          left: 0,
+          opacity: 0,
+          border: "none",
+          background: "transparent",
+          transform: "none",
+          cursor: "crosshair",
+        }}
+      />
       <Handle
         type="source"
         position={Position.Left}
-        id="left"
+        id="left-source"
         isConnectable={true}
-        isConnectableStart={true}
-        isConnectableEnd={true}
-        className="w-2 h-2 transition-opacity"
         style={{
-          background: adjustColorBrightness(nodeColor, -30),
-          opacity: showHandles ? 1 : 0,
-          border: `1px solid ${textColor}`,
+          width: "30px",
+          height: "100%",
+          top: 0,
+          left: 0,
+          opacity: 0,
+          border: "none",
+          background: "transparent",
+          transform: "none",
+          cursor: "crosshair",
         }}
       />
 

@@ -14,6 +14,7 @@ import type {
 } from '../types';
 import { MINIMIZED_GROUP_WIDTH, MINIMIZED_GROUP_HEIGHT } from '../constants';
 import { migrateTangibleConfigs } from '../utils/tangibleMigration';
+import { migrateRelationHandlesArray } from '../utils/handleMigration';
 
 /**
  * ⚠️ IMPORTANT: DO NOT USE THIS STORE DIRECTLY IN COMPONENTS ⚠️
@@ -641,10 +642,13 @@ export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
       ? migrateTangibleConfigs(data.tangibles)
       : [];
 
+    // Apply handle migration for backward compatibility (remove old 4-position handles)
+    const migratedEdges = migrateRelationHandlesArray(data.edges);
+
     // Atomic update: all state changes happen in a single set() call
     set({
       nodes: sanitizedNodes,
-      edges: data.edges,
+      edges: migratedEdges,
       groups: data.groups || [],
       nodeTypes: data.nodeTypes,
       edgeTypes: data.edgeTypes,

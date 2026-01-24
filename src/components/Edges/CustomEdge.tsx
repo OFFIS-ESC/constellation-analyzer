@@ -1,14 +1,12 @@
 import { memo, useMemo } from 'react';
 import {
   EdgeProps,
-  getBezierPath,
   EdgeLabelRenderer,
   BaseEdge,
-  useNodes,
+  useInternalNode,
 } from '@xyflow/react';
 import { useGraphStore } from '../../stores/graphStore';
 import type { Relation } from '../../types';
-import type { Group } from '../../types';
 import LabelBadge from '../Common/LabelBadge';
 import { getFloatingEdgeParams } from '../../utils/edgeUtils';
 import { useActiveFilters, edgeMatchesFilters } from '../../hooks/useActiveFilters';
@@ -34,66 +32,72 @@ const CustomEdge = ({
   sourceY,
   targetX,
   targetY,
-  sourcePosition,
-  targetPosition,
   data,
   selected,
 }: EdgeProps<Relation>) => {
   const edgeTypes = useGraphStore((state) => state.edgeTypes);
   const labels = useGraphStore((state) => state.labels);
+  const nodeTypes = useGraphStore((state) => state.nodeTypes);
 
   // Get active filters based on mode (editing vs presentation)
   const filters = useActiveFilters();
 
-  // Get all nodes to check if source/target are minimized groups
-  const nodes = useNodes();
-  const sourceNode = nodes.find((n) => n.id === source);
-  const targetNode = nodes.find((n) => n.id === target);
+  // Get internal nodes for floating edge calculations with correct absolute positioning
+  const sourceNode = useInternalNode(source);
+  const targetNode = useInternalNode(target);
 
-  // Check if either endpoint is a minimized group
-  const sourceIsMinimizedGroup = sourceNode?.type === 'group' && (sourceNode.data as Group['data']).minimized;
-  const targetIsMinimizedGroup = targetNode?.type === 'group' && (targetNode.data as Group['data']).minimized;
+  // Determine node shapes from node type configuration
+  const sourceShape = useMemo(() => {
+    if (!sourceNode) return 'rectangle';
+    // Groups always use rectangle shape
+    if (sourceNode.type === 'group') return 'rectangle';
+    const nodeData = sourceNode.data as { type?: string };
+    const nodeTypeConfig = nodeTypes.find((nt) => nt.id === nodeData?.type);
+    return nodeTypeConfig?.shape || 'rectangle';
+  }, [sourceNode, nodeTypes]);
 
-  // Calculate floating edge parameters if needed
-  // When connecting to groups (especially minimized ones), we need to use floating edges
-  // because groups don't have specific handles
-  let finalSourceX = sourceX;
-  let finalSourceY = sourceY;
-  let finalTargetX = targetX;
-  let finalTargetY = targetY;
-  let finalSourcePosition = sourcePosition;
-  let finalTargetPosition = targetPosition;
+  const targetShape = useMemo(() => {
+    if (!targetNode) return 'rectangle';
+    // Groups always use rectangle shape
+    if (targetNode.type === 'group') return 'rectangle';
+    const nodeData = targetNode.data as { type?: string };
+    const nodeTypeConfig = nodeTypes.find((nt) => nt.id === nodeData?.type);
+    return nodeTypeConfig?.shape || 'rectangle';
+  }, [targetNode, nodeTypes]);
 
-  // Check if we need to use floating edge calculations
-  const needsFloatingEdge = (sourceIsMinimizedGroup || targetIsMinimizedGroup) && sourceNode && targetNode;
-
-  if (needsFloatingEdge) {
-    const floatingParams = getFloatingEdgeParams(sourceNode, targetNode);
-
-    // When either endpoint is a minimized group, use floating positions for that side
-    // IMPORTANT: When BOTH are groups, we must use floating for BOTH sides
-    if (sourceIsMinimizedGroup) {
-      finalSourceX = floatingParams.sx;
-      finalSourceY = floatingParams.sy;
-      finalSourcePosition = floatingParams.sourcePos;
+  // Calculate floating edge parameters with custom bezier control points
+  const edgeParams = useMemo(() => {
+    if (!sourceNode || !targetNode) {
+      // Fallback to default React Flow positioning
+      return {
+        edgePath: `M ${sourceX},${sourceY} L ${targetX},${targetY}`,
+        labelX: (sourceX + targetX) / 2,
+        labelY: (sourceY + targetY) / 2,
+      };
     }
 
-    if (targetIsMinimizedGroup) {
-      finalTargetX = floatingParams.tx;
-      finalTargetY = floatingParams.ty;
-      finalTargetPosition = floatingParams.targetPos;
-    }
-  }
+    const params = getFloatingEdgeParams(sourceNode, targetNode, sourceShape, targetShape);
 
-  // Calculate the bezier path
-  const [edgePath, labelX, labelY] = getBezierPath({
-    sourceX: finalSourceX,
-    sourceY: finalSourceY,
-    sourcePosition: finalSourcePosition,
-    targetX: finalTargetX,
-    targetY: finalTargetY,
-    targetPosition: finalTargetPosition,
-  });
+    // Create cubic bezier path using custom control points
+    const edgePath = `M ${params.sx},${params.sy} C ${params.sourceControlX},${params.sourceControlY} ${params.targetControlX},${params.targetControlY} ${params.tx},${params.ty}`;
+
+    // Calculate label position at midpoint of the bezier curve (t=0.5)
+    const t = 0.5;
+    const labelX =
+      Math.pow(1 - t, 3) * params.sx +
+      3 * Math.pow(1 - t, 2) * t * params.sourceControlX +
+      3 * (1 - t) * Math.pow(t, 2) * params.targetControlX +
+      Math.pow(t, 3) * params.tx;
+    const labelY =
+      Math.pow(1 - t, 3) * params.sy +
+      3 * Math.pow(1 - t, 2) * t * params.sourceControlY +
+      3 * (1 - t) * Math.pow(t, 2) * params.targetControlY +
+      Math.pow(t, 3) * params.ty;
+
+    return { edgePath, labelX, labelY };
+  }, [sourceNode, targetNode, sourceShape, targetShape, sourceX, sourceY, targetX, targetY]);
+
+  const { edgePath, labelX, labelY } = edgeParams;
 
   // Check if this is an aggregated edge
   const isAggregated = !!(data as { aggregatedCount?: number })?.aggregatedCount;

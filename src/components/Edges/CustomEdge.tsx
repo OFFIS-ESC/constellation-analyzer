@@ -226,7 +226,7 @@ const CustomEdge = ({
               </div>
             )}
             {data?.labels && data.labels.length > 0 && (
-              <div className="flex flex-wrap gap-1 justify-center">
+              <div className="flex flex-wrap gap-1 justify-center" style={{ maxWidth: '200px' }}>
                 {data.labels.map((labelId) => {
                   const labelConfig = labels.find((l) => l.id === labelId);
                   if (!labelConfig) return null;
@@ -235,7 +235,6 @@ const CustomEdge = ({
                       key={labelId}
                       name={labelConfig.name}
                       color={labelConfig.color}
-                      maxWidth="80px"
                       size="sm"
                     />
                   );

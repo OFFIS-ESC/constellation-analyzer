@@ -266,7 +266,7 @@ const CustomNode = ({ data, selected }: NodeProps<Actor>) => {
 
           {/* Labels */}
           {data.labels && data.labels.length > 0 && (
-            <div className="flex flex-wrap gap-1 justify-center mt-2">
+            <div className="flex flex-wrap gap-1 justify-center mt-2" style={{ maxWidth: '200px' }}>
               {data.labels.map((labelId) => {
                 const labelConfig = labels.find((l) => l.id === labelId);
                 if (!labelConfig) return null;
@@ -275,7 +275,6 @@ const CustomNode = ({ data, selected }: NodeProps<Actor>) => {
                     key={labelId}
                     name={labelConfig.name}
                     color={labelConfig.color}
-                    maxWidth="80px"
                     size="sm"
                   />
                 );

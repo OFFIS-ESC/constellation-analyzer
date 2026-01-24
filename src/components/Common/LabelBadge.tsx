@@ -6,7 +6,7 @@ import { getContrastColor } from '../../utils/colorUtils';
  * Features:
  * - Pill-shaped design
  * - Auto-contrast text color
- * - Truncation with ellipsis
+ * - Optional truncation with ellipsis (if maxWidth is provided)
  * - Tooltip on hover (via title attribute)
  */
 
@@ -17,7 +17,7 @@ interface Props {
   size?: 'sm' | 'md';
 }
 
-const LabelBadge = ({ name, color, maxWidth = '120px', size = 'sm' }: Props) => {
+const LabelBadge = ({ name, color, maxWidth, size = 'sm' }: Props) => {
   const textColor = getContrastColor(color);
 
   const sizeClasses = size === 'sm'
@@ -26,11 +26,11 @@ const LabelBadge = ({ name, color, maxWidth = '120px', size = 'sm' }: Props) => 
 
   return (
     <span
-      className={`inline-block rounded-full font-medium whitespace-nowrap overflow-hidden text-ellipsis ${sizeClasses}`}
+      className={`inline-block rounded-full font-medium whitespace-nowrap ${maxWidth ? 'overflow-hidden text-ellipsis' : ''} ${sizeClasses}`}
       style={{
         backgroundColor: color,
         color: textColor,
-        maxWidth,
+        ...(maxWidth && { maxWidth }),
       }}
       title={name}
     >

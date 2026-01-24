@@ -4,6 +4,7 @@ import { useGraphStore } from '../graphStore';
 import { useTimelineStore } from '../timelineStore';
 import type { Actor, Relation, Group, NodeTypeConfig, EdgeTypeConfig, LabelConfig, TangibleConfig } from '../../types';
 import { getCurrentGraphFromDocument } from './documentUtils';
+import { migrateRelationHandlesArray } from '../../utils/handleMigration';
 
 /**
  * useActiveDocument Hook
@@ -97,8 +98,11 @@ export function useActiveDocument() {
       isLoadingRef.current = true;
       lastLoadedDocIdRef.current = activeDocumentId;
 
+      // Apply handle migration for backward compatibility (remove old 4-position handles)
+      const migratedEdges = migrateRelationHandlesArray(currentGraph.edges);
+
       setNodes(currentGraph.nodes as never[]);
-      setEdges(currentGraph.edges as never[]);
+      setEdges(migratedEdges as never[]);
       setGroups(currentGraph.groups as never[]);
       setNodeTypes(currentGraph.nodeTypes as never[]);
       setEdgeTypes(currentGraph.edgeTypes as never[]);
@@ -109,7 +113,7 @@ export function useActiveDocument() {
       lastSyncedStateRef.current = {
         documentId: activeDocumentId,
         nodes: currentGraph.nodes as Actor[],
-        edges: currentGraph.edges as Relation[],
+        edges: migratedEdges as Relation[],
         groups: currentGraph.groups as Group[],
         nodeTypes: currentGraph.nodeTypes as NodeTypeConfig[],
         edgeTypes: currentGraph.edgeTypes as EdgeTypeConfig[],

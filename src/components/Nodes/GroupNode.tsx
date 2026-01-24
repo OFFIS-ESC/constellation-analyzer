@@ -220,6 +220,42 @@ const GroupNode = ({ id, data, selected }: NodeProps<Group>) => {
         position: 'relative',
       }}
     >
+      {/* Invisible handles for easy-connect - floating edges calculate actual connection points */}
+      {/* Target handle - full node coverage for incoming connections */}
+      <Handle
+        type="target"
+        position={Position.Top}
+        isConnectable={true}
+        style={{
+          width: '100%',
+          height: '100%',
+          top: 0,
+          left: 0,
+          borderRadius: 0,
+          opacity: 0,
+          border: 'none',
+          background: 'transparent',
+          transform: 'none',
+        }}
+      />
+      {/* Source handle - full node coverage for outgoing connections */}
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        isConnectable={true}
+        style={{
+          width: '100%',
+          height: '100%',
+          top: 0,
+          left: 0,
+          borderRadius: 0,
+          opacity: 0,
+          border: 'none',
+          background: 'transparent',
+          transform: 'none',
+        }}
+      />
+
       {/* Background color overlay - uses group's custom color */}
       <div
         style={{

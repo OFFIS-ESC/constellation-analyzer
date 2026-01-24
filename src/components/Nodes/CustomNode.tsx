@@ -1,5 +1,5 @@
 import { memo, useMemo } from "react";
-import { Handle, Position, NodeProps, useConnection } from "@xyflow/react";
+import { Handle, Position, NodeProps } from "@xyflow/react";
 import { useGraphStore } from "../../stores/graphStore";
 import {
   getContrastColor,
@@ -16,7 +16,7 @@ import { useActiveFilters, nodeMatchesFilters } from "../../hooks/useActiveFilte
  *
  * Features:
  * - Visual representation with type-based coloring
- * - Connection handles (top, right, bottom, left)
+ * - Easy-connect: whole node is connectable, edges auto-route to nearest border point
  * - Label display
  * - Type badge
  *
@@ -28,10 +28,6 @@ const CustomNode = ({ data, selected }: NodeProps<Actor>) => {
 
   // Get active filters based on mode (editing vs presentation)
   const filters = useActiveFilters();
-
-  // Check if any connection is being made (to show handles)
-  const connection = useConnection();
-  const isConnecting = !!connection.inProgress;
 
   // Find the node type configuration
   const nodeTypeConfig = nodeTypes.find((nt) => nt.id === data.type);
@@ -45,9 +41,6 @@ const CustomNode = ({ data, selected }: NodeProps<Actor>) => {
   const borderColor = selected
     ? adjustColorBrightness(nodeColor, -20)
     : nodeColor;
-
-  // Show handles when selected or when connecting
-  const showHandles = selected || isConnecting;
 
   // Check if this node matches the filter criteria
   const isMatch = useMemo(() => {
@@ -85,64 +78,39 @@ const CustomNode = ({ data, selected }: NodeProps<Actor>) => {
         opacity: nodeOpacity,
       }}
     >
-      {/* Connection handles - shown only when selected or connecting */}
+      {/* Invisible handles for easy-connect - floating edges calculate actual connection points */}
+      {/* Target handle - full node coverage for incoming connections */}
       <Handle
-        type="source"
+        type="target"
         position={Position.Top}
-        id="top"
         isConnectable={true}
-        isConnectableStart={true}
-        isConnectableEnd={true}
-        className="w-2 h-2 transition-opacity"
         style={{
-          background: adjustColorBrightness(nodeColor, -30),
-          opacity: showHandles ? 1 : 0,
-          border: `1px solid ${textColor}`,
+          width: '100%',
+          height: '100%',
+          top: 0,
+          left: 0,
+          borderRadius: 0,
+          opacity: 0,
+          border: 'none',
+          background: 'transparent',
+          transform: 'none',
         }}
       />
-
-      <Handle
-        type="source"
-        position={Position.Right}
-        id="right"
-        isConnectable={true}
-        isConnectableStart={true}
-        isConnectableEnd={true}
-        className="w-2 h-2 transition-opacity"
-        style={{
-          background: adjustColorBrightness(nodeColor, -30),
-          opacity: showHandles ? 1 : 0,
-          border: `1px solid ${textColor}`,
-        }}
-      />
-
+      {/* Source handle - full node coverage for outgoing connections */}
       <Handle
         type="source"
         position={Position.Bottom}
-        id="bottom"
         isConnectable={true}
-        isConnectableStart={true}
-        isConnectableEnd={true}
-        className="w-2 h-2 transition-opacity"
         style={{
-          background: adjustColorBrightness(nodeColor, -30),
-          opacity: showHandles ? 1 : 0,
-          border: `1px solid ${textColor}`,
-        }}
-      />
-
-      <Handle
-        type="source"
-        position={Position.Left}
-        id="left"
-        isConnectable={true}
-        isConnectableStart={true}
-        isConnectableEnd={true}
-        className="w-2 h-2 transition-opacity"
-        style={{
-          background: adjustColorBrightness(nodeColor, -30),
-          opacity: showHandles ? 1 : 0,
-          border: `1px solid ${textColor}`,
+          width: '100%',
+          height: '100%',
+          top: 0,
+          left: 0,
+          borderRadius: 0,
+          opacity: 0,
+          border: 'none',
+          background: 'transparent',
+          transform: 'none',
         }}
       />
 

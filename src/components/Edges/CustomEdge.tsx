@@ -4,11 +4,10 @@ import {
   getBezierPath,
   EdgeLabelRenderer,
   BaseEdge,
-  useNodes,
+  useInternalNode,
 } from '@xyflow/react';
 import { useGraphStore } from '../../stores/graphStore';
 import type { Relation } from '../../types';
-import type { Group } from '../../types';
 import LabelBadge from '../Common/LabelBadge';
 import { getFloatingEdgeParams } from '../../utils/edgeUtils';
 import { useActiveFilters, edgeMatchesFilters } from '../../hooks/useActiveFilters';
@@ -45,18 +44,11 @@ const CustomEdge = ({
   // Get active filters based on mode (editing vs presentation)
   const filters = useActiveFilters();
 
-  // Get all nodes to check if source/target are minimized groups
-  const nodes = useNodes();
-  const sourceNode = nodes.find((n) => n.id === source);
-  const targetNode = nodes.find((n) => n.id === target);
+  // Get internal nodes for floating edge calculations with correct absolute positioning
+  const sourceNode = useInternalNode(source);
+  const targetNode = useInternalNode(target);
 
-  // Check if either endpoint is a minimized group
-  const sourceIsMinimizedGroup = sourceNode?.type === 'group' && (sourceNode.data as Group['data']).minimized;
-  const targetIsMinimizedGroup = targetNode?.type === 'group' && (targetNode.data as Group['data']).minimized;
-
-  // Calculate floating edge parameters if needed
-  // When connecting to groups (especially minimized ones), we need to use floating edges
-  // because groups don't have specific handles
+  // Always use floating edges for easy-connect (dynamic border point calculation)
   let finalSourceX = sourceX;
   let finalSourceY = sourceY;
   let finalTargetX = targetX;
@@ -64,25 +56,15 @@ const CustomEdge = ({
   let finalSourcePosition = sourcePosition;
   let finalTargetPosition = targetPosition;
 
-  // Check if we need to use floating edge calculations
-  const needsFloatingEdge = (sourceIsMinimizedGroup || targetIsMinimizedGroup) && sourceNode && targetNode;
-
-  if (needsFloatingEdge) {
+  // Use floating edge calculations for ALL edges to get smart border connection
+  if (sourceNode && targetNode) {
     const floatingParams = getFloatingEdgeParams(sourceNode, targetNode);
-
-    // When either endpoint is a minimized group, use floating positions for that side
-    // IMPORTANT: When BOTH are groups, we must use floating for BOTH sides
-    if (sourceIsMinimizedGroup) {
-      finalSourceX = floatingParams.sx;
-      finalSourceY = floatingParams.sy;
-      finalSourcePosition = floatingParams.sourcePos;
-    }
-
-    if (targetIsMinimizedGroup) {
-      finalTargetX = floatingParams.tx;
-      finalTargetY = floatingParams.ty;
-      finalTargetPosition = floatingParams.targetPos;
-    }
+    finalSourceX = floatingParams.sx;
+    finalSourceY = floatingParams.sy;
+    finalSourcePosition = floatingParams.sourcePos;
+    finalTargetX = floatingParams.tx;
+    finalTargetY = floatingParams.ty;
+    finalTargetPosition = floatingParams.targetPos;
   }
 
   // Calculate the bezier path

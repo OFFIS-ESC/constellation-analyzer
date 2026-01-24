@@ -1256,6 +1256,69 @@ describe('graphStore', () => {
         const loadedNode = state.nodes[0];
         expect(loadedNode.parentId).toBe('group-1');
       });
+
+      it('should migrate old 4-position handle references by removing handles', () => {
+        const { loadGraphState } = useGraphStore.getState();
+
+        // Create edges with old handle format
+        const edgeWithOldHandles: Relation = {
+          ...createMockEdge('edge-1', 'node-1', 'node-2'),
+          sourceHandle: 'right',
+          targetHandle: 'left',
+        };
+
+        const edgeWithTopBottom: Relation = {
+          ...createMockEdge('edge-2', 'node-1', 'node-2'),
+          sourceHandle: 'top',
+          targetHandle: 'bottom',
+        };
+
+        loadGraphState({
+          nodes: [createMockNode('node-1'), createMockNode('node-2')],
+          edges: [edgeWithOldHandles, edgeWithTopBottom],
+          groups: [],
+          nodeTypes: [],
+          edgeTypes: [],
+          labels: [],
+        });
+
+        const state = useGraphStore.getState();
+
+        // Both edges should have handles removed (undefined) for floating edge pattern
+        expect(state.edges[0].sourceHandle).toBeUndefined();
+        expect(state.edges[0].targetHandle).toBeUndefined();
+        expect(state.edges[1].sourceHandle).toBeUndefined();
+        expect(state.edges[1].targetHandle).toBeUndefined();
+
+        // Other fields should be preserved
+        expect(state.edges[0].id).toBe('edge-1');
+        expect(state.edges[0].source).toBe('node-1');
+        expect(state.edges[0].target).toBe('node-2');
+      });
+
+      it('should preserve undefined/null handles', () => {
+        const { loadGraphState } = useGraphStore.getState();
+
+        // Create edge without handles (new format)
+        const edgeWithoutHandles: Relation = {
+          ...createMockEdge('edge-1', 'node-1', 'node-2'),
+        };
+
+        loadGraphState({
+          nodes: [createMockNode('node-1'), createMockNode('node-2')],
+          edges: [edgeWithoutHandles],
+          groups: [],
+          nodeTypes: [],
+          edgeTypes: [],
+          labels: [],
+        });
+
+        const state = useGraphStore.getState();
+
+        // Handles should remain undefined
+        expect(state.edges[0].sourceHandle).toBeUndefined();
+        expect(state.edges[0].targetHandle).toBeUndefined();
+      });
     });
   });
 

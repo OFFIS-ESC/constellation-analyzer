@@ -33,6 +33,7 @@ import { Cite } from '@citation-js/core';
 import type { CSLReference } from '../types/bibliography';
 import { needsStorageCleanup, cleanupAllStorage } from '../utils/cleanupStorage';
 import { migrateTangibleConfigs } from '../utils/tangibleMigration';
+import { migrateRelationHandlesArray } from '../utils/handleMigration';
 
 /**
  * Workspace Store
@@ -316,6 +317,16 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
     // Apply tangible migration for backward compatibility
     if (doc.tangibles) {
       doc.tangibles = migrateTangibleConfigs(doc.tangibles);
+    }
+
+    // Apply handle migration to all timeline states for backward compatibility
+    if (doc.timeline && doc.timeline.states) {
+      Object.keys(doc.timeline.states).forEach((stateId) => {
+        const state = doc.timeline.states[stateId];
+        if (state && state.graph && state.graph.edges) {
+          state.graph.edges = migrateRelationHandlesArray(state.graph.edges);
+        }
+      });
     }
 
     // Load timeline if it exists
@@ -624,6 +635,16 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
           // Apply tangible migration for backward compatibility
           if (importedDoc.tangibles) {
             importedDoc.tangibles = migrateTangibleConfigs(importedDoc.tangibles);
+          }
+
+          // Apply handle migration to all timeline states for backward compatibility
+          if (importedDoc.timeline && importedDoc.timeline.states) {
+            Object.keys(importedDoc.timeline.states).forEach((stateId) => {
+              const state = importedDoc.timeline.states[stateId];
+              if (state && state.graph && state.graph.edges) {
+                state.graph.edges = migrateRelationHandlesArray(state.graph.edges);
+              }
+            });
           }
 
           const metadata: DocumentMetadata = {
@@ -936,6 +957,16 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
             // Apply tangible migration for backward compatibility
             if (doc.tangibles) {
               doc.tangibles = migrateTangibleConfigs(doc.tangibles);
+            }
+
+            // Apply handle migration to all timeline states for backward compatibility
+            if (doc.timeline && doc.timeline.states) {
+              Object.keys(doc.timeline.states).forEach((stateId) => {
+                const state = doc.timeline.states[stateId];
+                if (state && state.graph && state.graph.edges) {
+                  state.graph.edges = migrateRelationHandlesArray(state.graph.edges);
+                }
+              });
             }
 
             saveDocumentToStorage(docId, doc);

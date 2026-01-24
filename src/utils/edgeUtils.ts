@@ -1,7 +1,6 @@
 import type { Relation, RelationData } from '../types';
 import type { Node } from '@xyflow/react';
 import { Position } from '@xyflow/react';
-import { MINIMIZED_GROUP_WIDTH, MINIMIZED_GROUP_HEIGHT } from '../constants';
 
 /**
  * Generates a unique ID for edges
@@ -15,27 +14,33 @@ export const generateEdgeId = (source: string, target: string): string => {
  * Used for floating edges to connect at the closest point on the node
  */
 function getNodeIntersection(intersectionNode: Node, targetNode: Node) {
-  const {
-    width: intersectionNodeWidth,
-    height: intersectionNodeHeight,
-    position: intersectionNodePosition,
-  } = intersectionNode;
-  const targetPosition = targetNode.position;
+  // Use positionAbsolute for correct positioning of nodes inside groups
+  // positionAbsolute accounts for parent group offset, while position is relative
+  // @ts-ignore - internals.positionAbsolute exists at runtime but not in public types
+  const intersectionNodePosition = intersectionNode.internals?.positionAbsolute ?? intersectionNode.position;
+  // @ts-ignore - internals.positionAbsolute exists at runtime but not in public types
+  const targetPosition = targetNode.internals?.positionAbsolute ?? targetNode.position;
 
-  // Use fallback dimensions if width/height are not set (e.g., for groups without measured dimensions)
-  const w = (intersectionNodeWidth ?? MINIMIZED_GROUP_WIDTH) / 2;
-  const h = (intersectionNodeHeight ?? MINIMIZED_GROUP_HEIGHT) / 2;
+  // Use measured dimensions from React Flow (stored in node.measured)
+  // If undefined, node hasn't been measured yet - return center
+  const intersectionNodeWidth = intersectionNode.measured?.width ?? intersectionNode.width;
+  const intersectionNodeHeight = intersectionNode.measured?.height ?? intersectionNode.height;
+  const targetNodeWidth = targetNode.measured?.width ?? targetNode.width;
+  const targetNodeHeight = targetNode.measured?.height ?? targetNode.height;
+
+  if (!intersectionNodeWidth || !intersectionNodeHeight || !targetNodeWidth || !targetNodeHeight) {
+    const centerX = intersectionNodePosition.x + (intersectionNodeWidth ?? 0) / 2;
+    const centerY = intersectionNodePosition.y + (intersectionNodeHeight ?? 0) / 2;
+    return { x: centerX, y: centerY };
+  }
+
+  const w = intersectionNodeWidth / 2;
+  const h = intersectionNodeHeight / 2;
 
   const x2 = intersectionNodePosition.x + w;
   const y2 = intersectionNodePosition.y + h;
-  const x1 = targetPosition.x + (targetNode.width ?? MINIMIZED_GROUP_WIDTH) / 2;
-  const y1 = targetPosition.y + (targetNode.height ?? MINIMIZED_GROUP_HEIGHT) / 2;
-
-  // Guard against division by zero
-  if (w === 0 || h === 0) {
-    // If node has no dimensions, return center point
-    return { x: x2, y: y2 };
-  }
+  const x1 = targetPosition.x + targetNodeWidth / 2;
+  const y1 = targetPosition.y + targetNodeHeight / 2;
 
   const xx1 = (x1 - x2) / (2 * w) - (y1 - y2) / (2 * h);
   const yy1 = (x1 - x2) / (2 * w) + (y1 - y2) / (2 * h);
@@ -52,15 +57,22 @@ function getNodeIntersection(intersectionNode: Node, targetNode: Node) {
  * Get the position (top, right, bottom, left) of the handle based on the intersection point
  */
 function getEdgePosition(node: Node, intersectionPoint: { x: number; y: number }) {
-  const n = { ...node.position, ...node };
-  const nx = Math.round(n.x);
-  const ny = Math.round(n.y);
+  // Use positionAbsolute for correct positioning of nodes inside groups
+  // @ts-ignore - internals.positionAbsolute exists at runtime but not in public types
+  const nodePosition = node.internals?.positionAbsolute ?? node.position;
+  const nx = Math.round(nodePosition.x);
+  const ny = Math.round(nodePosition.y);
   const px = Math.round(intersectionPoint.x);
   const py = Math.round(intersectionPoint.y);
 
-  // Use fallback dimensions if not set (same as getNodeIntersection)
-  const width = node.width ?? MINIMIZED_GROUP_WIDTH;
-  const height = node.height ?? MINIMIZED_GROUP_HEIGHT;
+  // Use measured dimensions from React Flow (stored in node.measured)
+  // If not available, default to Top
+  const width = node.measured?.width ?? node.width;
+  const height = node.measured?.height ?? node.height;
+
+  if (!width || !height) {
+    return Position.Top;
+  }
 
   if (px <= nx + 1) {
     return Position.Left;

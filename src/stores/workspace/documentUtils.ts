@@ -225,15 +225,25 @@ export function serializeActors(actors: Actor[]): SerializedActor[] {
  * Serialize relations for storage (strip React Flow internals)
  */
 export function serializeRelations(relations: Relation[]): SerializedRelation[] {
-  return relations.map(relation => ({
-    id: relation.id,
-    source: relation.source,
-    target: relation.target,
-    type: relation.type,
-    data: relation.data,
-    sourceHandle: relation.sourceHandle,
-    targetHandle: relation.targetHandle,
-  }));
+  return relations.map(relation => {
+    const serialized: SerializedRelation = {
+      id: relation.id,
+      source: relation.source,
+      target: relation.target,
+      type: relation.type,
+      data: relation.data,
+    };
+
+    // Only include handles if they exist and are non-null/non-undefined
+    if (relation.sourceHandle != null) {
+      serialized.sourceHandle = relation.sourceHandle;
+    }
+    if (relation.targetHandle != null) {
+      serialized.targetHandle = relation.targetHandle;
+    }
+
+    return serialized;
+  });
 }
 
 /**

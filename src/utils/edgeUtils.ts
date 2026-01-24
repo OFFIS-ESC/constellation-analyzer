@@ -196,6 +196,77 @@ function getPillIntersection(
 }
 
 /**
+ * Calculate intersection point with a rounded rectangle
+ * Handles corners as circular arcs with specified radius
+ */
+function getRoundedRectangleIntersection(
+  centerX: number,
+  centerY: number,
+  width: number,
+  height: number,
+  targetX: number,
+  targetY: number,
+  cornerRadius: number = 24,
+  offset: number = 2
+): { x: number; y: number; angle: number } {
+  const w = width / 2;
+  const h = height / 2;
+
+  // Calculate basic rectangle intersection first
+  const dx = targetX - centerX;
+  const dy = targetY - centerY;
+
+  const xx1 = dx / (2 * w) - dy / (2 * h);
+  const yy1 = dx / (2 * w) + dy / (2 * h);
+  const a = 1 / (Math.abs(xx1) + Math.abs(yy1));
+  const xx3 = a * xx1;
+  const yy3 = a * yy1;
+  const x = w * (xx3 + yy3) + centerX;
+  const y = h * (-xx3 + yy3) + centerY;
+
+  // Determine which edge the intersection is on
+  const leftEdge = centerX - w;
+  const rightEdge = centerX + w;
+  const topEdge = centerY - h;
+  const bottomEdge = centerY + h;
+
+  // Check if intersection is near a corner (within corner radius distance from corner)
+  const isNearTopLeft = x < leftEdge + cornerRadius && y < topEdge + cornerRadius;
+  const isNearTopRight = x > rightEdge - cornerRadius && y < topEdge + cornerRadius;
+  const isNearBottomLeft = x < leftEdge + cornerRadius && y > bottomEdge - cornerRadius;
+  const isNearBottomRight = x > rightEdge - cornerRadius && y > bottomEdge - cornerRadius;
+
+  if (isNearTopLeft) {
+    // Top-left corner - circular arc
+    const cornerCenterX = leftEdge + cornerRadius;
+    const cornerCenterY = topEdge + cornerRadius;
+    return getCircleIntersection(cornerCenterX, cornerCenterY, cornerRadius, targetX, targetY, offset);
+  } else if (isNearTopRight) {
+    // Top-right corner - circular arc
+    const cornerCenterX = rightEdge - cornerRadius;
+    const cornerCenterY = topEdge + cornerRadius;
+    return getCircleIntersection(cornerCenterX, cornerCenterY, cornerRadius, targetX, targetY, offset);
+  } else if (isNearBottomLeft) {
+    // Bottom-left corner - circular arc
+    const cornerCenterX = leftEdge + cornerRadius;
+    const cornerCenterY = bottomEdge - cornerRadius;
+    return getCircleIntersection(cornerCenterX, cornerCenterY, cornerRadius, targetX, targetY, offset);
+  } else if (isNearBottomRight) {
+    // Bottom-right corner - circular arc
+    const cornerCenterX = rightEdge - cornerRadius;
+    const cornerCenterY = bottomEdge - cornerRadius;
+    return getCircleIntersection(cornerCenterX, cornerCenterY, cornerRadius, targetX, targetY, offset);
+  }
+
+  // Straight edge - use rectangle calculation
+  const angle = Math.atan2(y - centerY, x - centerX);
+  const offsetX = x + Math.cos(angle) * offset;
+  const offsetY = y + Math.sin(angle) * offset;
+
+  return { x: offsetX, y: offsetY, angle };
+}
+
+/**
  * Calculate the intersection point between a line and a node shape
  * Returns the intersection point and the normal angle at that point
  */
@@ -267,8 +338,20 @@ function getNodeIntersection(
       targetCenterY,
       offset
     );
+  } else if (intersectionShape === 'roundedRectangle') {
+    // Rounded rectangle with circular corner arcs
+    return getRoundedRectangleIntersection(
+      intersectionCenterX,
+      intersectionCenterY,
+      intersectionNodeWidth,
+      intersectionNodeHeight,
+      targetCenterX,
+      targetCenterY,
+      24, // Corner radius matches RoundedRectangleShape component
+      offset
+    );
   } else {
-    // Rectangle and roundedRectangle use the original algorithm with offset
+    // Rectangle uses the original algorithm with offset
     const w = intersectionNodeWidth / 2;
     const h = intersectionNodeHeight / 2;
 

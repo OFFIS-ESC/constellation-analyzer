@@ -226,23 +226,16 @@ export function serializeActors(actors: Actor[]): SerializedActor[] {
  */
 export function serializeRelations(relations: Relation[]): SerializedRelation[] {
   return relations.map(relation => {
-    const serialized: SerializedRelation = {
+    // Omit handle fields entirely - edges use floating calculations
+    // The handle IDs (like "top-source", "right-target") are only for defining
+    // clickable areas and should not be persisted
+    return {
       id: relation.id,
       source: relation.source,
       target: relation.target,
       type: relation.type,
       data: relation.data,
     };
-
-    // Only include handles if they exist and are non-null/non-undefined
-    if (relation.sourceHandle != null) {
-      serialized.sourceHandle = relation.sourceHandle;
-    }
-    if (relation.targetHandle != null) {
-      serialized.targetHandle = relation.targetHandle;
-    }
-
-    return serialized;
   });
 }
 

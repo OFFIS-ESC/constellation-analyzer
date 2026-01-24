@@ -20,6 +20,11 @@ function getCircleIntersection(
   targetY: number,
   offset: number = 3
 ): { x: number; y: number; angle: number } {
+  // Guard against zero radius
+  if (radius === 0) {
+    return { x: centerX + offset, y: centerY, angle: 0 };
+  }
+
   const dx = targetX - centerX;
   const dy = targetY - centerY;
   const distance = Math.sqrt(dx * dx + dy * dy);
@@ -53,6 +58,11 @@ function getEllipseIntersection(
   targetY: number,
   offset: number = 3
 ): { x: number; y: number; angle: number } {
+  // Guard against zero radii
+  if (radiusX === 0 || radiusY === 0) {
+    return { x: centerX + offset, y: centerY, angle: 0 };
+  }
+
   const dx = targetX - centerX;
   const dy = targetY - centerY;
 
@@ -131,9 +141,12 @@ function getPillIntersection(
       // Calculate x position where line from target to center intersects the horizontal edge
       // Line equation: (y - centerY) / (x - centerX) = dy / dx
       // Solving for x when y = intersectY: x = centerX + dx * (intersectY - centerY) / dy
-      const intersectX = Math.abs(dy) > 0.001
+      let intersectX = Math.abs(dy) > 0.001
         ? centerX + dx * (intersectY - centerY) / dy
         : centerX;
+
+      // Clamp intersection to the straight horizontal segment between the caps
+      intersectX = Math.min(Math.max(intersectX, leftCapX), rightCapX);
 
       const normalAngle = side < 0 ? -Math.PI / 2 : Math.PI / 2;
 
@@ -164,9 +177,12 @@ function getPillIntersection(
       // Calculate y position where line from target to center intersects the vertical edge
       // Line equation: (y - centerY) / (x - centerX) = dy / dx
       // Solving for y when x = intersectX: y = centerY + dy * (intersectX - centerX) / dx
-      const intersectY = Math.abs(dx) > 0.001
+      let intersectY = Math.abs(dx) > 0.001
         ? centerY + dy * (intersectX - centerX) / dx
         : centerY;
+
+      // Clamp intersection to the straight vertical segment between the caps
+      intersectY = Math.min(Math.max(intersectY, topCapY), bottomCapY);
 
       const normalAngle = side < 0 ? Math.PI : 0;
 

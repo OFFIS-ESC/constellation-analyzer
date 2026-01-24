@@ -221,10 +221,13 @@ const GroupNode = ({ id, data, selected }: NodeProps<Group>) => {
       }}
     >
       {/* Invisible handles positioned around edges - center remains free for dragging */}
-      {/* Top edge handle */}
+      {/* Bidirectional handles (source + target overlapping at each edge) */}
+
+      {/* Top edge handles */}
       <Handle
         type="target"
         position={Position.Top}
+        id="top-target"
         isConnectable={true}
         style={{
           width: '100%',
@@ -238,10 +241,29 @@ const GroupNode = ({ id, data, selected }: NodeProps<Group>) => {
           cursor: 'crosshair',
         }}
       />
-      {/* Right edge handle */}
       <Handle
         type="source"
+        position={Position.Top}
+        id="top-source"
+        isConnectable={true}
+        style={{
+          width: '100%',
+          height: '30px',
+          top: 0,
+          left: 0,
+          opacity: 0,
+          border: 'none',
+          background: 'transparent',
+          transform: 'none',
+          cursor: 'crosshair',
+        }}
+      />
+
+      {/* Right edge handles */}
+      <Handle
+        type="target"
         position={Position.Right}
+        id="right-target"
         isConnectable={true}
         style={{
           width: '30px',
@@ -255,10 +277,29 @@ const GroupNode = ({ id, data, selected }: NodeProps<Group>) => {
           cursor: 'crosshair',
         }}
       />
-      {/* Bottom edge handle */}
       <Handle
         type="source"
+        position={Position.Right}
+        id="right-source"
+        isConnectable={true}
+        style={{
+          width: '30px',
+          height: '100%',
+          top: 0,
+          right: 0,
+          opacity: 0,
+          border: 'none',
+          background: 'transparent',
+          transform: 'none',
+          cursor: 'crosshair',
+        }}
+      />
+
+      {/* Bottom edge handles */}
+      <Handle
+        type="target"
         position={Position.Bottom}
+        id="bottom-target"
         isConnectable={true}
         style={{
           width: '100%',
@@ -272,10 +313,46 @@ const GroupNode = ({ id, data, selected }: NodeProps<Group>) => {
           cursor: 'crosshair',
         }}
       />
-      {/* Left edge handle */}
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="bottom-source"
+        isConnectable={true}
+        style={{
+          width: '100%',
+          height: '30px',
+          bottom: 0,
+          left: 0,
+          opacity: 0,
+          border: 'none',
+          background: 'transparent',
+          transform: 'none',
+          cursor: 'crosshair',
+        }}
+      />
+
+      {/* Left edge handles */}
       <Handle
         type="target"
         position={Position.Left}
+        id="left-target"
+        isConnectable={true}
+        style={{
+          width: '30px',
+          height: '100%',
+          top: 0,
+          left: 0,
+          opacity: 0,
+          border: 'none',
+          background: 'transparent',
+          transform: 'none',
+          cursor: 'crosshair',
+        }}
+      />
+      <Handle
+        type="source"
+        position={Position.Left}
+        id="left-source"
         isConnectable={true}
         style={{
           width: '30px',

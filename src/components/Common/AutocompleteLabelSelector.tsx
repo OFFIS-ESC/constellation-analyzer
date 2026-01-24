@@ -99,8 +99,10 @@ const AutocompleteLabelSelector = ({ value, onChange, scope }: Props) => {
 
     // Check if ID already exists
     if (labels.some((l) => l.id === id)) {
-      // If label already exists, just select it
-      onChange([...value, id]);
+      // If label already exists, just select it (but only if not already selected)
+      if (!value.includes(id)) {
+        onChange([...value, id]);
+      }
       setInputValue('');
       setIsOpen(false);
       setHighlightedIndex(0);

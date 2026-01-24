@@ -9,7 +9,10 @@ import { getIconComponent } from "../../utils/iconUtils";
 import type { Actor } from "../../types";
 import NodeShapeRenderer from "./Shapes/NodeShapeRenderer";
 import LabelBadge from "../Common/LabelBadge";
-import { useActiveFilters, nodeMatchesFilters } from "../../hooks/useActiveFilters";
+import {
+  useActiveFilters,
+  nodeMatchesFilters,
+} from "../../hooks/useActiveFilters";
 
 /**
  * CustomNode - Represents an actor in the constellation graph
@@ -50,7 +53,7 @@ const CustomNode = ({ data, selected }: NodeProps<Actor>) => {
       data.label || "",
       data.description || "",
       nodeLabel,
-      filters
+      filters,
     );
   }, [
     data.type,
@@ -78,39 +81,73 @@ const CustomNode = ({ data, selected }: NodeProps<Actor>) => {
         opacity: nodeOpacity,
       }}
     >
-      {/* Invisible handles for easy-connect - floating edges calculate actual connection points */}
-      {/* Target handle - full node coverage for incoming connections */}
+      {/* Invisible handles positioned around edges - center remains free for dragging */}
+      {/* Top edge handle */}
       <Handle
         type="target"
         position={Position.Top}
         isConnectable={true}
         style={{
-          width: '100%',
-          height: '100%',
+          width: "100%",
+          height: "30px",
           top: 0,
           left: 0,
-          borderRadius: 0,
           opacity: 0,
-          border: 'none',
-          background: 'transparent',
-          transform: 'none',
+          border: "none",
+          background: "transparent",
+          transform: "none",
+          cursor: "crosshair",
         }}
       />
-      {/* Source handle - full node coverage for outgoing connections */}
+      {/* Right edge handle */}
+      <Handle
+        type="source"
+        position={Position.Right}
+        isConnectable={true}
+        style={{
+          width: "30px",
+          height: "100%",
+          top: 0,
+          right: 0,
+          opacity: 0,
+          border: "none",
+          background: "transparent",
+          transform: "none",
+          cursor: "crosshair",
+        }}
+      />
+      {/* Bottom edge handle */}
       <Handle
         type="source"
         position={Position.Bottom}
         isConnectable={true}
         style={{
-          width: '100%',
-          height: '100%',
+          width: "100%",
+          height: "30px",
+          bottom: 0,
+          left: 0,
+          opacity: 0,
+          border: "none",
+          background: "transparent",
+          transform: "none",
+          cursor: "crosshair",
+        }}
+      />
+      {/* Left edge handle */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        isConnectable={true}
+        style={{
+          width: "30px",
+          height: "100%",
           top: 0,
           left: 0,
-          borderRadius: 0,
           opacity: 0,
-          border: 'none',
-          background: 'transparent',
-          transform: 'none',
+          border: "none",
+          background: "transparent",
+          transform: "none",
+          cursor: "crosshair",
         }}
       />
 

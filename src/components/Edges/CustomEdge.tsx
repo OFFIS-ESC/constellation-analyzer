@@ -1,7 +1,6 @@
 import { memo, useMemo } from 'react';
 import {
   EdgeProps,
-  getBezierPath,
   EdgeLabelRenderer,
   BaseEdge,
   useInternalNode,
@@ -33,13 +32,12 @@ const CustomEdge = ({
   sourceY,
   targetX,
   targetY,
-  sourcePosition,
-  targetPosition,
   data,
   selected,
 }: EdgeProps<Relation>) => {
   const edgeTypes = useGraphStore((state) => state.edgeTypes);
   const labels = useGraphStore((state) => state.labels);
+  const nodeTypes = useGraphStore((state) => state.nodeTypes);
 
   // Get active filters based on mode (editing vs presentation)
   const filters = useActiveFilters();
@@ -48,34 +46,58 @@ const CustomEdge = ({
   const sourceNode = useInternalNode(source);
   const targetNode = useInternalNode(target);
 
-  // Always use floating edges for easy-connect (dynamic border point calculation)
-  let finalSourceX = sourceX;
-  let finalSourceY = sourceY;
-  let finalTargetX = targetX;
-  let finalTargetY = targetY;
-  let finalSourcePosition = sourcePosition;
-  let finalTargetPosition = targetPosition;
+  // Determine node shapes from node type configuration
+  const sourceShape = useMemo(() => {
+    if (!sourceNode) return 'rectangle';
+    // Groups always use rectangle shape
+    if (sourceNode.type === 'group') return 'rectangle';
+    const nodeData = sourceNode.data as { type?: string };
+    const nodeTypeConfig = nodeTypes.find((nt) => nt.id === nodeData?.type);
+    return nodeTypeConfig?.shape || 'rectangle';
+  }, [sourceNode, nodeTypes]);
 
-  // Use floating edge calculations for ALL edges to get smart border connection
-  if (sourceNode && targetNode) {
-    const floatingParams = getFloatingEdgeParams(sourceNode, targetNode);
-    finalSourceX = floatingParams.sx;
-    finalSourceY = floatingParams.sy;
-    finalSourcePosition = floatingParams.sourcePos;
-    finalTargetX = floatingParams.tx;
-    finalTargetY = floatingParams.ty;
-    finalTargetPosition = floatingParams.targetPos;
-  }
+  const targetShape = useMemo(() => {
+    if (!targetNode) return 'rectangle';
+    // Groups always use rectangle shape
+    if (targetNode.type === 'group') return 'rectangle';
+    const nodeData = targetNode.data as { type?: string };
+    const nodeTypeConfig = nodeTypes.find((nt) => nt.id === nodeData?.type);
+    return nodeTypeConfig?.shape || 'rectangle';
+  }, [targetNode, nodeTypes]);
 
-  // Calculate the bezier path
-  const [edgePath, labelX, labelY] = getBezierPath({
-    sourceX: finalSourceX,
-    sourceY: finalSourceY,
-    sourcePosition: finalSourcePosition,
-    targetX: finalTargetX,
-    targetY: finalTargetY,
-    targetPosition: finalTargetPosition,
-  });
+  // Calculate floating edge parameters with custom bezier control points
+  const edgeParams = useMemo(() => {
+    if (!sourceNode || !targetNode) {
+      // Fallback to default React Flow positioning
+      return {
+        edgePath: `M ${sourceX},${sourceY} L ${targetX},${targetY}`,
+        labelX: (sourceX + targetX) / 2,
+        labelY: (sourceY + targetY) / 2,
+      };
+    }
+
+    const params = getFloatingEdgeParams(sourceNode, targetNode, sourceShape, targetShape);
+
+    // Create cubic bezier path using custom control points
+    const edgePath = `M ${params.sx},${params.sy} C ${params.sourceControlX},${params.sourceControlY} ${params.targetControlX},${params.targetControlY} ${params.tx},${params.ty}`;
+
+    // Calculate label position at midpoint of the bezier curve (t=0.5)
+    const t = 0.5;
+    const labelX =
+      Math.pow(1 - t, 3) * params.sx +
+      3 * Math.pow(1 - t, 2) * t * params.sourceControlX +
+      3 * (1 - t) * Math.pow(t, 2) * params.targetControlX +
+      Math.pow(t, 3) * params.tx;
+    const labelY =
+      Math.pow(1 - t, 3) * params.sy +
+      3 * Math.pow(1 - t, 2) * t * params.sourceControlY +
+      3 * (1 - t) * Math.pow(t, 2) * params.targetControlY +
+      Math.pow(t, 3) * params.ty;
+
+    return { edgePath, labelX, labelY };
+  }, [sourceNode, targetNode, sourceShape, targetShape, sourceX, sourceY, targetX, targetY]);
+
+  const { edgePath, labelX, labelY } = edgeParams;
 
   // Check if this is an aggregated edge
   const isAggregated = !!(data as { aggregatedCount?: number })?.aggregatedCount;

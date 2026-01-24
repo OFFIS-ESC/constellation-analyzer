@@ -191,9 +191,9 @@ function getNodeIntersection(
 ): { x: number; y: number; angle: number } {
   // Use positionAbsolute for correct positioning of nodes inside groups
   // positionAbsolute accounts for parent group offset, while position is relative
-  // @ts-ignore - internals.positionAbsolute exists at runtime but not in public types
+  // @ts-expect-error - internals.positionAbsolute exists at runtime but not in public types
   const intersectionNodePosition = intersectionNode.internals?.positionAbsolute ?? intersectionNode.position;
-  // @ts-ignore - internals.positionAbsolute exists at runtime but not in public types
+  // @ts-expect-error - internals.positionAbsolute exists at runtime but not in public types
   const targetPosition = targetNode.internals?.positionAbsolute ?? targetNode.position;
 
   // Use measured dimensions from React Flow (stored in node.measured)

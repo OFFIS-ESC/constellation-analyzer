@@ -18,12 +18,13 @@ const OLD_HANDLE_POSITIONS = ['top', 'right', 'bottom', 'left'] as const;
 export function migrateRelationHandles(relation: SerializedRelation): SerializedRelation {
   // Check if either handle uses old format
   const hasOldSourceHandle =
-    relation.sourceHandle != null && OLD_HANDLE_POSITIONS.includes(relation.sourceHandle as any);
+    relation.sourceHandle != null && OLD_HANDLE_POSITIONS.includes(relation.sourceHandle as typeof OLD_HANDLE_POSITIONS[number]);
   const hasOldTargetHandle =
-    relation.targetHandle != null && OLD_HANDLE_POSITIONS.includes(relation.targetHandle as any);
+    relation.targetHandle != null && OLD_HANDLE_POSITIONS.includes(relation.targetHandle as typeof OLD_HANDLE_POSITIONS[number]);
 
   // If old format detected, remove handle fields entirely for floating edge pattern
   if (hasOldSourceHandle || hasOldTargetHandle) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { sourceHandle, targetHandle, ...relationWithoutHandles } = relation;
     return relationWithoutHandles;
   }

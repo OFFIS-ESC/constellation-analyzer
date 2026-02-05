@@ -237,7 +237,6 @@ const CustomEdge = ({
           strokeWidth,
           strokeDasharray,
           opacity: edgeOpacity,
-          transition: 'stroke-width 150ms ease-in-out',
         }}
         markerEnd={markerEnd}
         markerStart={markerStart}

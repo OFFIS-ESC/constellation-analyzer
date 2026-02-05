@@ -22,20 +22,18 @@ const RoundedRectangleShape = ({
   color,
   borderColor,
   textColor,
-  selected = false,
   isHighlighted = false,
   children,
   className = '',
 }: RoundedRectangleShapeProps) => {
-  const shadowStyle = selected
-    ? `0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1), 0 0 0 3px ${color}40`
-    : isHighlighted
-      ? `0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1), 0 0 0 3px ${color}80, 0 0 12px ${color}60`
-      : '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)';
+  // Simplified shadow for performance - single shadow instead of multiple layers
+  const shadowStyle = isHighlighted
+    ? `0 0 0 2px ${color}80` // Simple outline for highlight
+    : '0 2px 4px rgb(0 0 0 / 0.1)'; // Single lightweight shadow
 
   return (
     <div
-      className={`px-4 py-3 min-w-[120px] transition-shadow duration-200 ${className}`}
+      className={`px-4 py-3 min-w-[120px] ${className}`}
       style={{
         backgroundColor: color,
         borderWidth: '3px',

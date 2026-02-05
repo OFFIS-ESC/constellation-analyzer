@@ -10,7 +10,6 @@ import {
   BackgroundVariant,
   useNodesState,
   useEdgesState,
-  addEdge,
   Node,
   Edge,
   NodeChange,
@@ -256,13 +255,12 @@ const GraphEditor = ({ presentationMode = false, onNodeSelect, onEdgeSelect, onG
           });
         }
       } else {
-        // No rerouting needed, just add the edge (no aggregation for normal edges)
-        if (!edgeMap.has(edgeKey)) {
-          edgeMap.set(edgeKey, {
-            edge,
-            aggregatedRelations: [],
-          });
-        }
+        // No rerouting needed - use edge ID as key to allow multiple parallel edges
+        // (edgeKey based on source/target would deduplicate parallel edges)
+        edgeMap.set(edge.id, {
+          edge,
+          aggregatedRelations: [],
+        });
       }
     });
 
@@ -286,13 +284,26 @@ const GraphEditor = ({ presentationMode = false, onNodeSelect, onEdgeSelect, onG
     const parallelGroups = groupParallelEdges(processedEdges as Relation[]);
 
     // Create a map of edge ID -> offset info
-    const offsetMap = new Map<string, { multiplier: number; groupSize: number }>();
+    const offsetMap = new Map<string, { multiplier: number; groupSize: number; groupKey: string }>();
 
-    parallelGroups.forEach((group) => {
+    parallelGroups.forEach((group, groupKey) => {
       const totalEdges = group.edges.length;
-      group.edges.forEach((edge, index) => {
+
+      // Sort edges by direction: edges going in normalized direction first, then reverse
+      const [normalizedSource, normalizedTarget] = groupKey.split('<->');
+
+      const edgesInNormalizedDirection = group.edges.filter(
+        e => e.source === normalizedSource && e.target === normalizedTarget
+      );
+      const edgesInReverseDirection = group.edges.filter(
+        e => e.source === normalizedTarget && e.target === normalizedSource
+      );
+
+      const sortedEdges = [...edgesInNormalizedDirection, ...edgesInReverseDirection];
+
+      sortedEdges.forEach((edge, index) => {
         const multiplier = calculateEdgeOffsetMultiplier(index, totalEdges);
-        offsetMap.set(edge.id, { multiplier, groupSize: totalEdges });
+        offsetMap.set(edge.id, { multiplier, groupSize: totalEdges, groupKey });
       });
     });
 
@@ -306,6 +317,7 @@ const GraphEditor = ({ presentationMode = false, onNodeSelect, onEdgeSelect, onG
             ...edge.data,
             offsetMultiplier: offsetInfo.multiplier,
             parallelGroupSize: offsetInfo.groupSize,
+            parallelGroupKey: offsetInfo.groupKey,
           },
         } as Edge;
       }
@@ -746,9 +758,17 @@ const GraphEditor = ({ presentationMode = false, onNodeSelect, onEdgeSelect, onG
       const edgeTypeConfig = edgeTypeConfigs.find((et) => et.id === edgeType);
       const defaultDirectionality = edgeTypeConfig?.defaultDirectionality || 'directed';
 
-      // Create edge with custom data (no label - will use type default)
-      const edgeWithData = {
-        ...connection,
+      // Generate a unique edge ID that allows multiple edges between same nodes
+      // Include timestamp to ensure uniqueness
+      const edgeId = `edge_${connection.source}_${connection.target}_${Date.now()}`;
+
+      // Create edge with custom data and unique ID (don't use addEdge to allow duplicates)
+      const newEdge: Relation = {
+        id: edgeId,
+        source: connection.source,
+        target: connection.target,
+        sourceHandle: connection.sourceHandle,
+        targetHandle: connection.targetHandle,
         type: "custom",
         data: {
           type: edgeType,
@@ -756,12 +776,6 @@ const GraphEditor = ({ presentationMode = false, onNodeSelect, onEdgeSelect, onG
           // Don't set label - will use type's label as default
         },
       };
-
-      // Use React Flow's addEdge helper to properly format the edge
-      const updatedEdges = addEdge(edgeWithData, storeEdges as Edge[]);
-
-      // Find the newly added edge (it will be the last one)
-      const newEdge = updatedEdges[updatedEdges.length - 1] as Relation;
 
       // Set pending selection - will be applied after Zustand sync
       pendingSelectionRef.current = { type: 'edge', id: newEdge.id };
@@ -1081,6 +1095,7 @@ const GraphEditor = ({ presentationMode = false, onNodeSelect, onEdgeSelect, onG
         edgeTypes={edgeTypes}
         connectionMode={ConnectionMode.Loose}
         connectOnClick={isEditable}
+        isValidConnection={() => true}
         snapToGrid={snapToGrid}
         snapGrid={[gridSize, gridSize]}
         panOnDrag={true}

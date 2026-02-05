@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { addEdge as rfAddEdge } from '@xyflow/react';
 import type {
   Actor,
   Relation,
@@ -121,7 +120,7 @@ export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
   // Edge operations
   addEdge: (edge: Relation) =>
     set((state) => ({
-      edges: rfAddEdge(edge, state.edges) as Relation[],
+      edges: [...state.edges, edge],
     })),
 
   updateEdge: (id: string, data: Partial<RelationData>) =>

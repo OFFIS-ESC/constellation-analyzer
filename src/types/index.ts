@@ -26,6 +26,7 @@ export interface RelationData extends Record<string, unknown> {
   // Parallel edge offset information
   offsetMultiplier?: number;  // Multiplier for perpendicular offset (0 = center, ±0.5, ±1, etc.)
   parallelGroupSize?: number;  // Total number of edges in this parallel group
+  parallelGroupKey?: string;  // Normalized key for parallel group (sorted node IDs)
 }
 
 export type Relation = Edge<RelationData>;

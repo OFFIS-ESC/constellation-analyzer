@@ -21,7 +21,7 @@ export interface EdgeGroup {
 /**
  * Base offset for parallel edges (in pixels)
  */
-const BASE_EDGE_OFFSET = 30;
+const BASE_EDGE_OFFSET = 80; // Increased for better visibility with multiple edges
 
 /**
  * Calculate the perpendicular offset for a parallel edge
@@ -94,13 +94,15 @@ export function groupParallelEdges(edges: Relation[]): Map<string, EdgeGroup> {
 
   edges.forEach((edge) => {
     // Create normalized key (alphabetically sorted endpoints)
-    const key = [edge.source, edge.target].sort().join('_');
+    // Use <-> separator to avoid conflicts with underscores in node IDs
+    const [normalizedSource, normalizedTarget] = [edge.source, edge.target].sort();
+    const key = `${normalizedSource}<->${normalizedTarget}`;
 
     if (!groups.has(key)) {
       groups.set(key, {
         edges: [],
-        sourceId: edge.source,
-        targetId: edge.target,
+        sourceId: normalizedSource,  // Store normalized source
+        targetId: normalizedTarget,   // Store normalized target
       });
     }
 
@@ -499,13 +501,15 @@ function getNodeIntersection(
  * @param sourceShape - Shape of source node
  * @param targetShape - Shape of target node
  * @param offsetMultiplier - Multiplier for perpendicular offset (0 = no offset, ±1 = BASE_EDGE_OFFSET)
+ * @param parallelGroupKey - Normalized key for parallel group (for consistent offset direction)
  */
 export function getFloatingEdgeParams(
   sourceNode: Node,
   targetNode: Node,
   sourceShape: NodeShape = 'rectangle',
   targetShape: NodeShape = 'rectangle',
-  offsetMultiplier: number = 0
+  offsetMultiplier: number = 0,
+  parallelGroupKey?: string
 ) {
   const sourceIntersection = getNodeIntersection(sourceNode, targetNode, sourceShape);
   const targetIntersection = getNodeIntersection(targetNode, sourceNode, targetShape);
@@ -522,14 +526,47 @@ export function getFloatingEdgeParams(
   let perpOffset = { x: 0, y: 0 };
   if (offsetMultiplier !== 0) {
     const offsetMagnitude = offsetMultiplier * BASE_EDGE_OFFSET;
+
+    // For parallel edges with a group key, calculate perpendicular based on normalized direction
+    // The offsetMultiplier already accounts for edge direction (assigned in GraphEditor)
+    let refSourceX = sourceIntersection.x;
+    let refSourceY = sourceIntersection.y;
+    let refTargetX = targetIntersection.x;
+    let refTargetY = targetIntersection.y;
+
+    // Always use the normalized direction for perpendicular calculation
+    if (parallelGroupKey) {
+      const [normalizedSourceId, normalizedTargetId] = parallelGroupKey.split('<->');
+
+      // Find the actual node positions for the normalized direction
+      if (sourceNode.id === normalizedSourceId && targetNode.id === normalizedTargetId) {
+        // This edge goes in normalized direction - use as-is
+      } else if (sourceNode.id === normalizedTargetId && targetNode.id === normalizedSourceId) {
+        // This edge goes in reverse direction - flip reference to use normalized direction
+        [refSourceX, refSourceY, refTargetX, refTargetY] = [refTargetX, refTargetY, refSourceX, refSourceY];
+      }
+    }
+
     perpOffset = calculatePerpendicularOffset(
-      sourceIntersection.x,
-      sourceIntersection.y,
-      targetIntersection.x,
-      targetIntersection.y,
+      refSourceX,
+      refSourceY,
+      refTargetX,
+      refTargetY,
       offsetMagnitude
     );
   }
+
+  // For parallel edges, use minimal endpoint offset to keep edges close to nodes
+  // The control points will create the visual separation
+  const endpointOffsetFactor = 0.1; // Minimal offset (10% of full offset)
+  const sourceEndpointOffset = offsetMultiplier !== 0 ? {
+    x: perpOffset.x * endpointOffsetFactor,
+    y: perpOffset.y * endpointOffsetFactor,
+  } : { x: 0, y: 0 };
+  const targetEndpointOffset = offsetMultiplier !== 0 ? {
+    x: perpOffset.x * endpointOffsetFactor,
+    y: perpOffset.y * endpointOffsetFactor,
+  } : { x: 0, y: 0 };
 
   // Calculate control points using the normal angles, with perpendicular offset applied
   const sourceControlX = sourceIntersection.x + Math.cos(sourceIntersection.angle) * controlPointDistance + perpOffset.x;
@@ -537,11 +574,23 @@ export function getFloatingEdgeParams(
   const targetControlX = targetIntersection.x + Math.cos(targetIntersection.angle) * controlPointDistance + perpOffset.x;
   const targetControlY = targetIntersection.y + Math.sin(targetIntersection.angle) * controlPointDistance + perpOffset.y;
 
+  // Debug: Log control point offsets
+  if (offsetMultiplier !== 0) {
+    console.log('🎯 Edge path with offset:', {
+      offsetMultiplier,
+      perpOffset,
+      controlPointDistance,
+      endpointOffset: sourceEndpointOffset,
+      sourceControl: { x: sourceControlX, y: sourceControlY },
+      targetControl: { x: targetControlX, y: targetControlY },
+    });
+  }
+
   return {
-    sx: sourceIntersection.x,
-    sy: sourceIntersection.y,
-    tx: targetIntersection.x,
-    ty: targetIntersection.y,
+    sx: sourceIntersection.x + sourceEndpointOffset.x,
+    sy: sourceIntersection.y + sourceEndpointOffset.y,
+    tx: targetIntersection.x + targetEndpointOffset.x,
+    ty: targetIntersection.y + targetEndpointOffset.y,
     sourceControlX,
     sourceControlY,
     targetControlX,

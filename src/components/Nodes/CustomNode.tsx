@@ -1,6 +1,7 @@
 import { memo, useMemo } from "react";
 import { Handle, Position, NodeProps } from "@xyflow/react";
 import { useGraphStore } from "../../stores/graphStore";
+import { shallow } from "zustand/shallow";
 import {
   getContrastColor,
   adjustColorBrightness,
@@ -26,8 +27,8 @@ import {
  * Usage: Automatically rendered by React Flow for nodes with type='custom'
  */
 const CustomNode = ({ data, selected }: NodeProps<Actor>) => {
-  const nodeTypes = useGraphStore((state) => state.nodeTypes);
-  const labels = useGraphStore((state) => state.labels);
+  const nodeTypes = useGraphStore((state) => state.nodeTypes, shallow);
+  const labels = useGraphStore((state) => state.labels, shallow);
 
   // Get active filters based on mode (editing vs presentation)
   const filters = useActiveFilters();

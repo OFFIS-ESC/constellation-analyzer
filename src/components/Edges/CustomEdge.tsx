@@ -6,6 +6,7 @@ import {
   useInternalNode,
 } from '@xyflow/react';
 import { useGraphStore } from '../../stores/graphStore';
+import { shallow } from 'zustand/shallow';
 import type { Relation } from '../../types';
 import LabelBadge from '../Common/LabelBadge';
 import { getFloatingEdgeParams } from '../../utils/edgeUtils';
@@ -35,9 +36,9 @@ const CustomEdge = ({
   data,
   selected,
 }: EdgeProps<Relation>) => {
-  const edgeTypes = useGraphStore((state) => state.edgeTypes);
-  const labels = useGraphStore((state) => state.labels);
-  const nodeTypes = useGraphStore((state) => state.nodeTypes);
+  const edgeTypes = useGraphStore((state) => state.edgeTypes, shallow);
+  const labels = useGraphStore((state) => state.labels, shallow);
+  const nodeTypes = useGraphStore((state) => state.nodeTypes, shallow);
 
   // Get active filters based on mode (editing vs presentation)
   const filters = useActiveFilters();

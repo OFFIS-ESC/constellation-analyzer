@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useState, useCallback } from 'react';
 import {
   EdgeProps,
   EdgeLabelRenderer,
@@ -41,6 +41,17 @@ const CustomEdge = ({
 
   // Get active filters based on mode (editing vs presentation)
   const filters = useActiveFilters();
+
+  // Hover state for parallel edge highlighting
+  const [isHovered, setIsHovered] = useState(false);
+
+  const handleMouseEnter = useCallback(() => {
+    setIsHovered(true);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setIsHovered(false);
+  }, []);
 
   // Get internal nodes for floating edge calculations with correct absolute positioning
   const sourceNode = useInternalNode(source);
@@ -105,6 +116,10 @@ const CustomEdge = ({
   // Check if this is an aggregated edge
   const isAggregated = !!(data as { aggregatedCount?: number })?.aggregatedCount;
 
+  // Check if this edge is part of a large parallel group (4+ edges)
+  const parallelGroupSize = (data as { parallelGroupSize?: number })?.parallelGroupSize || 0;
+  const showParallelBadge = parallelGroupSize >= 4;
+
   // Find the edge type configuration
   const edgeTypeConfig = edgeTypes.find((et) => et.id === data?.type);
 
@@ -150,6 +165,9 @@ const CustomEdge = ({
 
   // Calculate opacity based on visibility
   const edgeOpacity = hasActiveFilters && !isMatch ? 0.2 : 1.0;
+
+  // Calculate stroke width based on state (selected, hovered, or default)
+  const strokeWidth = selected ? 4 : isHovered ? 3 : 2;
 
   // Create unique marker IDs based on color (for reusability)
   const safeColor = edgeColor.replace('#', '');
@@ -202,16 +220,19 @@ const CustomEdge = ({
         path={edgePath}
         style={{
           stroke: edgeColor,
-          strokeWidth: selected ? 3 : 2,
+          strokeWidth,
           strokeDasharray,
           opacity: edgeOpacity,
+          transition: 'stroke-width 150ms ease-in-out',
         }}
         markerEnd={markerEnd}
         markerStart={markerStart}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       />
 
-      {/* Edge label - show custom or type default, plus labels, plus aggregation count */}
-      {(displayLabel || (data?.labels && data.labels.length > 0) || (data as { aggregatedCount?: number })?.aggregatedCount) && (
+      {/* Edge label - show custom or type default, plus labels, plus aggregation count, plus parallel badge */}
+      {(displayLabel || (data?.labels && data.labels.length > 0) || (data as { aggregatedCount?: number })?.aggregatedCount || showParallelBadge) && (
         <EdgeLabelRenderer>
           <div
             style={{
@@ -251,6 +272,16 @@ const CustomEdge = ({
                 style={{ backgroundColor: edgeColor }}
               >
                 {(data as { aggregatedCount?: number }).aggregatedCount} relations
+              </div>
+            )}
+            {/* Parallel edge badge for 4+ parallel edges (show only on center edge) */}
+            {showParallelBadge && Math.abs((data as { offsetMultiplier?: number })?.offsetMultiplier || 0) < 0.1 && (
+              <div
+                className="mt-1 px-2 py-0.5 rounded-full text-xs font-semibold text-white"
+                style={{ backgroundColor: '#6b7280' }}
+                title={`${parallelGroupSize} parallel relations between these nodes`}
+              >
+                {parallelGroupSize} relations
               </div>
             )}
           </div>

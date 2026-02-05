@@ -96,18 +96,25 @@ const CustomEdge = ({
     // Create cubic bezier path using custom control points
     const edgePath = `M ${params.sx},${params.sy} C ${params.sourceControlX},${params.sourceControlY} ${params.targetControlX},${params.targetControlY} ${params.tx},${params.ty}`;
 
-    // Calculate label position at midpoint of the bezier curve (t=0.5)
-    const t = 0.5;
+    // Smart label positioning: vary position along curve based on offset
+    // This staggers labels for parallel edges to reduce overlap
+    // Symmetric staggering: negative offsets toward source, positive toward target
+    const labelPositionOffset = offsetMultiplier * 0.1; // 10% stagger per offset unit
+    const t = 0.5 + labelPositionOffset;
+
+    // Clamp t to reasonable range to keep labels on the visible part of the curve
+    const clampedT = Math.max(0.3, Math.min(0.7, t));
+
     const labelX =
-      Math.pow(1 - t, 3) * params.sx +
-      3 * Math.pow(1 - t, 2) * t * params.sourceControlX +
-      3 * (1 - t) * Math.pow(t, 2) * params.targetControlX +
-      Math.pow(t, 3) * params.tx;
+      Math.pow(1 - clampedT, 3) * params.sx +
+      3 * Math.pow(1 - clampedT, 2) * clampedT * params.sourceControlX +
+      3 * (1 - clampedT) * Math.pow(clampedT, 2) * params.targetControlX +
+      Math.pow(clampedT, 3) * params.tx;
     const labelY =
-      Math.pow(1 - t, 3) * params.sy +
-      3 * Math.pow(1 - t, 2) * t * params.sourceControlY +
-      3 * (1 - t) * Math.pow(t, 2) * params.targetControlY +
-      Math.pow(t, 3) * params.ty;
+      Math.pow(1 - clampedT, 3) * params.sy +
+      3 * Math.pow(1 - clampedT, 2) * clampedT * params.sourceControlY +
+      3 * (1 - clampedT) * Math.pow(clampedT, 2) * params.targetControlY +
+      Math.pow(clampedT, 3) * params.ty;
 
     return { edgePath, labelX, labelY };
   }, [sourceNode, targetNode, sourceShape, targetShape, sourceX, sourceY, targetX, targetY, data]);
@@ -116,10 +123,6 @@ const CustomEdge = ({
 
   // Check if this is an aggregated edge
   const isAggregated = !!(data as { aggregatedCount?: number })?.aggregatedCount;
-
-  // Check if this edge is part of a large parallel group (4+ edges)
-  const parallelGroupSize = (data as { parallelGroupSize?: number })?.parallelGroupSize || 0;
-  const showParallelBadge = parallelGroupSize >= 4;
 
   // Find the edge type configuration
   const edgeTypeConfig = edgeTypes.find((et) => et.id === data?.type);
@@ -232,8 +235,8 @@ const CustomEdge = ({
         onMouseLeave={handleMouseLeave}
       />
 
-      {/* Edge label - show custom or type default, plus labels, plus aggregation count, plus parallel badge */}
-      {(displayLabel || (data?.labels && data.labels.length > 0) || (data as { aggregatedCount?: number })?.aggregatedCount || showParallelBadge) && (
+      {/* Edge label - show custom or type default, plus labels, plus aggregation count */}
+      {(displayLabel || (data?.labels && data.labels.length > 0) || (data as { aggregatedCount?: number })?.aggregatedCount) && (
         <EdgeLabelRenderer>
           <div
             style={{
@@ -273,16 +276,6 @@ const CustomEdge = ({
                 style={{ backgroundColor: edgeColor }}
               >
                 {(data as { aggregatedCount?: number }).aggregatedCount} relations
-              </div>
-            )}
-            {/* Parallel edge badge for 4+ parallel edges (show only on center edge) */}
-            {showParallelBadge && Math.abs((data as { offsetMultiplier?: number })?.offsetMultiplier || 0) < 0.1 && (
-              <div
-                className="mt-1 px-2 py-0.5 rounded-full text-xs font-semibold text-white"
-                style={{ backgroundColor: '#6b7280' }}
-                title={`${parallelGroupSize} parallel relations between these nodes`}
-              >
-                {parallelGroupSize} relations
               </div>
             )}
           </div>

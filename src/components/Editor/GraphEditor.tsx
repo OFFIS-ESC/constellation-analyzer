@@ -432,19 +432,11 @@ const GraphEditor = ({ presentationMode = false, onNodeSelect, onEdgeSelect, onG
     ) {
       const currentViewport = getCurrentViewport();
       saveViewport(prevDocumentIdRef.current, currentViewport);
-      console.log(
-        `Saved viewport for document: ${prevDocumentIdRef.current}`,
-        currentViewport,
-      );
     }
 
     // Restore viewport for the new document
     const savedViewport = getViewport(activeDocumentId);
     if (savedViewport) {
-      console.log(
-        `Restoring viewport for document: ${activeDocumentId}`,
-        savedViewport,
-      );
       setViewport(savedViewport, { duration: 0 });
     }
 

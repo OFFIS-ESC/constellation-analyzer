@@ -574,18 +574,6 @@ export function getFloatingEdgeParams(
   const targetControlX = targetIntersection.x + Math.cos(targetIntersection.angle) * controlPointDistance + perpOffset.x;
   const targetControlY = targetIntersection.y + Math.sin(targetIntersection.angle) * controlPointDistance + perpOffset.y;
 
-  // Debug: Log control point offsets
-  if (offsetMultiplier !== 0) {
-    console.log('🎯 Edge path with offset:', {
-      offsetMultiplier,
-      perpOffset,
-      controlPointDistance,
-      endpointOffset: sourceEndpointOffset,
-      sourceControl: { x: sourceControlX, y: sourceControlY },
-      targetControl: { x: targetControlX, y: targetControlY },
-    });
-  }
-
   return {
     sx: sourceIntersection.x + sourceEndpointOffset.x,
     sy: sourceIntersection.y + sourceEndpointOffset.y,

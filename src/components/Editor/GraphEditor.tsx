@@ -1112,6 +1112,9 @@ const GraphEditor = ({ presentationMode = false, onNodeSelect, onEdgeSelect, onG
         connectionRadius={0}
         fitView
         attributionPosition="bottom-left"
+        onlyRenderVisibleElements={true}
+        elevateEdgesOnSelect={true}
+        selectNodesOnDrag={false}
       >
         {/* Background grid - Hide in presentation mode */}
         {!presentationMode && showGrid && (

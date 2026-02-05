@@ -776,7 +776,6 @@ const GraphEditor = ({ presentationMode = false, onNodeSelect, onEdgeSelect, onG
       addEdgeWithHistory(newEdge);
     },
     [
-      storeEdges,
       edgeTypeConfigs,
       addEdgeWithHistory,
       selectedRelationType,

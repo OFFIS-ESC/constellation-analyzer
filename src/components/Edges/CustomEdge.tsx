@@ -126,7 +126,7 @@ const CustomEdge = ({
       Math.pow(t, 3) * params.ty;
 
     return { edgePath, labelX, labelY };
-  }, [sourceNode, targetNode, sourceShape, targetShape, sourceX, sourceY, targetX, targetY, data]);
+  }, [sourceNode, targetNode, sourceShape, targetShape, sourceX, sourceY, targetX, targetY, data, source, target]);
 
   const { edgePath, labelX, labelY } = edgeParams;
 

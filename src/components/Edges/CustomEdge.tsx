@@ -96,25 +96,34 @@ const CustomEdge = ({
     // Create cubic bezier path using custom control points
     const edgePath = `M ${params.sx},${params.sy} C ${params.sourceControlX},${params.sourceControlY} ${params.targetControlX},${params.targetControlY} ${params.tx},${params.ty}`;
 
-    // Smart label positioning: vary position along curve based on offset
-    // This staggers labels for parallel edges to reduce overlap
-    // Symmetric staggering: negative offsets toward source, positive toward target
-    const labelPositionOffset = offsetMultiplier * 0.1; // 10% stagger per offset unit
-    const t = 0.5 + labelPositionOffset;
+    // Calculate label position along the curve with staggering for parallel edges
+    // Use t parameter variation (position along curve from 0 to 1)
+    // Center edge at t=0.5, others staggered symmetrically
+    // Reverse stagger direction for edges going opposite to normalized direction
+    let tStagger = offsetMultiplier * 0.12; // 12% of curve per offset unit
 
-    // Clamp t to reasonable range to keep labels on the visible part of the curve
-    const clampedT = Math.max(0.3, Math.min(0.7, t));
+    // Check if this edge goes in the reverse direction relative to normalized group
+    if (parallelGroupKey) {
+      const [normalizedSource, normalizedTarget] = parallelGroupKey.split('<->');
+      const isReversed = source === normalizedTarget && target === normalizedSource;
+      if (isReversed) {
+        tStagger = -tStagger; // Reverse the stagger direction
+      }
+    }
 
+    const t = 0.5 + tStagger;
+
+    // Calculate position on Bezier curve at parameter t
     const labelX =
-      Math.pow(1 - clampedT, 3) * params.sx +
-      3 * Math.pow(1 - clampedT, 2) * clampedT * params.sourceControlX +
-      3 * (1 - clampedT) * Math.pow(clampedT, 2) * params.targetControlX +
-      Math.pow(clampedT, 3) * params.tx;
+      Math.pow(1 - t, 3) * params.sx +
+      3 * Math.pow(1 - t, 2) * t * params.sourceControlX +
+      3 * (1 - t) * Math.pow(t, 2) * params.targetControlX +
+      Math.pow(t, 3) * params.tx;
     const labelY =
-      Math.pow(1 - clampedT, 3) * params.sy +
-      3 * Math.pow(1 - clampedT, 2) * clampedT * params.sourceControlY +
-      3 * (1 - clampedT) * Math.pow(clampedT, 2) * params.targetControlY +
-      Math.pow(clampedT, 3) * params.ty;
+      Math.pow(1 - t, 3) * params.sy +
+      3 * Math.pow(1 - t, 2) * t * params.sourceControlY +
+      3 * (1 - t) * Math.pow(t, 2) * params.targetControlY +
+      Math.pow(t, 3) * params.ty;
 
     return { edgePath, labelX, labelY };
   }, [sourceNode, targetNode, sourceShape, targetShape, sourceX, sourceY, targetX, targetY, data]);

@@ -3,10 +3,11 @@ import type { Node } from '@xyflow/react';
 import { ROUNDED_RECTANGLE_RADIUS } from '../constants';
 
 /**
- * Generates a unique ID for edges
+ * Generates a unique ID for edges using crypto.randomUUID()
+ * Format: edge_<source>_<target>_<uuid> for guaranteed uniqueness and readability
  */
 export const generateEdgeId = (source: string, target: string): string => {
-  return `edge_${source}_${target}_${Date.now()}`;
+  return `edge_${source}_${target}_${crypto.randomUUID()}`;
 };
 
 /**

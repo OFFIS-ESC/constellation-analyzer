@@ -35,7 +35,7 @@ import CustomEdge from "../Edges/CustomEdge";
 import ContextMenu from "./ContextMenu";
 import EmptyState from "../Common/EmptyState";
 import { createNode } from "../../utils/nodeUtils";
-import { groupParallelEdges, calculateEdgeOffsetMultiplier } from "../../utils/edgeUtils";
+import { groupParallelEdges, calculateEdgeOffsetMultiplier, generateEdgeId } from "../../utils/edgeUtils";
 import DeleteIcon from "@mui/icons-material/Delete";
 import GroupWorkIcon from "@mui/icons-material/GroupWork";
 import UngroupIcon from "@mui/icons-material/CallSplit";
@@ -751,8 +751,8 @@ const GraphEditor = ({ presentationMode = false, onNodeSelect, onEdgeSelect, onG
       const defaultDirectionality = edgeTypeConfig?.defaultDirectionality || 'directed';
 
       // Generate a unique edge ID that allows multiple edges between same nodes
-      // Include timestamp to ensure uniqueness
-      const edgeId = `edge_${connection.source}_${connection.target}_${Date.now()}`;
+      // Use UUID to guarantee uniqueness without collision risk
+      const edgeId = generateEdgeId(connection.source, connection.target);
 
       // Create edge with custom data and unique ID (don't use addEdge to allow duplicates)
       const newEdge: Relation = {

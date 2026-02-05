@@ -324,16 +324,18 @@ describe('graphStore', () => {
         expect(state.edges).toHaveLength(2);
       });
 
-      it('should use React Flow addEdge for duplicate prevention', () => {
+      it('should allow parallel edges (multiple edges between same nodes)', () => {
         const { addEdge } = useGraphStore.getState();
 
-        // Add same edge twice
+        // Add two edges between same nodes with different IDs
         addEdge(createMockEdge('edge-1', 'node-1', 'node-2'));
-        addEdge(createMockEdge('edge-1', 'node-1', 'node-2'));
+        addEdge(createMockEdge('edge-2', 'node-1', 'node-2'));
 
         const state = useGraphStore.getState();
-        // React Flow's addEdge should prevent duplicates
-        expect(state.edges.length).toBeGreaterThan(0);
+        // Should allow parallel edges (no deduplication)
+        expect(state.edges).toHaveLength(2);
+        expect(state.edges[0].id).toBe('edge-1');
+        expect(state.edges[1].id).toBe('edge-2');
       });
     });
 

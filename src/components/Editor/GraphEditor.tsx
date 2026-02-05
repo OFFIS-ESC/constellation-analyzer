@@ -36,6 +36,7 @@ import CustomEdge from "../Edges/CustomEdge";
 import ContextMenu from "./ContextMenu";
 import EmptyState from "../Common/EmptyState";
 import { createNode } from "../../utils/nodeUtils";
+import { groupParallelEdges, calculateEdgeOffsetMultiplier } from "../../utils/edgeUtils";
 import DeleteIcon from "@mui/icons-material/Delete";
 import GroupWorkIcon from "@mui/icons-material/GroupWork";
 import UngroupIcon from "@mui/icons-material/CallSplit";
@@ -266,7 +267,7 @@ const GraphEditor = ({ presentationMode = false, onNodeSelect, onEdgeSelect, onG
     });
 
     // Convert the map to an array of edges, attaching aggregation metadata
-    return Array.from(edgeMap.values()).map(({ edge, aggregatedRelations }) => {
+    const processedEdges = Array.from(edgeMap.values()).map(({ edge, aggregatedRelations }) => {
       if (aggregatedRelations.length > 1) {
         // Multiple relations aggregated - add metadata to edge data
         return {
@@ -275,6 +276,36 @@ const GraphEditor = ({ presentationMode = false, onNodeSelect, onEdgeSelect, onG
             ...edge.data,
             aggregatedCount: aggregatedRelations.length,
             aggregatedRelations: aggregatedRelations,
+          },
+        } as Edge;
+      }
+      return edge;
+    });
+
+    // Detect parallel edges and add offset information
+    const parallelGroups = groupParallelEdges(processedEdges as Relation[]);
+
+    // Create a map of edge ID -> offset info
+    const offsetMap = new Map<string, { multiplier: number; groupSize: number }>();
+
+    parallelGroups.forEach((group) => {
+      const totalEdges = group.edges.length;
+      group.edges.forEach((edge, index) => {
+        const multiplier = calculateEdgeOffsetMultiplier(index, totalEdges);
+        offsetMap.set(edge.id, { multiplier, groupSize: totalEdges });
+      });
+    });
+
+    // Apply offset information to edges
+    return processedEdges.map((edge) => {
+      const offsetInfo = offsetMap.get(edge.id);
+      if (offsetInfo) {
+        return {
+          ...edge,
+          data: {
+            ...edge.data,
+            offsetMultiplier: offsetInfo.multiplier,
+            parallelGroupSize: offsetInfo.groupSize,
           },
         } as Edge;
       }

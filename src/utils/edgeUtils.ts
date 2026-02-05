@@ -10,6 +10,115 @@ export const generateEdgeId = (source: string, target: string): string => {
 };
 
 /**
+ * Edge group information for parallel edges
+ */
+export interface EdgeGroup {
+  edges: Relation[];
+  sourceId: string;
+  targetId: string;
+}
+
+/**
+ * Base offset for parallel edges (in pixels)
+ */
+const BASE_EDGE_OFFSET = 30;
+
+/**
+ * Calculate the perpendicular offset for a parallel edge
+ * Returns a 2D vector that is perpendicular to the line between source and target
+ */
+export function calculatePerpendicularOffset(
+  sourceX: number,
+  sourceY: number,
+  targetX: number,
+  targetY: number,
+  offsetMagnitude: number
+): { x: number; y: number } {
+  // Calculate direction vector from source to target
+  const dx = targetX - sourceX;
+  const dy = targetY - sourceY;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+
+  // Handle zero-distance case
+  if (distance === 0) {
+    return { x: offsetMagnitude, y: 0 };
+  }
+
+  // Normalize direction vector
+  const nx = dx / distance;
+  const ny = dy / distance;
+
+  // Perpendicular vector (rotate 90 degrees counterclockwise)
+  const perpX = -ny;
+  const perpY = nx;
+
+  // Scale by offset magnitude
+  return {
+    x: perpX * offsetMagnitude,
+    y: perpY * offsetMagnitude,
+  };
+}
+
+/**
+ * Calculate edge offset for a parallel edge within a group
+ * @param edgeIndex - Index of this edge within the parallel group (0-based)
+ * @param totalEdges - Total number of parallel edges
+ * @returns Offset multiplier (-1, 0, +1, etc.)
+ */
+export function calculateEdgeOffsetMultiplier(
+  edgeIndex: number,
+  totalEdges: number
+): number {
+  // For single edge, no offset
+  if (totalEdges === 1) {
+    return 0;
+  }
+
+  // For 2 edges: offset by ±0.5 (one above, one below center)
+  if (totalEdges === 2) {
+    return edgeIndex === 0 ? -0.5 : 0.5;
+  }
+
+  // For 3+ edges: distribute evenly around center
+  // Center edge(s) get offset 0, others get ±1, ±2, etc.
+  const middle = (totalEdges - 1) / 2;
+  return edgeIndex - middle;
+}
+
+/**
+ * Group edges by their source-target pairs (bidirectional)
+ * Edges between A-B and B-A are grouped together
+ */
+export function groupParallelEdges(edges: Relation[]): Map<string, EdgeGroup> {
+  const groups = new Map<string, EdgeGroup>();
+
+  edges.forEach((edge) => {
+    // Create normalized key (alphabetically sorted endpoints)
+    const key = [edge.source, edge.target].sort().join('_');
+
+    if (!groups.has(key)) {
+      groups.set(key, {
+        edges: [],
+        sourceId: edge.source,
+        targetId: edge.target,
+      });
+    }
+
+    groups.get(key)!.edges.push(edge);
+  });
+
+  // Filter to only return groups with 2+ edges (parallel edges)
+  const parallelGroups = new Map<string, EdgeGroup>();
+  groups.forEach((group, key) => {
+    if (group.edges.length >= 2) {
+      parallelGroups.set(key, group);
+    }
+  });
+
+  return parallelGroups;
+}
+
+/**
  * Calculate intersection point with a circle
  * Returns both the intersection point and the normal vector (outward direction)
  */
@@ -385,12 +494,18 @@ function getNodeIntersection(
 /**
  * Calculate the parameters for a floating edge between two nodes
  * Returns source/target coordinates with angles for smooth bezier curves
+ * @param sourceNode - Source node
+ * @param targetNode - Target node
+ * @param sourceShape - Shape of source node
+ * @param targetShape - Shape of target node
+ * @param offsetMultiplier - Multiplier for perpendicular offset (0 = no offset, ±1 = BASE_EDGE_OFFSET)
  */
 export function getFloatingEdgeParams(
   sourceNode: Node,
   targetNode: Node,
   sourceShape: NodeShape = 'rectangle',
-  targetShape: NodeShape = 'rectangle'
+  targetShape: NodeShape = 'rectangle',
+  offsetMultiplier: number = 0
 ) {
   const sourceIntersection = getNodeIntersection(sourceNode, targetNode, sourceShape);
   const targetIntersection = getNodeIntersection(targetNode, sourceNode, targetShape);
@@ -403,11 +518,24 @@ export function getFloatingEdgeParams(
   // Use 40% of distance for more pronounced curves, with reasonable limits
   const controlPointDistance = Math.min(Math.max(distance * 0.4, 40), 150);
 
-  // Calculate control points using the normal angles
-  const sourceControlX = sourceIntersection.x + Math.cos(sourceIntersection.angle) * controlPointDistance;
-  const sourceControlY = sourceIntersection.y + Math.sin(sourceIntersection.angle) * controlPointDistance;
-  const targetControlX = targetIntersection.x + Math.cos(targetIntersection.angle) * controlPointDistance;
-  const targetControlY = targetIntersection.y + Math.sin(targetIntersection.angle) * controlPointDistance;
+  // Calculate perpendicular offset if needed
+  let perpOffset = { x: 0, y: 0 };
+  if (offsetMultiplier !== 0) {
+    const offsetMagnitude = offsetMultiplier * BASE_EDGE_OFFSET;
+    perpOffset = calculatePerpendicularOffset(
+      sourceIntersection.x,
+      sourceIntersection.y,
+      targetIntersection.x,
+      targetIntersection.y,
+      offsetMagnitude
+    );
+  }
+
+  // Calculate control points using the normal angles, with perpendicular offset applied
+  const sourceControlX = sourceIntersection.x + Math.cos(sourceIntersection.angle) * controlPointDistance + perpOffset.x;
+  const sourceControlY = sourceIntersection.y + Math.sin(sourceIntersection.angle) * controlPointDistance + perpOffset.y;
+  const targetControlX = targetIntersection.x + Math.cos(targetIntersection.angle) * controlPointDistance + perpOffset.x;
+  const targetControlY = targetIntersection.y + Math.sin(targetIntersection.angle) * controlPointDistance + perpOffset.y;
 
   return {
     sx: sourceIntersection.x,

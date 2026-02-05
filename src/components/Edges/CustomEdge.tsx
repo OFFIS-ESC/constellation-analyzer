@@ -76,7 +76,10 @@ const CustomEdge = ({
       };
     }
 
-    const params = getFloatingEdgeParams(sourceNode, targetNode, sourceShape, targetShape);
+    // Get offset multiplier from edge data (for parallel edges)
+    const offsetMultiplier = (data as { offsetMultiplier?: number })?.offsetMultiplier || 0;
+
+    const params = getFloatingEdgeParams(sourceNode, targetNode, sourceShape, targetShape, offsetMultiplier);
 
     // Create cubic bezier path using custom control points
     const edgePath = `M ${params.sx},${params.sy} C ${params.sourceControlX},${params.sourceControlY} ${params.targetControlX},${params.targetControlY} ${params.tx},${params.ty}`;
@@ -95,7 +98,7 @@ const CustomEdge = ({
       Math.pow(t, 3) * params.ty;
 
     return { edgePath, labelX, labelY };
-  }, [sourceNode, targetNode, sourceShape, targetShape, sourceX, sourceY, targetX, targetY]);
+  }, [sourceNode, targetNode, sourceShape, targetShape, sourceX, sourceY, targetX, targetY, data]);
 
   const { edgePath, labelX, labelY } = edgeParams;
 

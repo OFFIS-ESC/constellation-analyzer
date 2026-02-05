@@ -116,6 +116,18 @@ const GraphEditor = ({ presentationMode = false, onNodeSelect, onEdgeSelect, onG
     selectedRelationType,
   } = useEditorStore();
 
+  // Optimize MiniMap nodeColor lookup with Map for O(1) performance
+  const nodeTypeColorMap = useMemo(() => {
+    const map = new Map<string, string>();
+    nodeTypeConfigs.forEach(nt => map.set(nt.id, nt.color));
+    return map;
+  }, [nodeTypeConfigs]);
+
+  const miniMapNodeColor = useCallback((node: Node) => {
+    const actor = node as Actor;
+    return nodeTypeColorMap.get(actor.data?.type) || "#6b7280";
+  }, [nodeTypeColorMap]);
+
   // React Flow instance for screen-to-flow coordinates and viewport control
   const {
     screenToFlowPosition,
@@ -1116,13 +1128,7 @@ const GraphEditor = ({ presentationMode = false, onNodeSelect, onEdgeSelect, onG
 
         {/* MiniMap for navigation - Read-only in presentation mode */}
         <MiniMap
-          nodeColor={(node) => {
-            const actor = node as Actor;
-            const nodeType = nodeTypeConfigs.find(
-              (nt) => nt.id === actor.data?.type,
-            );
-            return nodeType?.color || "#6b7280";
-          }}
+          nodeColor={miniMapNodeColor}
           pannable={isEditable}
           zoomable={isEditable}
         />

@@ -304,14 +304,27 @@ const GraphEditor = ({ presentationMode = false, onNodeSelect, onEdgeSelect, onG
       // Sort edges by direction: edges going in normalized direction first, then reverse
       const [normalizedSource, normalizedTarget] = groupKey.split('<->');
 
-      const edgesInNormalizedDirection = group.edges.filter(
-        e => e.source === normalizedSource && e.target === normalizedTarget
-      );
-      const edgesInReverseDirection = group.edges.filter(
-        e => e.source === normalizedTarget && e.target === normalizedSource
-      );
+      // For self-references (source === target), all edges go in one group
+      // For regular edges, separate by direction
+      let sortedEdges: Relation[];
+      if (normalizedSource === normalizedTarget) {
+        // Self-reference: just sort by ID for deterministic ordering
+        sortedEdges = [...group.edges].sort((a, b) => a.id.localeCompare(b.id));
+      } else {
+        // Regular edges: separate by direction
+        const edgesInNormalizedDirection = group.edges.filter(
+          e => e.source === normalizedSource && e.target === normalizedTarget
+        );
+        const edgesInReverseDirection = group.edges.filter(
+          e => e.source === normalizedTarget && e.target === normalizedSource
+        );
 
-      const sortedEdges = [...edgesInNormalizedDirection, ...edgesInReverseDirection];
+        // Sort each group by edge ID for deterministic ordering
+        edgesInNormalizedDirection.sort((a, b) => a.id.localeCompare(b.id));
+        edgesInReverseDirection.sort((a, b) => a.id.localeCompare(b.id));
+
+        sortedEdges = [...edgesInNormalizedDirection, ...edgesInReverseDirection];
+      }
 
       sortedEdges.forEach((edge, index) => {
         const multiplier = calculateEdgeOffsetMultiplier(index, totalEdges);

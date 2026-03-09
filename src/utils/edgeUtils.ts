@@ -1,6 +1,6 @@
 import type { Relation, RelationData, NodeShape } from '../types';
 import type { Node } from '@xyflow/react';
-import { ROUNDED_RECTANGLE_RADIUS } from '../constants';
+import { ROUNDED_RECTANGLE_RADIUS, DEFAULT_ACTOR_WIDTH, DEFAULT_ACTOR_HEIGHT } from '../constants';
 
 /**
  * Generates a unique ID for edges using crypto.randomUUID()
@@ -495,6 +495,169 @@ function getNodeIntersection(
 }
 
 /**
+ * Calculate the parameters for a self-loop edge (self-reference)
+ * Creates a curved loop that goes above the node
+ * Uses shape-aware intersection points for proper rendering
+ * @param node - The node that references itself
+ * @param offsetMultiplier - Offset multiplier for parallel self-loops
+ * @param sourceShape - Shape of the node
+ */
+function getSelfLoopParams(
+  node: Node,
+  offsetMultiplier: number,
+  sourceShape: NodeShape
+): {
+  sx: number;
+  sy: number;
+  tx: number;
+  ty: number;
+  sourceControlX: number;
+  sourceControlY: number;
+  targetControlX: number;
+  targetControlY: number;
+  sourceAngle: number;
+  targetAngle: number;
+} {
+  // Use positionAbsolute for correct positioning of nodes inside groups
+  // @ts-expect-error - internals.positionAbsolute exists at runtime but not in public types
+  const nodePosition = node.internals?.positionAbsolute ?? node.position;
+  
+  const nodeWidth = node.measured?.width ?? node.width ?? DEFAULT_ACTOR_WIDTH;
+  const nodeHeight = node.measured?.height ?? node.height ?? DEFAULT_ACTOR_HEIGHT;
+  
+  const centerX = nodePosition.x + nodeWidth / 2;
+  const centerY = nodePosition.y + nodeHeight / 2;
+  const topEdge = nodePosition.y;
+  const rightEdge = nodePosition.x + nodeWidth;
+  
+  // Calculate loop level for progressive widening/taller loops.
+  // offsetMultiplier values from calculateEdgeOffsetMultiplier:
+  //   1 edge:  0
+  //   2 edges: -0.5, 0.5
+  //   3 edges: -1, 0, 1
+  //   4 edges: -1.5, -0.5, 0.5, 1.5
+  //   5 edges: -2, -1, 0, 1, 2
+  // Shift by +2 so the center/innermost loop starts at level 2 with a comfortable default
+  // offset and arc height. Clamp to 0 for 6+ parallel loops rather than going negative.
+  const roundedMultiplier = Math.round(offsetMultiplier * 2) / 2;
+  const loopLevel = Math.max(0, roundedMultiplier + 2);
+
+  // loopOffset controls how far the exit/entry points spread from the top-right corner.
+  // Lower loopLevel → smaller loopOffset → points close together near the corner → short arc.
+  // Higher loopLevel → larger loopOffset → points spread along edges → tall arc.
+  const baseOffset = 15;
+  const offsetIncrement = 20;
+  const loopOffset = baseOffset + loopLevel * offsetIncrement;
+
+  // Source exits from the top edge, measured leftward from the top-right corner.
+  // Target enters from the right edge, measured downward from the top-right corner.
+  // This anchors the innermost loop tightly at the corner (label closest to node)
+  // and fans outer loops out along the edges.
+  let sx, sy, tx, ty, sourceAngle, targetAngle;
+
+  if (sourceShape === 'circle') {
+    const radius = Math.min(nodeWidth, nodeHeight) / 2;
+    // Anchor both points near the top-right of the circle and fan outward with loopOffset.
+    // angleSpread controls how far source/target diverge from the top-right (angle = -PI/4).
+    // Capped at PI/4 so source never exceeds -PI/2 (top) and target never exceeds 0 (right).
+    const angleSpread = Math.min(Math.PI / 4, (loopOffset / (radius * 2)) * (Math.PI / 2));
+    const sourceAngleRad = -Math.PI / 4 - angleSpread; // toward top
+    const targetAngleRad = -Math.PI / 4 + angleSpread; // toward right
+    sx = centerX + Math.cos(sourceAngleRad) * (radius + 2);
+    sy = centerY + Math.sin(sourceAngleRad) * (radius + 2);
+    tx = centerX + Math.cos(targetAngleRad) * (radius + 2);
+    ty = centerY + Math.sin(targetAngleRad) * (radius + 2);
+    sourceAngle = sourceAngleRad;
+    targetAngle = targetAngleRad;
+  } else if (sourceShape === 'pill') {
+    const isHorizontal = nodeWidth >= nodeHeight;
+    const capRadius = isHorizontal ? nodeHeight / 2 : nodeWidth / 2;
+
+    if (isHorizontal) {
+      // Horizontal pill: source on top straight edge (left of corner), target on right cap (below corner)
+      sx = rightEdge - loopOffset * 0.8;
+      sy = topEdge;
+      sourceAngle = -Math.PI / 2;
+
+      const rightCapCenterX = nodePosition.x + nodeWidth - capRadius;
+      tx = rightCapCenterX + capRadius + 2;
+      ty = topEdge + loopOffset * 0.5;
+      targetAngle = 0;
+    } else {
+      // Vertical pill: source on top cap (near right), target on right straight edge (near top)
+      const topCapCenterY = nodePosition.y + capRadius;
+      const sourceAngleRad = -Math.PI / 2 + (loopOffset / nodeWidth) * Math.PI / 4;
+      sx = centerX + Math.cos(sourceAngleRad) * (capRadius + 2);
+      sy = topCapCenterY + Math.sin(sourceAngleRad) * (capRadius + 2);
+      sourceAngle = sourceAngleRad;
+
+      tx = rightEdge;
+      ty = topEdge + loopOffset * 0.5;
+      targetAngle = 0;
+    }
+  } else if (sourceShape === 'ellipse') {
+    const radiusX = nodeWidth / 2;
+    const radiusY = nodeHeight / 2;
+
+    // Source: near top of ellipse, rotated slightly CW (toward right) by loopOffset.
+    // In screen coords (y increases down) the top is at theta = -PI/2.
+    const sourceTheta = -Math.PI / 2 + (loopOffset / nodeWidth) * 0.8;
+    const sourcePx = centerX + radiusX * Math.cos(sourceTheta);
+    const sourcePy = centerY + radiusY * Math.sin(sourceTheta);
+    const sourceNormalX = Math.cos(sourceTheta) / radiusX;
+    const sourceNormalY = Math.sin(sourceTheta) / radiusY;
+    const sourceNormalLen = Math.sqrt(sourceNormalX * sourceNormalX + sourceNormalY * sourceNormalY);
+    sourceAngle = Math.atan2(sourceNormalY / sourceNormalLen, sourceNormalX / sourceNormalLen);
+    sx = sourcePx + Math.cos(sourceAngle) * 2;
+    sy = sourcePy + Math.sin(sourceAngle) * 2;
+
+    // Target: near right side of ellipse, rotated slightly CW (downward) by loopOffset.
+    const targetTheta = (loopOffset / nodeHeight) * 0.5;
+    const targetPx = centerX + radiusX * Math.cos(targetTheta);
+    const targetPy = centerY + radiusY * Math.sin(targetTheta);
+    const targetNormalX = Math.cos(targetTheta) / radiusX;
+    const targetNormalY = Math.sin(targetTheta) / radiusY;
+    const targetNormalLen = Math.sqrt(targetNormalX * targetNormalX + targetNormalY * targetNormalY);
+    targetAngle = Math.atan2(targetNormalY / targetNormalLen, targetNormalX / targetNormalLen);
+    tx = targetPx + Math.cos(targetAngle) * 2;
+    ty = targetPy + Math.sin(targetAngle) * 2;
+  } else {
+    // Rectangle and roundedRectangle: source on top edge (left of corner), target on right edge (below corner)
+    sx = rightEdge - loopOffset * 0.8;
+    sy = topEdge;
+    sourceAngle = -Math.PI / 2;
+
+    tx = rightEdge;
+    ty = topEdge + loopOffset * 0.5;
+    targetAngle = 0;
+  }
+
+  // Loop height grows with loopLevel so outer parallel loops arc progressively higher.
+  const baseLoopHeight = Math.max(nodeHeight * 1.5, 60);
+  const additionalHeight = loopLevel * 80;
+  const loopHeight = baseLoopHeight + additionalHeight;
+  
+  // Control points extend upward along the normal direction
+  const sourceControlX = sx + Math.cos(sourceAngle) * loopHeight;
+  const sourceControlY = sy + Math.sin(sourceAngle) * loopHeight;
+  const targetControlX = tx + Math.cos(targetAngle) * loopHeight;
+  const targetControlY = ty + Math.sin(targetAngle) * loopHeight;
+  
+  return {
+    sx,
+    sy,
+    tx,
+    ty,
+    sourceControlX,
+    sourceControlY,
+    targetControlX,
+    targetControlY,
+    sourceAngle,
+    targetAngle,
+  };
+}
+
+/**
  * Calculate the parameters for a floating edge between two nodes
  * Returns source/target coordinates with angles for smooth bezier curves
  * @param sourceNode - Source node
@@ -512,6 +675,11 @@ export function getFloatingEdgeParams(
   offsetMultiplier: number = 0,
   parallelGroupKey?: string
 ) {
+  // Handle self-referencing edges (self-loops)
+  if (sourceNode.id === targetNode.id) {
+    return getSelfLoopParams(sourceNode, offsetMultiplier, sourceShape);
+  }
+  
   const sourceIntersection = getNodeIntersection(sourceNode, targetNode, sourceShape);
   const targetIntersection = getNodeIntersection(targetNode, sourceNode, targetShape);
 

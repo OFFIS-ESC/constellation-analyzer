@@ -4,8 +4,10 @@ import {
   calculatePerpendicularOffset,
   groupParallelEdges,
   generateEdgeId,
+  getFloatingEdgeParams,
 } from './edgeUtils';
 import type { Relation } from '../types';
+import type { Node } from '@xyflow/react';
 
 describe('edgeUtils', () => {
   describe('generateEdgeId', () => {
@@ -249,6 +251,136 @@ describe('edgeUtils', () => {
       const key2 = Array.from(result2.keys())[0];
 
       expect(key1).toBe(key2); // Should produce same normalized key
+    });
+
+    it('should group self-referencing edges together', () => {
+      const edges = [
+        createMockEdge('e1', 'n1', 'n1'),
+        createMockEdge('e2', 'n1', 'n1'),
+        createMockEdge('e3', 'n1', 'n1'),
+      ];
+
+      const result = groupParallelEdges(edges);
+
+      expect(result.size).toBe(1); // All self-references should be in one group
+      const group = Array.from(result.values())[0];
+      expect(group.edges).toHaveLength(3);
+      const key = Array.from(result.keys())[0];
+      expect(key).toBe('n1<->n1'); // Self-reference key
+    });
+  });
+
+  describe('getFloatingEdgeParams - self-references', () => {
+    const createMockNode = (id: string, x: number, y: number, width: number = 150, height: number = 80): Node => ({
+      id,
+      position: { x, y },
+      width,
+      height,
+      measured: { width, height },
+      selected: false,
+      dragging: false,
+      type: 'custom',
+      data: {},
+      internals: {
+        positionAbsolute: { x, y },
+        handleBounds: { source: [], target: [] },
+      },
+    } as Node);
+
+    it('should detect self-reference and create loop', () => {
+      const node = createMockNode('node-1', 100, 100);
+
+      const result = getFloatingEdgeParams(node, node, 'rectangle', 'rectangle', 0);
+
+      // Source should be at top of node, target at right side
+      expect(result.sy).toBe(100); // Source at top edge
+      expect(result.tx).toBe(250); // Target at right edge (100 + 150)
+      // Control points should extend outward
+      expect(result.sourceControlY).toBeLessThan(result.sy); // Control point above
+      expect(result.targetControlX).toBeGreaterThan(result.tx); // Control point to the right
+    });
+
+    it('should create loop with correct height based on node dimensions', () => {
+      const node = createMockNode('node-1', 100, 100, 200, 100);
+
+      const result = getFloatingEdgeParams(node, node, 'rectangle', 'rectangle', 0);
+
+      const loopHeight = result.sy - result.sourceControlY;
+      // Should be at least 1.5x node height = 150px (may be more due to shape calculations)
+      expect(loopHeight).toBeGreaterThanOrEqual(150);
+    });
+
+    it('should apply horizontal offset for parallel self-loops', () => {
+      const node = createMockNode('node-1', 100, 100, 150, 80);
+
+      const result1 = getFloatingEdgeParams(node, node, 'rectangle', 'rectangle', 0);
+      const result2 = getFloatingEdgeParams(node, node, 'rectangle', 'rectangle', 1);
+      const result3 = getFloatingEdgeParams(node, node, 'rectangle', 'rectangle', -1);
+
+      // Source should be at top, target at right side
+      const rightEdge = 250; // 100 + 150
+
+      expect(result1.sy).toBe(100); // Source at top
+      expect(result1.tx).toBe(rightEdge); // Target at right
+
+      // Outer loops (±1) should arc higher than the center loop (0)
+      const height1 = Math.abs(result1.sourceControlY - result1.sy);
+      const height2 = Math.abs(result2.sourceControlY - result2.sy);
+      const height3 = Math.abs(result3.sourceControlY - result3.sy);
+
+      // offsetMultiplier=1 → loopLevel=3, offsetMultiplier=0 → loopLevel=2, offsetMultiplier=-1 → loopLevel=1
+      expect(height2).toBeGreaterThan(height1); // Outer loop (level 3) taller than center (level 2)
+      expect(height1).toBeGreaterThan(height3); // Center (level 2) taller than inner (level 1)
+
+      // Spreads should be reasonable
+      expect(height1).toBeLessThan(500);
+      expect(height2).toBeLessThan(500);
+    });
+
+    it('should use shape-aware angles for self-loop', () => {
+      const node = createMockNode('node-1', 100, 100);
+
+      const result = getFloatingEdgeParams(node, node, 'rectangle', 'rectangle', 0);
+
+      // Source angle should point upward (from top of node)
+      // Target angle should point rightward (from right side of node)
+      expect(result.sourceAngle).toBeCloseTo(-Math.PI / 2, 0); // Upward
+      expect(result.targetAngle).toBeCloseTo(0, 0); // Rightward
+    });
+
+    it('should create loop with source at top and target at right', () => {
+      const node = createMockNode('node-1', 100, 100, 150, 80);
+
+      const result = getFloatingEdgeParams(node, node, 'rectangle', 'rectangle', 0);
+
+      // Source should be near top of node
+      expect(result.sy).toBe(100);
+      // Target should be at right edge of node
+      expect(result.tx).toBe(250); // 100 + 150
+      // offsetMultiplier=0 → loopLevel=2, loopOffset=55 → sx = rightEdge - 55*0.8 = 250 - 44 = 206
+      expect(result.sx).toBeCloseTo(206, 0);
+    });
+
+    it('should handle nodes with minimum loop height', () => {
+      const node = createMockNode('node-1', 100, 100, 150, 20);
+
+      const result = getFloatingEdgeParams(node, node, 'rectangle', 'rectangle', 0);
+
+      const loopHeight = result.sy - result.sourceControlY;
+      // Node height is 20, 1.5x = 30, but minimum is 60
+      expect(loopHeight).toBeGreaterThanOrEqual(60);
+    });
+
+    it('should not affect regular edges between different nodes', () => {
+      const sourceNode = createMockNode('node-1', 100, 100);
+      const targetNode = createMockNode('node-2', 300, 100);
+
+      const result = getFloatingEdgeParams(sourceNode, targetNode, 'rectangle', 'rectangle', 0);
+
+      // Should use normal edge calculation
+      expect(result.sx).not.toBe(result.tx);
+      expect(result.sy).toBe(result.ty); // Same Y for horizontal edge
+      // Control points create a slight curve (not necessarily above or below)
     });
   });
 });

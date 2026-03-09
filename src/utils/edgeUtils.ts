@@ -574,25 +574,36 @@ function getSelfLoopParams(
     const capRadius = isHorizontal ? nodeHeight / 2 : nodeWidth / 2;
 
     if (isHorizontal) {
-      // Horizontal pill: source on top straight edge (left of corner), target on right cap (below corner)
-      sx = rightEdge - loopOffset * 0.8;
+      // The top-right corner is where the top straight edge meets the right semicircle cap.
+      // Source: spreads leftward along the top straight edge from the corner.
+      // Target: spreads downward along the right cap surface from the top of the cap.
+      const rightCapCenterX = nodePosition.x + nodeWidth - capRadius;
+
+      sx = Math.max(nodePosition.x + capRadius, rightCapCenterX - loopOffset * 0.6);
       sy = topEdge;
       sourceAngle = -Math.PI / 2;
 
-      const rightCapCenterX = nodePosition.x + nodeWidth - capRadius;
-      tx = rightCapCenterX + capRadius + 2;
-      ty = topEdge + loopOffset * 0.5;
-      targetAngle = 0;
+      // Angle on the right cap: -PI/2 = top of cap (corner), 0 = rightmost point.
+      // Innermost loop targets near the top; outer loops rotate toward the right.
+      const targetCapAngle = -Math.PI / 2 + Math.min(Math.PI / 2, (loopOffset / capRadius) * 0.8);
+      tx = rightCapCenterX + Math.cos(targetCapAngle) * (capRadius + 2);
+      ty = centerY + Math.sin(targetCapAngle) * (capRadius + 2);
+      targetAngle = targetCapAngle;
     } else {
-      // Vertical pill: source on top cap (near right), target on right straight edge (near top)
+      // The top-right corner is where the right straight edge meets the top semicircle cap.
+      // Source: spreads upward along the top cap from the corner.
+      // Target: spreads downward along the right straight edge from the corner.
       const topCapCenterY = nodePosition.y + capRadius;
-      const sourceAngleRad = -Math.PI / 2 + (loopOffset / nodeWidth) * Math.PI / 4;
-      sx = centerX + Math.cos(sourceAngleRad) * (capRadius + 2);
-      sy = topCapCenterY + Math.sin(sourceAngleRad) * (capRadius + 2);
-      sourceAngle = sourceAngleRad;
+
+      // Angle on the top cap: 0 = rightmost point of cap (corner), -PI/2 = top of cap.
+      // Innermost loop sources near the corner; outer loops rotate toward the top.
+      const sourceCapAngle = Math.max(-Math.PI / 2, -(loopOffset / capRadius) * 0.8);
+      sx = centerX + Math.cos(sourceCapAngle) * (capRadius + 2);
+      sy = topCapCenterY + Math.sin(sourceCapAngle) * (capRadius + 2);
+      sourceAngle = sourceCapAngle;
 
       tx = rightEdge;
-      ty = topEdge + loopOffset * 0.5;
+      ty = topCapCenterY + loopOffset * 0.5;
       targetAngle = 0;
     }
   } else if (sourceShape === 'ellipse') {

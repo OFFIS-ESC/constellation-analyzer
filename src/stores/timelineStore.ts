@@ -111,6 +111,10 @@ export const useTimelineStore = create<TimelineStore & TimelineActions>(
       console.log(`Timeline initialized for document ${documentId}`);
     },
 
+    setActiveDocument: (documentId: string) => {
+      set({ activeDocumentId: documentId });
+    },
+
     loadTimeline: (documentId: string, timeline: Timeline) => {
       set((state) => {
         const newTimelines = new Map(state.timelines);

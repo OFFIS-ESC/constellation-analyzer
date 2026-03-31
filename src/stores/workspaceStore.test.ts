@@ -25,6 +25,7 @@ vi.mock("./timelineStore", () => ({
     getState: () => ({
       timelines: new Map(),
       loadTimeline: vi.fn(),
+      setActiveDocument: vi.fn(),
       clearTimeline: vi.fn(),
     }),
   },

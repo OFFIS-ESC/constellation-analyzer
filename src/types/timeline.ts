@@ -66,6 +66,9 @@ export interface TimelineActions {
   // Load timeline from document
   loadTimeline: (documentId: string, timeline: Timeline) => void;
 
+  // Set active document without reloading timeline data (for switching between already-loaded documents)
+  setActiveDocument: (documentId: string) => void;
+
   // Create new state
   createState: (label: string, description?: string, cloneFromCurrent?: boolean) => StateId;
 

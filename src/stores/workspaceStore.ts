@@ -600,6 +600,11 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
           activeDocumentId: documentId,
         };
       });
+
+      // Always sync timelineStore.activeDocumentId — loadDocument returns early
+      // when the document is already in memory, so loadTimeline is never called
+      // and timelineStore.activeDocumentId would remain stale.
+      useTimelineStore.getState().setActiveDocument(documentId);
     });
   },
 

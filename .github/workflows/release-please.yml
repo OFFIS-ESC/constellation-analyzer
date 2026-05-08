@@ -16,5 +16,3 @@ jobs:
       - uses: googleapis/release-please-action@v4
         with:
           release-type: node
-          package-name: constellation-analyzer
-          include-v-in-tag: true

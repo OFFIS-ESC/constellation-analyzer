@@ -25,6 +25,7 @@ const NodeEditorPanel = ({ selectedNode, onClose }: NodeEditorPanelProps) => {
   const [actorType, setActorType] = useState('');
   const [actorLabel, setActorLabel] = useState('');
   const [actorDescription, setActorDescription] = useState('');
+  const [actorShowDescriptionInNode, setActorShowDescriptionInNode] = useState(false);
   const [actorLabels, setActorLabels] = useState<string[]>([]);
   const [actorCitations, setActorCitations] = useState<string[]>([]);
   const labelInputRef = useRef<HTMLInputElement>(null);
@@ -42,23 +43,36 @@ const NodeEditorPanel = ({ selectedNode, onClose }: NodeEditorPanelProps) => {
   // Bibliography modal state
   const [showBibliographyModal, setShowBibliographyModal] = useState(false);
 
-  // Update state when selected node changes
-  useEffect(() => {
-    setActorType(selectedNode.data?.type || '');
-    setActorLabel(selectedNode.data?.label || '');
-    setActorDescription(selectedNode.data?.description || '');
-    setActorLabels(selectedNode.data?.labels || []);
-    setActorCitations(selectedNode.data?.citations || []);
-    setHasNodeChanges(false);
+  // The `selectedNode` prop is captured at selection time and does not
+  // update when the store changes (e.g. via undo/redo), so we read the
+  // canonical data from the live `nodes` array exposed by useGraphWithHistory.
+  const sourceData =
+    nodes.find((n) => n.id === selectedNode.id)?.data ?? selectedNode.data;
 
-    // Focus and select the label input when node is selected
-    setTimeout(() => {
+  // Sync local form state from the live store data, unless the user has
+  // unsaved edits in flight (in which case we'd clobber what they typed).
+  useEffect(() => {
+    if (hasNodeChanges) return;
+    setActorType(sourceData?.type || '');
+    setActorLabel(sourceData?.label || '');
+    setActorDescription(sourceData?.description || '');
+    setActorShowDescriptionInNode(sourceData?.showDescriptionInNode ?? false);
+    setActorLabels(sourceData?.labels || []);
+    setActorCitations(sourceData?.citations || []);
+  }, [sourceData, hasNodeChanges]);
+
+  // Reset the dirty flag and focus the label input when the user picks a
+  // different node.
+  useEffect(() => {
+    setHasNodeChanges(false);
+    const timeoutId = setTimeout(() => {
       if (labelInputRef.current) {
         labelInputRef.current.focus();
         labelInputRef.current.select();
       }
     }, 100);
-  }, [selectedNode]);
+    return () => clearTimeout(timeoutId);
+  }, [selectedNode.id]);
 
   // Live update node properties (debounced)
   const updateNodeProperties = useCallback(() => {
@@ -68,12 +82,13 @@ const NodeEditorPanel = ({ selectedNode, onClose }: NodeEditorPanelProps) => {
         type: actorType,
         label: actorLabel,
         description: actorDescription || undefined,
+        showDescriptionInNode: actorShowDescriptionInNode || undefined,
         labels: actorLabels.length > 0 ? actorLabels : undefined,
         citations: actorCitations.length > 0 ? actorCitations : undefined,
       },
     });
     setHasNodeChanges(false);
-  }, [selectedNode.id, actorType, actorLabel, actorDescription, actorLabels, actorCitations, hasNodeChanges, updateNode]);
+  }, [selectedNode.id, actorType, actorLabel, actorDescription, actorShowDescriptionInNode, actorLabels, actorCitations, hasNodeChanges, updateNode]);
 
   // Debounce live updates
   useEffect(() => {
@@ -154,6 +169,7 @@ const NodeEditorPanel = ({ selectedNode, onClose }: NodeEditorPanelProps) => {
                   type: newType,
                   label: actorLabel,
                   description: actorDescription || undefined,
+                  showDescriptionInNode: actorShowDescriptionInNode || undefined,
                   labels: actorLabels.length > 0 ? actorLabels : undefined,
                   citations: actorCitations.length > 0 ? actorCitations : undefined,
                 },
@@ -213,6 +229,31 @@ const NodeEditorPanel = ({ selectedNode, onClose }: NodeEditorPanelProps) => {
             rows={3}
             className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
           />
+          <label className="mt-2 flex items-center gap-2 text-xs text-gray-700 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={actorShowDescriptionInNode}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setActorShowDescriptionInNode(checked);
+                // Commit the toggle instantly (no debounce) and flush any
+                // pending text edits along with it so they aren't lost.
+                updateNode(selectedNode.id, {
+                  data: {
+                    type: actorType,
+                    label: actorLabel,
+                    description: actorDescription || undefined,
+                    showDescriptionInNode: checked || undefined,
+                    labels: actorLabels.length > 0 ? actorLabels : undefined,
+                    citations: actorCitations.length > 0 ? actorCitations : undefined,
+                  },
+                });
+                setHasNodeChanges(false);
+              }}
+              className="h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span>Show description in node</span>
+          </label>
         </div>
 
         {/* Labels */}

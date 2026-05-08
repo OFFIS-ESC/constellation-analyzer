@@ -265,6 +265,16 @@ const CustomNode = ({ data, selected }: NodeProps<Actor>) => {
             {nodeLabel}
           </div>
 
+          {/* Description (only when enabled per-actor) */}
+          {data.showDescriptionInNode && data.description && (
+            <div
+              className="text-xs text-center opacity-90 leading-snug whitespace-pre-wrap break-words mt-1"
+              style={{ color: textColor, maxWidth: '200px' }}
+            >
+              {data.description}
+            </div>
+          )}
+
           {/* Labels */}
           {data.labels && data.labels.length > 0 && (
             <div className="flex flex-wrap gap-1 justify-center mt-2" style={{ maxWidth: '200px' }}>

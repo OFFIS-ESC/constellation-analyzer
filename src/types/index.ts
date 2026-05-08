@@ -5,6 +5,9 @@ export interface ActorData extends Record<string, unknown> {
   label: string;
   type: string;
   description?: string;
+  // When true, the description is rendered inside the actor's node.
+  // Optional and absent in older documents — treated as false for backwards compatibility.
+  showDescriptionInNode?: boolean;
   labels?: string[];  // Array of LabelConfig IDs
   citations?: string[];  // Array of bibliography reference IDs
   metadata?: Record<string, unknown>;

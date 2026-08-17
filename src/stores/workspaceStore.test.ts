@@ -239,15 +239,14 @@ describe("workspaceStore", () => {
         expect(loaded).toBeTruthy();
       });
 
-      it("should show success toast", () => {
+      it("should create silently - the new document opens as the active tab", () => {
         const { createDocument } = useWorkspaceStore.getState();
 
-        createDocument("Test Doc");
+        mockShowToast.mockClear();
+        const docId = createDocument("Test Doc");
 
-        expect(mockShowToast).toHaveBeenCalledWith(
-          'Document "Test Doc" created',
-          "success",
-        );
+        expect(useWorkspaceStore.getState().activeDocumentId).toBe(docId);
+        expect(mockShowToast).not.toHaveBeenCalled();
       });
     });
 
@@ -414,13 +413,13 @@ describe("workspaceStore", () => {
       it("should handle non-existent document", () => {
         const { duplicateDocument } = useWorkspaceStore.getState();
 
+        mockShowToast.mockClear();
         const result = duplicateDocument("non-existent");
 
+        // Duplicating a document that is not there can only come from a stale
+        // reference, not a user choice - the empty return says so
         expect(result).toBe("");
-        expect(mockShowToast).toHaveBeenCalledWith(
-          "Failed to duplicate: Document not found",
-          "error",
-        );
+        expect(mockShowToast).not.toHaveBeenCalled();
       });
     });
 
@@ -541,16 +540,15 @@ describe("workspaceStore", () => {
         expect(loaded).toBeNull();
       });
 
-      it("should show success toast", () => {
+      it("should delete silently - the document disappears from the tab bar", () => {
         const { createDocument, deleteDocument } = useWorkspaceStore.getState();
 
         const docId = createDocument("Test Doc");
+        mockShowToast.mockClear();
         deleteDocument(docId);
 
-        expect(mockShowToast).toHaveBeenCalledWith(
-          'Document "Test Doc" deleted',
-          "info",
-        );
+        expect(useWorkspaceStore.getState().documentOrder).not.toContain(docId);
+        expect(mockShowToast).not.toHaveBeenCalled();
       });
     });
   });
@@ -788,6 +786,67 @@ describe("workspaceStore", () => {
           addTangibleToDocument("invalid-id", tangible as TangibleConfig),
         ).not.toThrow();
       });
+
+      // Rejections come back as a message the calling form renders next to the
+      // offending field, rather than being announced by the store itself.
+      it("should return null when the tangible is accepted", () => {
+        const { addTangibleToDocument } = useWorkspaceStore.getState();
+
+        const result = addTangibleToDocument(documentId, {
+          name: "Red Block",
+          mode: "filter" as const,
+          filterLabels: ["label-1"],
+        } as TangibleConfig);
+
+        expect(result).toBeNull();
+      });
+
+      it("should reject a hardware ID already assigned to another tangible", () => {
+        const { addTangibleToDocument } = useWorkspaceStore.getState();
+
+        addTangibleToDocument(documentId, {
+          name: "First",
+          mode: "filter" as const,
+          filterLabels: ["label-1"],
+          hardwareId: "token-001",
+        } as TangibleConfig);
+
+        mockShowToast.mockClear();
+        const result = addTangibleToDocument(documentId, {
+          name: "Second",
+          mode: "filter" as const,
+          filterLabels: ["label-1"],
+          hardwareId: "token-001",
+        } as TangibleConfig);
+
+        expect(result).toContain("hardware ID");
+        expect(mockShowToast).not.toHaveBeenCalled();
+        expect(
+          useWorkspaceStore.getState().documents.get(documentId)?.tangibles,
+        ).toHaveLength(1);
+      });
+
+      it("should reject filter mode with no filters set", () => {
+        const { addTangibleToDocument } = useWorkspaceStore.getState();
+
+        const result = addTangibleToDocument(documentId, {
+          name: "Empty Filter",
+          mode: "filter" as const,
+        } as TangibleConfig);
+
+        expect(result).toContain("at least one filter");
+      });
+
+      it("should reject state mode with no state selected", () => {
+        const { addTangibleToDocument } = useWorkspaceStore.getState();
+
+        const result = addTangibleToDocument(documentId, {
+          name: "No State",
+          mode: "state" as const,
+        } as TangibleConfig);
+
+        expect(result).toContain("state selection");
+      });
     });
 
     describe("updateTangibleInDocument", () => {
@@ -817,6 +876,46 @@ describe("workspaceStore", () => {
           .documents.get(documentId);
         expect(updatedDoc?.tangibles?.[0].name).toBe("Updated");
         expect(updatedDoc?.tangibles?.[0].hardwareId).toBe("token-002");
+      });
+
+      it("should return null when the update is accepted", () => {
+        const { updateTangibleInDocument } = useWorkspaceStore.getState();
+
+        const doc = useWorkspaceStore.getState().documents.get(documentId);
+        const tangibleId = doc!.tangibles![0].id!;
+
+        const result = updateTangibleInDocument(documentId, tangibleId, {
+          name: "Updated",
+        });
+
+        expect(result).toBeNull();
+      });
+
+      it("should reject a hardware ID already assigned to another tangible", () => {
+        const { addTangibleToDocument, updateTangibleInDocument } =
+          useWorkspaceStore.getState();
+
+        addTangibleToDocument(documentId, {
+          name: "Other",
+          mode: "filter" as const,
+          filterLabels: ["label-1"],
+          hardwareId: "token-001",
+        } as TangibleConfig);
+
+        const doc = useWorkspaceStore.getState().documents.get(documentId);
+        const tangibleId = doc!.tangibles![0].id!;
+
+        mockShowToast.mockClear();
+        const result = updateTangibleInDocument(documentId, tangibleId, {
+          hardwareId: "token-001",
+        });
+
+        expect(result).toContain("hardware ID");
+        expect(mockShowToast).not.toHaveBeenCalled();
+        expect(
+          useWorkspaceStore.getState().documents.get(documentId)?.tangibles?.[0]
+            .hardwareId,
+        ).toBeUndefined();
       });
     });
 

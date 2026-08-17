@@ -1,6 +1,7 @@
 import { useState, useRef, KeyboardEvent } from "react";
 import { useTuioStore } from "../../stores/tuioStore";
 import TangibleForm from "./TangibleForm";
+import { validateTangibleForm, type TangibleFormErrors } from "./tangibleValidation";
 import type { TangibleMode, LabelConfig, FilterConfig, NodeTypeConfig, EdgeTypeConfig } from "../../types";
 import type { ConstellationState } from "../../types/timeline";
 
@@ -9,6 +10,11 @@ interface Props {
   nodeTypes: NodeTypeConfig[];
   edgeTypes: EdgeTypeConfig[];
   states: ConstellationState[];
+  /**
+   * Returns an error message when the tangible was rejected, nothing on
+   * success. Rejections are shown inline on the hardware ID field, the only
+   * constraint the form cannot check for itself.
+   */
   onAdd: (tangible: {
     name: string;
     mode: TangibleMode;
@@ -16,7 +22,7 @@ interface Props {
     hardwareId?: string;
     filters?: FilterConfig;
     stateId?: string;
-  }) => void;
+  }) => string | null | void;
 }
 
 const QuickAddTangibleForm = ({ labels, nodeTypes, edgeTypes, states, onAdd }: Props) => {
@@ -36,33 +42,19 @@ const QuickAddTangibleForm = ({ labels, nodeTypes, edgeTypes, states, onAdd }: P
     combineMode: 'OR' // Default to OR for tangibles
   });
   const [stateId, setStateId] = useState("");
+  const [errors, setErrors] = useState<TangibleFormErrors>({});
 
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = () => {
-    if (!name.trim()) {
-      nameInputRef.current?.focus();
+    const validation = validateTangibleForm({ name, mode, filters, stateId });
+    if (validation) {
+      setErrors(validation);
+      if (validation.name) nameInputRef.current?.focus();
       return;
     }
 
-    // Validate mode-specific fields
-    if (mode === "filter") {
-      const hasFilters =
-        (filters.labels && filters.labels.length > 0) ||
-        (filters.actorTypes && filters.actorTypes.length > 0) ||
-        (filters.relationTypes && filters.relationTypes.length > 0);
-
-      if (!hasFilters) {
-        alert("Filter mode requires at least one filter (labels, actor types, or relation types)");
-        return;
-      }
-    }
-    if ((mode === "state" || mode === "stateDial") && !stateId) {
-      alert("State mode requires a state selection");
-      return;
-    }
-
-    onAdd({
+    const error = onAdd({
       name: name.trim(),
       mode,
       description,
@@ -70,6 +62,10 @@ const QuickAddTangibleForm = ({ labels, nodeTypes, edgeTypes, states, onAdd }: P
       filters: mode === "filter" ? filters : undefined,
       stateId: mode === "state" || mode === "stateDial" ? stateId : undefined,
     });
+    if (error) {
+      setErrors({ hardwareId: error });
+      return;
+    }
 
     // Reset form
     setName("");
@@ -83,6 +79,7 @@ const QuickAddTangibleForm = ({ labels, nodeTypes, edgeTypes, states, onAdd }: P
       combineMode: 'OR'
     });
     setStateId("");
+    setErrors({});
 
     nameInputRef.current?.focus();
   };
@@ -104,6 +101,7 @@ const QuickAddTangibleForm = ({ labels, nodeTypes, edgeTypes, states, onAdd }: P
         combineMode: 'OR'
       });
       setStateId("");
+      setErrors({});
       nameInputRef.current?.blur();
     }
   };
@@ -122,12 +120,29 @@ const QuickAddTangibleForm = ({ labels, nodeTypes, edgeTypes, states, onAdd }: P
         edgeTypes={edgeTypes}
         states={states}
         suggestedHardwareId={suggestedHardwareId}
-        onNameChange={setName}
-        onHardwareIdChange={setHardwareId}
+        onNameChange={(value) => {
+          setName(value);
+          setErrors((prev) => ({ ...prev, name: undefined }));
+        }}
+        onHardwareIdChange={(value) => {
+          setHardwareId(value);
+          setErrors((prev) => ({ ...prev, hardwareId: undefined }));
+        }}
         onModeChange={setMode}
         onDescriptionChange={setDescription}
-        onFiltersChange={setFilters}
-        onStateIdChange={setStateId}
+        onFiltersChange={(value) => {
+          setFilters(value);
+          setErrors((prev) => ({ ...prev, filters: undefined }));
+        }}
+        onStateIdChange={(value) => {
+          setStateId(value);
+          setErrors((prev) => ({ ...prev, state: undefined }));
+        }}
+        nameInputRef={nameInputRef}
+        nameError={errors.name}
+        hardwareIdError={errors.hardwareId}
+        filtersError={errors.filters}
+        stateError={errors.state}
       />
 
       <button

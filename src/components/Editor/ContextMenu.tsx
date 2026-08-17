@@ -14,6 +14,12 @@ interface MenuAction {
   icon?: React.ReactNode;
   color?: string;
   onClick: () => void;
+  /**
+   * When set, the action is unavailable and this explains why. Shown as the
+   * item's tooltip - stating the reason up front beats letting someone click
+   * and then telling them it was never going to work.
+   */
+  disabledReason?: string;
 }
 
 interface MenuSection {
@@ -114,7 +120,13 @@ const ContextMenu = ({ x, y, sections, onClose }: Props) => {
                 action.onClick();
                 onClose();
               }}
-              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2 transition-colors"
+              disabled={Boolean(action.disabledReason)}
+              title={action.disabledReason}
+              className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 transition-colors ${
+                action.disabledReason
+                  ? 'text-gray-400 cursor-not-allowed'
+                  : 'hover:bg-gray-100'
+              }`}
             >
               {action.color && (
                 <span

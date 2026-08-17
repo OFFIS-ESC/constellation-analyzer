@@ -2,6 +2,7 @@ import { useState, useEffect, KeyboardEvent } from "react";
 import SaveIcon from "@mui/icons-material/Save";
 import { useTuioStore } from "../../stores/tuioStore";
 import TangibleForm from "./TangibleForm";
+import { validateTangibleForm, type TangibleFormErrors } from "./tangibleValidation";
 import type { TangibleConfig, TangibleMode, LabelConfig, FilterConfig, NodeTypeConfig, EdgeTypeConfig } from "../../types";
 import type { ConstellationState } from "../../types/timeline";
 import { migrateTangibleConfig } from "../../utils/tangibleMigration";
@@ -12,6 +13,7 @@ interface Props {
   nodeTypes: NodeTypeConfig[];
   edgeTypes: EdgeTypeConfig[];
   states: ConstellationState[];
+  /** Returns an error message when the update was rejected, nothing on success */
   onSave: (
     id: string,
     updates: {
@@ -22,7 +24,7 @@ interface Props {
       filters?: FilterConfig;
       stateId?: string;
     },
-  ) => void;
+  ) => string | null | void;
   onCancel: () => void;
 }
 
@@ -51,6 +53,7 @@ const EditTangibleInline = ({
     combineMode: 'OR'
   });
   const [stateId, setStateId] = useState("");
+  const [errors, setErrors] = useState<TangibleFormErrors>({});
 
   // Sync state with tangible prop
   useEffect(() => {
@@ -76,30 +79,18 @@ const EditTangibleInline = ({
         });
       }
       setStateId(migratedTangible.stateId || "");
+      setErrors({});
     }
   }, [tangible]);
 
   const handleSave = () => {
-    if (!name.trim()) return;
-
-    // Validate mode-specific fields
-    if (mode === "filter") {
-      const hasFilters =
-        (filters.labels && filters.labels.length > 0) ||
-        (filters.actorTypes && filters.actorTypes.length > 0) ||
-        (filters.relationTypes && filters.relationTypes.length > 0);
-
-      if (!hasFilters) {
-        alert("Filter mode requires at least one filter (labels, actor types, or relation types)");
-        return;
-      }
-    }
-    if ((mode === "state" || mode === "stateDial") && !stateId) {
-      alert("State mode requires a state selection");
+    const validation = validateTangibleForm({ name, mode, filters, stateId });
+    if (validation) {
+      setErrors(validation);
       return;
     }
 
-    onSave(tangible.id, {
+    const error = onSave(tangible.id, {
       name: name.trim(),
       mode,
       description: description.trim() || undefined,
@@ -107,6 +98,9 @@ const EditTangibleInline = ({
       filters: mode === "filter" ? filters : undefined,
       stateId: mode === "state" || mode === "stateDial" ? stateId : undefined,
     });
+    if (error) {
+      setErrors({ hardwareId: error });
+    }
   };
 
   const handleKeyDown = (e: KeyboardEvent) => {
@@ -135,12 +129,28 @@ const EditTangibleInline = ({
           edgeTypes={edgeTypes}
           states={states}
           suggestedHardwareId={suggestedHardwareId}
-          onNameChange={setName}
+          onNameChange={(value) => {
+            setName(value);
+            setErrors((prev) => ({ ...prev, name: undefined }));
+          }}
           onModeChange={setMode}
           onDescriptionChange={setDescription}
-          onHardwareIdChange={setHardwareId}
-          onFiltersChange={setFilters}
-          onStateIdChange={setStateId}
+          onHardwareIdChange={(value) => {
+            setHardwareId(value);
+            setErrors((prev) => ({ ...prev, hardwareId: undefined }));
+          }}
+          onFiltersChange={(value) => {
+            setFilters(value);
+            setErrors((prev) => ({ ...prev, filters: undefined }));
+          }}
+          onStateIdChange={(value) => {
+            setStateId(value);
+            setErrors((prev) => ({ ...prev, state: undefined }));
+          }}
+          nameError={errors.name}
+          hardwareIdError={errors.hardwareId}
+          filtersError={errors.filters}
+          stateError={errors.state}
         />
       </div>
 

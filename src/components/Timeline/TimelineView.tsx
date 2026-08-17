@@ -307,6 +307,22 @@ const TimelineViewInner: React.FC = () => {
     setContextMenu(null);
   }, [contextMenu, deleteState]);
 
+  // The timeline needs a root, and the state you are looking at cannot be
+  // pulled out from under you. Both are shown as a disabled Delete with the
+  // reason attached, rather than a rejection after the click.
+  const deleteBlockedReason = useCallback(
+    (stateId: string): string | undefined => {
+      if (stateId === timeline?.rootStateId) {
+        return "The first state of a timeline cannot be deleted";
+      }
+      if (stateId === timeline?.currentStateId) {
+        return "This is the state you are editing — switch to another one first";
+      }
+      return undefined;
+    },
+    [timeline],
+  );
+
   // Rename dialog actions
   const handleRename = useCallback(
     (newLabel: string) => {
@@ -415,6 +431,7 @@ const TimelineViewInner: React.FC = () => {
                   label: "Delete",
                   icon: <DeleteIcon fontSize="small" />,
                   onClick: handleDeleteFromMenu,
+                  disabledReason: deleteBlockedReason(contextMenu.stateId),
                 },
               ],
             },

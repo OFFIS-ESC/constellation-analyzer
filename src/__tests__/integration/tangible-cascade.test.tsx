@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { useTimelineStore } from "../../stores/timelineStore";
 import { useGraphStore } from "../../stores/graphStore";
@@ -231,6 +231,79 @@ describe("Tangible Cascade Cleanup Integration Tests", () => {
       const doc = useWorkspaceStore.getState().documents.get(documentId);
       // Only tangible with ID 'different-state' (auto-generated from name) should remain
       expect(doc?.tangibles).toHaveLength(1);
+    });
+
+    it("should state how many tangibles a deletion takes with it", () => {
+      const timelineStore = useTimelineStore.getState();
+      const stateId = timelineStore.createState("Doomed", undefined, false);
+
+      const { addTangibleToDocument } = useWorkspaceStore.getState();
+      addTangibleToDocument(documentId, {
+        id: "",
+        name: "State Tangible 1",
+        mode: "state",
+        stateId,
+      });
+      addTangibleToDocument(documentId, {
+        id: "",
+        name: "State Tangible 2",
+        mode: "state",
+        stateId,
+      });
+
+      const timeline = timelineStore.timelines.get(documentId);
+      timelineStore.switchToState(timeline!.rootStateId);
+
+      const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+      timelineStore.deleteState(stateId);
+
+      expect(confirmSpy).toHaveBeenCalledWith(
+        expect.stringContaining("2 tangible(s)"),
+      );
+      confirmSpy.mockRestore();
+    });
+
+    it("should leave the state and its tangibles alone when the deletion is cancelled", () => {
+      const timelineStore = useTimelineStore.getState();
+      const stateId = timelineStore.createState("Spared", undefined, false);
+
+      const { addTangibleToDocument } = useWorkspaceStore.getState();
+      addTangibleToDocument(documentId, {
+        id: "",
+        name: "State Tangible",
+        mode: "state",
+        stateId,
+      });
+
+      const timeline = timelineStore.timelines.get(documentId);
+      timelineStore.switchToState(timeline!.rootStateId);
+
+      const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+      const result = timelineStore.deleteState(stateId);
+      confirmSpy.mockRestore();
+
+      expect(result).toBe(false);
+      expect(
+        useTimelineStore.getState().timelines.get(documentId)?.states.has(stateId),
+      ).toBe(true);
+      expect(
+        useWorkspaceStore.getState().documents.get(documentId)?.tangibles,
+      ).toHaveLength(1);
+    });
+
+    it("should not ask for confirmation when nothing else is affected", () => {
+      const timelineStore = useTimelineStore.getState();
+      const stateId = timelineStore.createState("Lonely", undefined, false);
+
+      const timeline = timelineStore.timelines.get(documentId);
+      timelineStore.switchToState(timeline!.rootStateId);
+
+      const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+      const result = timelineStore.deleteState(stateId);
+      confirmSpy.mockRestore();
+
+      expect(result).toBe(true);
+      expect(confirmSpy).not.toHaveBeenCalled();
     });
   });
 

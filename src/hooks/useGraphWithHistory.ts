@@ -344,34 +344,36 @@ export function useGraphWithHistory() {
   );
 
   // Tangible operations
+  // Add/update pass the store's rejection message back to the caller so the
+  // form that triggered them can show it next to the offending field.
   const addTangible = useCallback(
-    (tangible: TangibleConfig) => {
+    (tangible: TangibleConfig): string | null => {
       if (!activeDocumentId) {
         console.warn('No active document');
-        return;
+        return 'No active document';
       }
       if (isRestoringRef.current) {
         graphStore.addTangible(tangible);
-        return;
+        return null;
       }
       pushToHistory(`Add Tangible: ${tangible.name}`); // Synchronous push BEFORE mutation
-      addTangibleToDocument(activeDocumentId, tangible);
+      return addTangibleToDocument(activeDocumentId, tangible);
     },
     [activeDocumentId, graphStore, pushToHistory, addTangibleToDocument]
   );
 
   const updateTangible = useCallback(
-    (id: string, updates: Partial<Omit<TangibleConfig, 'id'>>) => {
+    (id: string, updates: Partial<Omit<TangibleConfig, 'id'>>): string | null => {
       if (!activeDocumentId) {
         console.warn('No active document');
-        return;
+        return 'No active document';
       }
       if (isRestoringRef.current) {
         graphStore.updateTangible(id, updates);
-        return;
+        return null;
       }
       pushToHistory('Update Tangible'); // Synchronous push BEFORE mutation
-      updateTangibleInDocument(activeDocumentId, id, updates);
+      return updateTangibleInDocument(activeDocumentId, id, updates);
     },
     [activeDocumentId, graphStore, pushToHistory, updateTangibleInDocument]
   );

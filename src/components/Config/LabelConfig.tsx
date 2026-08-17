@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useGraphWithHistory } from '../../hooks/useGraphWithHistory';
 import { useConfirm } from '../../hooks/useConfirm';
-import { useToastStore } from '../../stores/toastStore';
 import QuickAddLabelForm from './QuickAddLabelForm';
 import LabelManagementList from './LabelManagementList';
 import EditLabelInline from './EditLabelInline';
@@ -16,8 +15,10 @@ import type { LabelConfig as LabelConfigType, LabelScope } from '../../types';
  * - Two-column layout: quick add (left) + management/edit (right)
  * - Inline editing replaces right column
  * - Usage count calculation
- * - Toast notifications for actions
  * - Full keyboard accessibility
+ *
+ * Successful edits are not announced: the management list on the right is the
+ * confirmation, and it updates as soon as the change lands.
  */
 
 interface Props {
@@ -29,7 +30,6 @@ interface Props {
 const LabelConfigModal = ({ isOpen, onClose, initialEditingLabelId }: Props) => {
   const { labels, nodes, edges, addLabel, updateLabel, deleteLabel } = useGraphWithHistory();
   const { confirm, ConfirmDialogComponent } = useConfirm();
-  const { showToast } = useToastStore();
 
   const [editingLabel, setEditingLabel] = useState<LabelConfigType | null>(null);
 
@@ -86,8 +86,7 @@ const LabelConfigModal = ({ isOpen, onClose, initialEditingLabelId }: Props) => 
 
     // Check if ID already exists (case-insensitive)
     if (labels.some((l) => l.id === id)) {
-      showToast('A label with this name already exists', 'error');
-      return;
+      return 'A label with this name already exists';
     }
 
     const newLabel: LabelConfigType = {
@@ -99,11 +98,10 @@ const LabelConfigModal = ({ isOpen, onClose, initialEditingLabelId }: Props) => 
     };
 
     addLabel(newLabel);
-    showToast(`Label "${label.name}" created`, 'success');
+    return null;
   };
 
   const handleDeleteLabel = async (id: string) => {
-    const label = labels.find((l) => l.id === id);
     const usage = usageCounts[id] || { actors: 0, relations: 0 };
     const totalUsage = usage.actors + usage.relations;
 
@@ -121,7 +119,6 @@ const LabelConfigModal = ({ isOpen, onClose, initialEditingLabelId }: Props) => 
 
     if (confirmed) {
       deleteLabel(id);
-      showToast(`Label "${label?.name}" deleted`, 'success');
     }
   };
 
@@ -135,7 +132,6 @@ const LabelConfigModal = ({ isOpen, onClose, initialEditingLabelId }: Props) => 
   ) => {
     updateLabel(id, updates);
     setEditingLabel(null);
-    showToast(`Label "${updates.name}" updated`, 'success');
   };
 
   const handleCancelEdit = () => {

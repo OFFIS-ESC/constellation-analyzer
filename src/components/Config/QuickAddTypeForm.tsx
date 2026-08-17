@@ -10,16 +10,19 @@ import type { NodeShape } from '../../types';
  * - Progressive disclosure for advanced options
  * - Keyboard accessible (Enter to submit, Escape to cancel)
  * - Focus management
+ * - Rejections from onAdd surface inline on the name field; the form keeps its
+ *   contents so the user can correct the name instead of retyping everything
  */
 
 interface Props {
+  /** Returns an error message when the type was rejected, nothing on success */
   onAdd: (type: {
     name: string;
     color: string;
     shape: NodeShape;
     icon: string;
     description: string;
-  }) => void;
+  }) => string | null | void;
 }
 
 const QuickAddTypeForm = ({ onAdd }: Props) => {
@@ -28,16 +31,23 @@ const QuickAddTypeForm = ({ onAdd }: Props) => {
   const [shape, setShape] = useState<NodeShape>('rectangle');
   const [icon, setIcon] = useState('');
   const [description, setDescription] = useState('');
+  const [nameError, setNameError] = useState<string | null>(null);
 
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = () => {
     if (!name.trim()) {
+      setNameError('Name is required');
       nameInputRef.current?.focus();
       return;
     }
 
-    onAdd({ name: name.trim(), color, shape, icon, description });
+    const error = onAdd({ name: name.trim(), color, shape, icon, description });
+    if (error) {
+      setNameError(error);
+      nameInputRef.current?.focus();
+      return;
+    }
 
     // Reset form
     setName('');
@@ -45,9 +55,15 @@ const QuickAddTypeForm = ({ onAdd }: Props) => {
     setShape('rectangle');
     setIcon('');
     setDescription('');
+    setNameError(null);
 
     // Focus back to name input for quick subsequent additions
     nameInputRef.current?.focus();
+  };
+
+  const handleNameChange = (value: string) => {
+    setName(value);
+    setNameError(null);
   };
 
   const handleKeyDown = (e: KeyboardEvent) => {
@@ -62,6 +78,7 @@ const QuickAddTypeForm = ({ onAdd }: Props) => {
       setShape('rectangle');
       setIcon('');
       setDescription('');
+      setNameError(null);
       nameInputRef.current?.blur();
     }
   };
@@ -74,7 +91,7 @@ const QuickAddTypeForm = ({ onAdd }: Props) => {
         shape={shape}
         icon={icon}
         description={description}
-        onNameChange={setName}
+        onNameChange={handleNameChange}
         onColorChange={setColor}
         onShapeChange={setShape}
         onIconChange={setIcon}
@@ -82,6 +99,7 @@ const QuickAddTypeForm = ({ onAdd }: Props) => {
         onKeyDown={handleKeyDown}
         nameInputRef={nameInputRef}
         autoFocusName={false}
+        nameError={nameError}
       />
 
       <button

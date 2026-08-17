@@ -302,22 +302,25 @@ describe('timelineStore', () => {
       expect(mockMarkDocumentDirty).toHaveBeenCalledWith(TEST_DOC_ID);
     });
 
-    it('should show success toast', () => {
+    it('should create silently - the new state appears in the timeline', () => {
       const { createState } = useTimelineStore.getState();
 
+      mockShowToast.mockClear();
       createState('New Feature');
 
-      expect(mockShowToast).toHaveBeenCalledWith('State "New Feature" created', 'success');
+      expect(mockShowToast).not.toHaveBeenCalled();
     });
 
     it('should return empty string if no active document', () => {
       useTimelineStore.setState({ activeDocumentId: null });
       const { createState } = useTimelineStore.getState();
 
+      mockShowToast.mockClear();
       const result = createState('Test');
 
+      // An internal invariant, not something to put in front of the user
       expect(result).toBe('');
-      expect(mockShowToast).toHaveBeenCalledWith('No active document', 'error');
+      expect(mockShowToast).not.toHaveBeenCalled();
     });
   });
 
@@ -375,12 +378,16 @@ describe('timelineStore', () => {
       expect(savedState?.graph.nodes).toHaveLength(1);
     });
 
-    it('should show error toast if state not found', () => {
+    it('should ignore an unknown state without notifying', () => {
       const { switchToState } = useTimelineStore.getState();
 
+      const before = useTimelineStore.getState().timelines.get(TEST_DOC_ID)?.currentStateId;
+      mockShowToast.mockClear();
       switchToState('non-existent-state');
 
-      expect(mockShowToast).toHaveBeenCalledWith('State not found', 'error');
+      const after = useTimelineStore.getState().timelines.get(TEST_DOC_ID)?.currentStateId;
+      expect(after).toBe(before);
+      expect(mockShowToast).not.toHaveBeenCalled();
     });
 
     it('should switch silently - the timeline header already shows the current state', () => {
@@ -504,10 +511,13 @@ describe('timelineStore', () => {
       const timeline = state.timelines.get(TEST_DOC_ID);
       const rootStateId = timeline?.rootStateId;
 
+      mockShowToast.mockClear();
       const result = deleteState(rootStateId!);
 
+      // The timeline disables Delete for the root state and says why, so the
+      // store just refuses rather than reporting after the fact
       expect(result).toBe(false);
-      expect(mockShowToast).toHaveBeenCalledWith('Cannot delete root state', 'error');
+      expect(mockShowToast).not.toHaveBeenCalled();
     });
 
     it('should not delete current state', () => {
@@ -517,13 +527,12 @@ describe('timelineStore', () => {
       const timeline = state.timelines.get(TEST_DOC_ID);
       const currentStateId = timeline?.currentStateId;
 
+      mockShowToast.mockClear();
       const result = deleteState(currentStateId!);
 
+      // Same as the root state: prevented in the UI, refused here
       expect(result).toBe(false);
-      expect(mockShowToast).toHaveBeenCalledWith(
-        'Cannot delete current state. Switch to another state first.',
-        'error'
-      );
+      expect(mockShowToast).not.toHaveBeenCalled();
     });
 
     it('should prompt confirmation if state has children', () => {
@@ -544,19 +553,18 @@ describe('timelineStore', () => {
       expect(global.confirm).toHaveBeenCalled();
     });
 
-    it('should show success toast after deletion', () => {
+    it('should delete silently - the state disappears from the timeline', () => {
       const { deleteState } = useTimelineStore.getState();
 
       // Ensure global.confirm is not mocked (allow deletion)
       global.confirm = vi.fn(() => true);
 
       mockShowToast.mockClear();
-      deleteState(state1Id);
+      const result = deleteState(state1Id);
 
-      expect(mockShowToast).toHaveBeenCalledWith(
-        expect.stringContaining('deleted'),
-        'info'
-      );
+      expect(result).toBe(true);
+      expect(useTimelineStore.getState().timelines.get(TEST_DOC_ID)?.states.has(state1Id)).toBe(false);
+      expect(mockShowToast).not.toHaveBeenCalled();
     });
   });
 

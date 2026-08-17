@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect, KeyboardEvent } from 'react';
 import { useBibliographyWithHistory } from '../../hooks/useBibliographyWithHistory';
 import { useBibliographyStore } from '../../stores/bibliographyStore';
-import { useToastStore } from '../../stores/toastStore';
 import { isValidCitationInput, getInputTypeHint } from '../../utils/bibliography/smart-parser';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import AddIcon from '@mui/icons-material/Add';
+import FieldError from '../Common/FieldError';
 import type { CSLReference } from '../../types/bibliography';
 
 const QuickAddReferenceForm = () => {
@@ -16,13 +16,14 @@ const QuickAddReferenceForm = () => {
   const [type, setType] = useState<CSLReference['type']>('article-journal');
   const [description, setDescription] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [smartError, setSmartError] = useState<string | null>(null);
+  const [titleError, setTitleError] = useState<string | null>(null);
 
   const smartInputRef = useRef<HTMLTextAreaElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
 
   const { addReference } = useBibliographyWithHistory();
   const { parseInput } = useBibliographyStore();
-  const { showToast } = useToastStore();
 
   // Auto-focus appropriate field
   useEffect(() => {
@@ -41,12 +42,17 @@ const QuickAddReferenceForm = () => {
     setType('article-journal');
     setDescription('');
     setManualEntry(false);
+    setSmartError(null);
+    setTitleError(null);
   };
 
+  // A reference that parses shows up in the list on the right, so only the
+  // failures need saying — and they belong under the input that failed.
   const handleSmartAdd = async () => {
     if (!smartInput.trim()) return;
 
     setIsProcessing(true);
+    setSmartError(null);
     try {
       // Use citation.js to parse the input
       const parsed = await parseInput(smartInput.trim());
@@ -54,20 +60,14 @@ const QuickAddReferenceForm = () => {
       if (parsed.length > 0) {
         // Add all parsed references
         parsed.forEach(ref => addReference(ref));
-        showToast(
-          parsed.length === 1
-            ? 'Reference added successfully'
-            : `${parsed.length} references added successfully`,
-          'success'
-        );
         resetForm();
         smartInputRef.current?.focus();
       } else {
-        showToast('Could not parse citation data', 'error');
+        setSmartError('No citation data could be read from this input');
       }
     } catch (error) {
       console.error('Parse error:', error);
-      showToast('Failed to parse input. Try manual entry instead.', 'error');
+      setSmartError('Could not parse this input — try manual entry instead');
     } finally {
       setIsProcessing(false);
     }
@@ -75,7 +75,8 @@ const QuickAddReferenceForm = () => {
 
   const handleManualAdd = () => {
     if (!title.trim()) {
-      showToast('Title is required', 'error');
+      setTitleError('Title is required');
+      titleInputRef.current?.focus();
       return;
     }
 
@@ -115,7 +116,6 @@ const QuickAddReferenceForm = () => {
     }
 
     addReference(ref);
-    showToast('Reference added successfully', 'success');
     resetForm();
     titleInputRef.current?.focus();
   };
@@ -180,13 +180,23 @@ const QuickAddReferenceForm = () => {
             <textarea
               ref={smartInputRef}
               value={smartInput}
-              onChange={(e) => setSmartInput(e.target.value)}
+              onChange={(e) => {
+                setSmartInput(e.target.value);
+                setSmartError(null);
+              }}
               onKeyDown={handleKeyDown}
               placeholder="Paste DOI, URL, BibTeX, RIS, PubMed ID, ISBN, Wikidata ID, Zenodo record, or CFF..."
               rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none font-mono"
+              className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 resize-none font-mono ${
+                smartError
+                  ? 'border-red-500 focus:ring-red-500'
+                  : 'border-gray-300 focus:ring-blue-500'
+              }`}
+              aria-invalid={smartError ? true : undefined}
+              aria-describedby={smartError ? 'smart-input-error' : undefined}
             />
-            {inputTypeHint && (
+            <FieldError id="smart-input-error" message={smartError} />
+            {inputTypeHint && !smartError && (
               <p className={`text-xs mt-1 ${isValidInput ? 'text-green-600' : 'text-orange-600'}`}>
                 Detected: {inputTypeHint}
               </p>
@@ -220,11 +230,21 @@ const QuickAddReferenceForm = () => {
               ref={titleInputRef}
               type="text"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                setTitleError(null);
+              }}
               onKeyDown={handleKeyDown}
               placeholder="Enter reference title"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 ${
+                titleError
+                  ? 'border-red-500 focus:ring-red-500'
+                  : 'border-gray-300 focus:ring-blue-500'
+              }`}
+              aria-invalid={titleError ? true : undefined}
+              aria-describedby={titleError ? 'reference-title-error' : undefined}
             />
+            <FieldError id="reference-title-error" message={titleError} />
           </div>
 
           <div>

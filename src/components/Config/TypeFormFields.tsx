@@ -1,6 +1,7 @@
 import { KeyboardEvent } from 'react';
 import IconPopover from './IconPopover';
 import ShapeSelector from './ShapeSelector';
+import FieldError from '../Common/FieldError';
 import type { NodeShape } from '../../types';
 
 /**
@@ -26,6 +27,8 @@ interface Props {
   onKeyDown?: (e: KeyboardEvent) => void;
   nameInputRef?: React.RefObject<HTMLInputElement>;
   autoFocusName?: boolean;
+  /** Validation message for the name field, shown beneath the input */
+  nameError?: string | null;
 }
 
 const TypeFormFields = ({
@@ -42,6 +45,7 @@ const TypeFormFields = ({
   onKeyDown,
   nameInputRef,
   autoFocusName = false,
+  nameError,
 }: Props) => {
 
   return (
@@ -62,8 +66,14 @@ const TypeFormFields = ({
               onChange={(e) => onNameChange(e.target.value)}
               onKeyDown={onKeyDown}
               placeholder="e.g., Department"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 ${
+                nameError
+                  ? 'border-red-500 focus:ring-red-500'
+                  : 'border-gray-300 focus:ring-blue-500'
+              }`}
               aria-required="true"
+              aria-invalid={nameError ? true : undefined}
+              aria-describedby={nameError ? 'type-name-error' : undefined}
               autoFocus={autoFocusName}
             />
           </div>
@@ -92,6 +102,7 @@ const TypeFormFields = ({
             <IconPopover selectedIcon={icon} onSelect={onIconChange} />
           </div>
         </div>
+        <FieldError id="type-name-error" message={nameError} />
       </div>
 
       {/* Shape Selector */}

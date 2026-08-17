@@ -9,15 +9,18 @@ import type { LabelScope } from '../../types';
  * - Quick add with name, color, and scope
  * - Keyboard accessible (Enter to submit, Escape to cancel)
  * - Focus management
+ * - Rejections from onAdd surface inline on the name field; the form keeps its
+ *   contents so the user can correct the name instead of retyping everything
  */
 
 interface Props {
+  /** Returns an error message when the label was rejected, nothing on success */
   onAdd: (label: {
     name: string;
     color: string;
     appliesTo: LabelScope;
     description: string;
-  }) => void;
+  }) => string | null | void;
 }
 
 const QuickAddLabelForm = ({ onAdd }: Props) => {
@@ -25,25 +28,38 @@ const QuickAddLabelForm = ({ onAdd }: Props) => {
   const [color, setColor] = useState('#6366f1');
   const [appliesTo, setAppliesTo] = useState<LabelScope>('both');
   const [description, setDescription] = useState('');
+  const [nameError, setNameError] = useState<string | null>(null);
 
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = () => {
     if (!name.trim()) {
+      setNameError('Name is required');
       nameInputRef.current?.focus();
       return;
     }
 
-    onAdd({ name: name.trim(), color, appliesTo, description });
+    const error = onAdd({ name: name.trim(), color, appliesTo, description });
+    if (error) {
+      setNameError(error);
+      nameInputRef.current?.focus();
+      return;
+    }
 
     // Reset form
     setName('');
     setColor('#6366f1');
     setAppliesTo('both');
     setDescription('');
+    setNameError(null);
 
     // Focus back to name input for quick subsequent additions
     nameInputRef.current?.focus();
+  };
+
+  const handleNameChange = (value: string) => {
+    setName(value);
+    setNameError(null);
   };
 
   const handleKeyDown = (e: KeyboardEvent) => {
@@ -57,6 +73,7 @@ const QuickAddLabelForm = ({ onAdd }: Props) => {
       setColor('#6366f1');
       setAppliesTo('both');
       setDescription('');
+      setNameError(null);
       nameInputRef.current?.blur();
     }
   };
@@ -68,10 +85,12 @@ const QuickAddLabelForm = ({ onAdd }: Props) => {
         color={color}
         appliesTo={appliesTo}
         description={description}
-        onNameChange={setName}
+        onNameChange={handleNameChange}
         onColorChange={setColor}
         onAppliesToChange={setAppliesTo}
         onDescriptionChange={setDescription}
+        nameInputRef={nameInputRef}
+        nameError={nameError}
       />
 
       <button

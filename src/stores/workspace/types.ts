@@ -104,8 +104,10 @@ export interface WorkspaceActions {
   deleteLabelFromDocument: (documentId: string, labelId: string) => void;
 
   // Tangible management (document-level)
-  addTangibleToDocument: (documentId: string, tangible: TangibleConfig) => void;
-  updateTangibleInDocument: (documentId: string, tangibleId: string, updates: Partial<Omit<TangibleConfig, 'id'>>) => void;
+  // Add/update return a validation message when the tangible was rejected and
+  // null when it was applied, so the calling form can show the reason inline.
+  addTangibleToDocument: (documentId: string, tangible: TangibleConfig) => string | null;
+  updateTangibleInDocument: (documentId: string, tangibleId: string, updates: Partial<Omit<TangibleConfig, 'id'>>) => string | null;
   deleteTangibleFromDocument: (documentId: string, tangibleId: string) => void;
 
   // Viewport operations

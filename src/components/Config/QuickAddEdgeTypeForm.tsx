@@ -11,15 +11,18 @@ import type { EdgeDirectionality } from '../../types';
  * - Keyboard accessible (Cmd/Ctrl+Enter to add)
  * - Auto-clears after successful add
  * - Focus management
+ * - Rejections from onAdd surface inline on the name field; the form keeps its
+ *   contents so the user can correct the name instead of retyping everything
  */
 
 interface Props {
+  /** Returns an error message when the type was rejected, nothing on success */
   onAdd: (data: {
     label: string;
     color: string;
     style: 'solid' | 'dashed' | 'dotted';
     defaultDirectionality: EdgeDirectionality;
-  }) => void;
+  }) => string | null | void;
 }
 
 const QuickAddEdgeTypeForm = ({ onAdd }: Props) => {
@@ -27,28 +30,41 @@ const QuickAddEdgeTypeForm = ({ onAdd }: Props) => {
   const [color, setColor] = useState('#6366f1');
   const [style, setStyle] = useState<'solid' | 'dashed' | 'dotted'>('solid');
   const [defaultDirectionality, setDefaultDirectionality] = useState<EdgeDirectionality>('directed');
+  const [nameError, setNameError] = useState<string | null>(null);
 
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   const handleAdd = () => {
     if (!name.trim()) {
+      setNameError('Name is required');
       nameInputRef.current?.focus();
       return;
     }
 
-    onAdd({
+    const error = onAdd({
       label: name.trim(),
       color,
       style,
       defaultDirectionality,
     });
+    if (error) {
+      setNameError(error);
+      nameInputRef.current?.focus();
+      return;
+    }
 
     // Reset form
     setName('');
     setColor('#6366f1');
     setStyle('solid');
     setDefaultDirectionality('directed');
+    setNameError(null);
     nameInputRef.current?.focus();
+  };
+
+  const handleNameChange = (value: string) => {
+    setName(value);
+    setNameError(null);
   };
 
   const handleKeyDown = (e: KeyboardEvent) => {
@@ -67,13 +83,14 @@ const QuickAddEdgeTypeForm = ({ onAdd }: Props) => {
         color={color}
         style={style}
         defaultDirectionality={defaultDirectionality}
-        onNameChange={setName}
+        onNameChange={handleNameChange}
         onColorChange={setColor}
         onStyleChange={setStyle}
         onDefaultDirectionalityChange={setDefaultDirectionality}
         onKeyDown={handleKeyDown}
         nameInputRef={nameInputRef}
         autoFocusName={false}
+        nameError={nameError}
       />
 
       <button

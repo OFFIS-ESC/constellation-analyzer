@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useGraphWithHistory } from '../../hooks/useGraphWithHistory';
 import { useConfirm } from '../../hooks/useConfirm';
-import { useToastStore } from '../../stores/toastStore';
 import { useTimelineStore } from '../../stores/timelineStore';
 import { useTuioConnection } from '../../hooks/useTuioConnection';
 import QuickAddTangibleForm from './QuickAddTangibleForm';
@@ -20,7 +19,6 @@ interface Props {
 const TangibleConfigModal = ({ isOpen, onClose, initialEditingTangibleId }: Props) => {
   const { tangibles, labels, nodeTypes, edgeTypes, addTangible, updateTangible, deleteTangible } = useGraphWithHistory();
   const { confirm, ConfirmDialogComponent } = useConfirm();
-  const { showToast } = useToastStore();
 
   // Connect to TUIO when dialog is open
   useTuioConnection(isOpen);
@@ -49,6 +47,10 @@ const TangibleConfigModal = ({ isOpen, onClose, initialEditingTangibleId }: Prop
     }
   }, [initialEditingTangibleId, isOpen, tangibles]);
 
+  // Mode-specific validation lives in the forms, which can show it next to the
+  // offending field. What is left here is the document-wide hardware ID check,
+  // which only the store can make; its message is passed back for the form to
+  // render inline.
   const handleAddTangible = (tangible: {
     name: string;
     mode: TangibleMode;
@@ -57,24 +59,6 @@ const TangibleConfigModal = ({ isOpen, onClose, initialEditingTangibleId }: Prop
     filters?: import('../../types').FilterConfig;
     stateId?: string;
   }) => {
-    // Validate mode-specific fields
-    if (tangible.mode === 'filter') {
-      const hasFilters =
-        tangible.filters &&
-        ((tangible.filters.labels && tangible.filters.labels.length > 0) ||
-         (tangible.filters.actorTypes && tangible.filters.actorTypes.length > 0) ||
-         (tangible.filters.relationTypes && tangible.filters.relationTypes.length > 0));
-
-      if (!hasFilters) {
-        showToast('Filter mode requires at least one filter (labels, actor types, or relation types)', 'error');
-        return;
-      }
-    }
-    if ((tangible.mode === 'state' || tangible.mode === 'stateDial') && !tangible.stateId) {
-      showToast('State mode requires a state selection', 'error');
-      return;
-    }
-
     const newTangible: Omit<TangibleConfigType, 'id'> = {
       name: tangible.name,
       mode: tangible.mode,
@@ -84,13 +68,10 @@ const TangibleConfigModal = ({ isOpen, onClose, initialEditingTangibleId }: Prop
       stateId: tangible.stateId,
     };
 
-    addTangible(newTangible as TangibleConfigType);
-    showToast(`Tangible "${tangible.name}" created`, 'success');
+    return addTangible(newTangible as TangibleConfigType);
   };
 
   const handleDeleteTangible = async (id: string) => {
-    const tangible = tangibles.find((t) => t.id === id);
-
     const confirmed = await confirm({
       title: 'Delete Tangible',
       message: 'Are you sure you want to delete this tangible? This action cannot be undone.',
@@ -100,7 +81,6 @@ const TangibleConfigModal = ({ isOpen, onClose, initialEditingTangibleId }: Prop
 
     if (confirmed) {
       deleteTangible(id);
-      showToast(`Tangible "${tangible?.name}" deleted`, 'success');
     }
   };
 
@@ -112,9 +92,11 @@ const TangibleConfigModal = ({ isOpen, onClose, initialEditingTangibleId }: Prop
     id: string,
     updates: { name: string; mode: TangibleMode; description?: string; hardwareId?: string; filters?: import('../../types').FilterConfig; stateId?: string }
   ) => {
-    updateTangible(id, updates);
+    const error = updateTangible(id, updates);
+    if (error) return error;
+
     setEditingTangible(null);
-    showToast(`Tangible "${updates.name}" updated`, 'success');
+    return null;
   };
 
   const handleCancelEdit = () => {

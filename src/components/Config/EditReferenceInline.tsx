@@ -1,7 +1,7 @@
 import { useState, useEffect, KeyboardEvent } from 'react';
 import { useBibliographyStore } from '../../stores/bibliographyStore';
 import { useBibliographyWithHistory } from '../../hooks/useBibliographyWithHistory';
-import { useToastStore } from '../../stores/toastStore';
+import FieldError from '../Common/FieldError';
 import type { CSLReference } from '../../types/bibliography';
 
 interface EditReferenceInlineProps {
@@ -12,7 +12,6 @@ interface EditReferenceInlineProps {
 const EditReferenceInline = ({ referenceId, onCancel }: EditReferenceInlineProps) => {
   const { getReferenceById } = useBibliographyStore();
   const { updateReference } = useBibliographyWithHistory();
-  const { showToast } = useToastStore();
 
   const reference = getReferenceById(referenceId);
 
@@ -28,6 +27,7 @@ const EditReferenceInline = ({ referenceId, onCancel }: EditReferenceInlineProps
   const [url, setUrl] = useState('');
   const [abstract, setAbstract] = useState('');
   const [note, setNote] = useState('');
+  const [titleError, setTitleError] = useState<string | null>(null);
 
   // Load reference data
   useEffect(() => {
@@ -59,12 +59,13 @@ const EditReferenceInline = ({ referenceId, onCancel }: EditReferenceInlineProps
       setUrl(reference.URL || '');
       setAbstract(reference.abstract || '');
       setNote(reference.note || '');
+      setTitleError(null);
     }
   }, [reference]);
 
   const handleSave = () => {
     if (!title.trim()) {
-      showToast('Title is required', 'error');
+      setTitleError('Title is required');
       return;
     }
 
@@ -108,8 +109,9 @@ const EditReferenceInline = ({ referenceId, onCancel }: EditReferenceInlineProps
     if (abstract.trim()) updates.abstract = abstract.trim();
     if (note.trim()) updates.note = note.trim();
 
+    // Closing the editor returns to the list showing the updated entry, which
+    // is confirmation enough.
     updateReference(referenceId, updates);
-    showToast('Reference updated successfully', 'success');
     onCancel();
   };
 
@@ -148,10 +150,20 @@ const EditReferenceInline = ({ referenceId, onCancel }: EditReferenceInlineProps
               <input
                 type="text"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  setTitleError(null);
+                }}
                 onKeyDown={handleKeyDown}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 ${
+                  titleError
+                    ? 'border-red-500 focus:ring-red-500'
+                    : 'border-gray-300 focus:ring-blue-500'
+                }`}
+                aria-invalid={titleError ? true : undefined}
+                aria-describedby={titleError ? 'edit-reference-title-error' : undefined}
               />
+              <FieldError id="edit-reference-title-error" message={titleError} />
             </div>
 
             {/* Type */}

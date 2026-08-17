@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useGraphWithHistory } from '../../hooks/useGraphWithHistory';
 import { useConfirm } from '../../hooks/useConfirm';
-import { useToastStore } from '../../stores/toastStore';
 import QuickAddEdgeTypeForm from './QuickAddEdgeTypeForm';
 import EdgeTypeManagementList from './EdgeTypeManagementList';
 import EditEdgeTypeInline from './EditEdgeTypeInline';
@@ -16,8 +15,10 @@ import type { EdgeTypeConfig, EdgeDirectionality } from '../../types';
  * - Two-column layout: quick add (left) + management/edit (right)
  * - Inline editing replaces right column
  * - Compact card-based management list
- * - Toast notifications for actions
  * - Full keyboard accessibility
+ *
+ * Successful edits are not announced: the management list on the right is the
+ * confirmation, and it updates as soon as the change lands.
  */
 
 interface Props {
@@ -29,7 +30,6 @@ interface Props {
 const EdgeTypeConfigModal = ({ isOpen, onClose, initialEditingTypeId }: Props) => {
   const { edgeTypes, addEdgeType, updateEdgeType, deleteEdgeType } = useGraphWithHistory();
   const { confirm, ConfirmDialogComponent } = useConfirm();
-  const { showToast } = useToastStore();
 
   const [editingType, setEditingType] = useState<EdgeTypeConfig | null>(null);
 
@@ -56,8 +56,7 @@ const EdgeTypeConfigModal = ({ isOpen, onClose, initialEditingTypeId }: Props) =
 
     // Check if ID already exists
     if (edgeTypes.some(et => et.id === id)) {
-      showToast('A relation type with this name already exists', 'error');
-      return;
+      return 'A relation type with this name already exists';
     }
 
     const newType: EdgeTypeConfig = {
@@ -69,11 +68,10 @@ const EdgeTypeConfigModal = ({ isOpen, onClose, initialEditingTypeId }: Props) =
     };
 
     addEdgeType(newType);
-    showToast(`Relation type "${type.label}" created`, 'success');
+    return null;
   };
 
   const handleDeleteType = async (id: string) => {
-    const type = edgeTypes.find(t => t.id === id);
     const confirmed = await confirm({
       title: 'Delete Relation Type',
       message: 'Are you sure you want to delete this relation type? This action cannot be undone.',
@@ -82,7 +80,6 @@ const EdgeTypeConfigModal = ({ isOpen, onClose, initialEditingTypeId }: Props) =
     });
     if (confirmed) {
       deleteEdgeType(id);
-      showToast(`Relation type "${type?.label}" deleted`, 'success');
     }
   };
 
@@ -101,7 +98,6 @@ const EdgeTypeConfigModal = ({ isOpen, onClose, initialEditingTypeId }: Props) =
   ) => {
     updateEdgeType(id, updates);
     setEditingType(null);
-    showToast(`Relation type "${updates.label}" updated`, 'success');
   };
 
   const handleCancelEdit = () => {
@@ -129,7 +125,6 @@ const EdgeTypeConfigModal = ({ isOpen, onClose, initialEditingTypeId }: Props) =
     };
 
     addEdgeType(duplicatedType);
-    showToast(`Relation type duplicated as "${newLabel}"`, 'success');
   };
 
   if (!isOpen) return null;

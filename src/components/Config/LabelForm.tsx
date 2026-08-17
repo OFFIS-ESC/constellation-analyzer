@@ -1,3 +1,4 @@
+import FieldError from '../Common/FieldError';
 import type { LabelScope } from '../../types';
 
 /**
@@ -19,6 +20,9 @@ interface Props {
   onColorChange: (value: string) => void;
   onAppliesToChange: (value: LabelScope) => void;
   onDescriptionChange: (value: string) => void;
+  nameInputRef?: React.RefObject<HTMLInputElement>;
+  /** Validation message for the name field, shown beneath the input */
+  nameError?: string | null;
 }
 
 const LabelForm = ({
@@ -30,6 +34,8 @@ const LabelForm = ({
   onColorChange,
   onAppliesToChange,
   onDescriptionChange,
+  nameInputRef,
+  nameError,
 }: Props) => {
   return (
     <div className="space-y-3">
@@ -38,12 +44,20 @@ const LabelForm = ({
           Name *
         </label>
         <input
+          ref={nameInputRef}
           type="text"
           value={name}
           onChange={(e) => onNameChange(e.target.value)}
           placeholder="e.g., Team, Lead, Important"
-          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 ${
+            nameError
+              ? 'border-red-500 focus:ring-red-500'
+              : 'border-gray-300 focus:ring-blue-500'
+          }`}
+          aria-invalid={nameError ? true : undefined}
+          aria-describedby={nameError ? 'label-name-error' : undefined}
         />
+        <FieldError id="label-name-error" message={nameError} />
       </div>
 
       <div>

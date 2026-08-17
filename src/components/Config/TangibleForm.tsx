@@ -1,3 +1,4 @@
+import FieldError from "../Common/FieldError";
 import type { TangibleMode, LabelConfig, FilterConfig, NodeTypeConfig, EdgeTypeConfig } from "../../types";
 import type { ConstellationState } from "../../types/timeline";
 
@@ -27,6 +28,12 @@ interface Props {
   onFilterLabelsChange?: (value: string[]) => void;
   onFiltersChange: (value: FilterConfig) => void;
   onStateIdChange: (value: string) => void;
+  nameInputRef?: React.RefObject<HTMLInputElement>;
+  /** Validation messages, each shown beneath the field it belongs to */
+  nameError?: string | null;
+  hardwareIdError?: string | null;
+  filtersError?: string | null;
+  stateError?: string | null;
 }
 
 const TangibleForm = ({
@@ -47,6 +54,11 @@ const TangibleForm = ({
   onHardwareIdChange,
   onFiltersChange,
   onStateIdChange,
+  nameInputRef,
+  nameError,
+  hardwareIdError,
+  filtersError,
+  stateError,
 }: Props) => {
   return (
     <div className="space-y-3">
@@ -56,12 +68,20 @@ const TangibleForm = ({
             Name *
           </label>
           <input
+            ref={nameInputRef}
             type="text"
             value={name}
             onChange={(e) => onNameChange(e.target.value)}
             placeholder="e.g., Red Block"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 ${
+              nameError
+                ? "border-red-500 focus:ring-red-500"
+                : "border-gray-300 focus:ring-blue-500"
+            }`}
+            aria-invalid={nameError ? true : undefined}
+            aria-describedby={nameError ? "tangible-name-error" : undefined}
           />
+          <FieldError id="tangible-name-error" message={nameError} />
         </div>
 
         <div>
@@ -85,8 +105,15 @@ const TangibleForm = ({
             value={hardwareId}
             onChange={(e) => onHardwareIdChange(e.target.value)}
             placeholder="e.g., token-001"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 ${
+              hardwareIdError
+                ? "border-red-500 focus:ring-red-500"
+                : "border-gray-300 focus:ring-blue-500"
+            }`}
+            aria-invalid={hardwareIdError ? true : undefined}
+            aria-describedby={hardwareIdError ? "tangible-hardware-id-error" : undefined}
           />
+          <FieldError id="tangible-hardware-id-error" message={hardwareIdError} />
         </div>
       </div>
 
@@ -141,6 +168,8 @@ const TangibleForm = ({
       {/* Mode-specific fields */}
       {mode === "filter" && (
         <div className="space-y-3">
+          <FieldError message={filtersError} />
+
           {/* Filter Combine Mode */}
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -322,7 +351,13 @@ const TangibleForm = ({
           <select
             value={stateId}
             onChange={(e) => onStateIdChange(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 ${
+              stateError
+                ? "border-red-500 focus:ring-red-500"
+                : "border-gray-300 focus:ring-blue-500"
+            }`}
+            aria-invalid={stateError ? true : undefined}
+            aria-describedby={stateError ? "tangible-state-error" : undefined}
           >
             <option value="">Select a state...</option>
             {states.map((state) => (
@@ -331,6 +366,7 @@ const TangibleForm = ({
               </option>
             ))}
           </select>
+          <FieldError id="tangible-state-error" message={stateError} />
         </div>
       )}
 

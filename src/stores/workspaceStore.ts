@@ -213,8 +213,6 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
       return newState;
     });
 
-    useToastStore.getState().showToast(`Document "${title}" created`, 'success');
-
     return documentId;
   },
 
@@ -279,10 +277,6 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
         activeDocumentId: documentId,
       };
     });
-
-    useToastStore
-      .getState()
-      .showToast('Example opened. Edit it freely — it is a normal document.', 'info');
 
     return documentId;
   },
@@ -494,11 +488,6 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
 
   // Delete document (remove from storage)
   deleteDocument: (documentId: string) => {
-    const state = get();
-
-    const metadata = state.documentMetadata.get(documentId);
-    const docTitle = metadata?.title || 'Untitled';
-
     // Delete from storage
     deleteDocumentFromStorage(documentId);
 
@@ -531,8 +520,6 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
       };
     });
 
-    useToastStore.getState().showToast(`Document "${docTitle}" deleted`, 'info');
-
     return true;
   },
 
@@ -559,8 +546,6 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
 
       return {};
     });
-
-    useToastStore.getState().showToast(`Document renamed to "${newTitle}"`, 'success');
   },
 
   // Duplicate document
@@ -569,7 +554,6 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
     const sourceDoc = state.documents.get(documentId);
     if (!sourceDoc) {
       console.error(`Document ${documentId} not found`);
-      useToastStore.getState().showToast('Failed to duplicate: Document not found', 'error');
       return '';
     }
 
@@ -637,8 +621,6 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
     // Initialize timeline for duplicated document - always copy the timeline
     // since all documents now have timelines
     useTimelineStore.getState().loadTimeline(newDocumentId, duplicatedDoc.timeline as unknown as Timeline);
-
-    useToastStore.getState().showToast(`Document duplicated as "${newTitle}"`, 'success');
 
     return newDocumentId;
   },
@@ -778,13 +760,11 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
             };
           });
 
-          // Show success toast
-          useToastStore.getState().showToast('Document imported successfully', 'success');
-
+          // Success needs no announcement: the imported document opens as the
+          // active tab. A failure has no such tell, so it still gets a toast.
           resolve(documentId);
         },
         (error) => {
-          // Show error toast
           useToastStore.getState().showToast(`Failed to import file: ${error}`, 'error', 5000);
           resolve(null);
         }
@@ -828,9 +808,10 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
         settings: bibliographyStore.settings,
       };
 
-      // Export the complete document with all timeline states
+      // Export the complete document with all timeline states.
+      // Success is announced by the browser's own download UI; only the
+      // failure path needs a toast.
       exportDocumentToFile(doc);
-      useToastStore.getState().showToast('Document exported successfully', 'success');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       useToastStore.getState().showToast(`Failed to export document: ${message}`, 'error', 5000);
@@ -986,7 +967,6 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
       }
 
       await exportAllDocumentsAsZip(allDocs, state.workspaceName);
-      useToastStore.getState().showToast('All documents exported successfully', 'success');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       useToastStore.getState().showToast(`Failed to export documents: ${message}`, 'error', 5000);
@@ -1014,7 +994,6 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
         state.documentOrder,
         loadDoc
       );
-      useToastStore.getState().showToast('Workspace exported successfully', 'success');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       useToastStore.getState().showToast(`Failed to export workspace: ${message}`, 'error', 5000);
@@ -1078,7 +1057,6 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
             documentMetadata: allMetadata,
           });
 
-          useToastStore.getState().showToast('Workspace imported successfully', 'success');
           resolve();
         },
         (error) => {
@@ -1718,7 +1696,7 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
 
     if (!doc) {
       console.error(`Document ${documentId} not found`);
-      return;
+      return 'Document not found';
     }
 
     // Initialize tangibles array if it doesn't exist (backward compatibility)
@@ -1731,8 +1709,7 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
 
     // Validate unique hardware ID (if provided)
     if (tangible.hardwareId && doc.tangibles.some((t) => t.hardwareId === tangible.hardwareId)) {
-      useToastStore.getState().showToast('This hardware ID is already assigned to another tangible', 'error');
-      return;
+      return 'This hardware ID is already assigned to another tangible';
     }
 
     // Validate mode-specific fields
@@ -1747,13 +1724,11 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
       const hasOldFilters = tangible.filterLabels && tangible.filterLabels.length > 0;
 
       if (!hasNewFilters && !hasOldFilters) {
-        useToastStore.getState().showToast('Filter mode requires at least one filter (labels, actor types, or relation types)', 'error');
-        return;
+        return 'Filter mode requires at least one filter (labels, actor types, or relation types)';
       }
     }
     if ((tangible.mode === 'state' || tangible.mode === 'stateDial') && !tangible.stateId) {
-      useToastStore.getState().showToast('State mode requires a state selection', 'error');
-      return;
+      return 'State mode requires a state selection';
     }
 
     // Create tangible with auto-generated ID
@@ -1785,6 +1760,8 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
       'add tangible',
       documentId
     );
+
+    return null;
   },
 
   updateTangibleInDocument: (documentId: string, tangibleId: string, updates) => {
@@ -1793,7 +1770,7 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
 
     if (!doc) {
       console.error(`Document ${documentId} not found`);
-      return;
+      return 'Document not found';
     }
 
     // Initialize tangibles array if it doesn't exist (backward compatibility)
@@ -1805,8 +1782,7 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
     if (updates.hardwareId !== undefined && updates.hardwareId) {
       const existingWithHardwareId = doc.tangibles.find((t) => t.hardwareId === updates.hardwareId && t.id !== tangibleId);
       if (existingWithHardwareId) {
-        useToastStore.getState().showToast('This hardware ID is already assigned to another tangible', 'error');
-        return;
+        return 'This hardware ID is already assigned to another tangible';
       }
     }
 
@@ -1822,13 +1798,11 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
       const hasOldFilters = updates.filterLabels && updates.filterLabels.length > 0;
 
       if (!hasNewFilters && !hasOldFilters) {
-        useToastStore.getState().showToast('Filter mode requires at least one filter (labels, actor types, or relation types)', 'error');
-        return;
+        return 'Filter mode requires at least one filter (labels, actor types, or relation types)';
       }
     }
     if ((updates.mode === 'state' || updates.mode === 'stateDial') && !updates.stateId) {
-      useToastStore.getState().showToast('State mode requires a state selection', 'error');
-      return;
+      return 'State mode requires a state selection';
     }
 
     // Capture original state for rollback
@@ -1859,6 +1833,8 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
       'update tangible',
       documentId
     );
+
+    return null;
   },
 
   deleteTangibleFromDocument: (documentId: string, tangibleId: string) => {

@@ -313,7 +313,7 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) =>
                   className="w-full text-left px-4 py-1.5 hover:bg-gray-100"
                 >
                   <span className="block text-sm text-gray-700">Open Example Analysis</span>
-                  <span className="block text-xs text-gray-500">A worked constellation to poke at</span>
+                  <span className="block text-xs text-gray-500">A worked constellation — a normal document you can edit or delete</span>
                 </button>
                 <button
                   onClick={handleOpenDocumentManager}

@@ -20,6 +20,7 @@ import { useCreateDocument } from "./hooks/useCreateDocument";
 import type { Actor, Relation, Group } from "./types";
 import type { ExportOptions } from "./utils/graphExport";
 import PresentationTimelineOverlay from "./components/Presentation/PresentationTimelineOverlay";
+import PresentationExitHint from "./components/Presentation/PresentationExitHint";
 import "./styles/presentation.css";
 
 /**
@@ -272,9 +273,12 @@ function AppContent() {
               }}
             />
 
-            {/* Presentation Timeline Overlay - Floats inside graph editor */}
+            {/* Presentation overlays - Float inside graph editor */}
             {presentationMode && activeDocumentId && (
-              <PresentationTimelineOverlay />
+              <>
+                <PresentationTimelineOverlay />
+                <PresentationExitHint />
+              </>
             )}
           </div>
 

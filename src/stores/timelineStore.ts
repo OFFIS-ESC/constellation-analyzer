@@ -9,7 +9,6 @@ import type { Actor, Relation, Group } from "../types";
 import type { SerializedActor, SerializedRelation, SerializedGroup } from "./persistence/types";
 import { useGraphStore } from "./graphStore";
 import { useWorkspaceStore } from "./workspaceStore";
-import { useToastStore } from "./toastStore";
 import { useHistoryStore } from "./historyStore";
 import { useTuioStore } from "./tuioStore";
 
@@ -31,6 +30,23 @@ interface TimelineStore {
 // Generate unique state ID
 function generateStateId(): StateId {
   return `state_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+/**
+ * How many tangibles a state deletion would take with it.
+ *
+ * Deleting a state deletes every tangible pointing at it, so the count is
+ * needed before the delete to state the consequence in the confirmation.
+ */
+function countTangiblesForState(documentId: string, stateId: StateId): number {
+  const doc = useWorkspaceStore.getState().documents.get(documentId);
+  if (!doc?.tangibles) return 0;
+
+  return doc.tangibles.filter(
+    (tangible) =>
+      (tangible.mode === "state" || tangible.mode === "stateDial") &&
+      tangible.stateId === stateId,
+  ).length;
 }
 
 /**
@@ -152,14 +168,12 @@ export const useTimelineStore = create<TimelineStore & TimelineActions>(
 
       if (!activeDocumentId) {
         console.error("No active document");
-        useToastStore.getState().showToast("No active document", "error");
         return "";
       }
 
       const timeline = state.timelines.get(activeDocumentId);
       if (!timeline) {
         console.error("No timeline for active document");
-        useToastStore.getState().showToast("Timeline not initialized", "error");
         return "";
       }
 
@@ -235,8 +249,6 @@ export const useTimelineStore = create<TimelineStore & TimelineActions>(
         useWorkspaceStore.getState().saveDocument(activeDocumentId);
       }, 1000);
 
-      useToastStore.getState().showToast(`State "${label}" created`, "success");
-
       return newStateId;
     },
 
@@ -258,7 +270,6 @@ export const useTimelineStore = create<TimelineStore & TimelineActions>(
       const targetState = timeline.states.get(stateId);
       if (!targetState) {
         console.error(`State ${stateId} not found`);
-        useToastStore.getState().showToast("State not found", "error");
         return;
       }
 
@@ -396,28 +407,37 @@ export const useTimelineStore = create<TimelineStore & TimelineActions>(
       const timeline = state.timelines.get(activeDocumentId);
       if (!timeline) return false;
 
-      // Can't delete root state
+      // The root and current states cannot be deleted. The timeline disables
+      // its Delete action for both and explains why, so reaching this point
+      // means a caller bypassed the UI - refuse quietly.
       if (stateId === timeline.rootStateId) {
-        useToastStore.getState().showToast("Cannot delete root state", "error");
+        console.warn("Refusing to delete the root state");
         return false;
       }
 
-      // Can't delete current state
       if (stateId === timeline.currentStateId) {
-        useToastStore
-          .getState()
-          .showToast(
-            "Cannot delete current state. Switch to another state first.",
-            "error",
-          );
+        console.warn("Refusing to delete the current state");
         return false;
       }
 
-      // Check if state has children
+      // Everything this delete takes with it goes into one confirmation, so the
+      // consequences are visible before the click rather than reported after.
       const children = get().getChildStates(stateId);
+      const tangiblesToDelete = countTangiblesForState(activeDocumentId, stateId);
+      const consequences: string[] = [];
       if (children.length > 0) {
+        consequences.push(
+          `${children.length} child state(s) will be orphaned`,
+        );
+      }
+      if (tangiblesToDelete > 0) {
+        consequences.push(
+          `${tangiblesToDelete} tangible(s) referencing it will be deleted`,
+        );
+      }
+      if (consequences.length > 0) {
         const confirmed = window.confirm(
-          `This state has ${children.length} child state(s). Delete anyway? Children will be orphaned.`,
+          `Delete this state?\n\n${consequences.map((c) => `• ${c}`).join("\n")}`,
         );
         if (!confirmed) return false;
       }
@@ -443,15 +463,11 @@ export const useTimelineStore = create<TimelineStore & TimelineActions>(
         const tangiblesDeleted = tangiblesBefore - doc.tangibles.length;
 
         if (tangiblesDeleted > 0) {
-          // Sync to graphStore if active
+          // Sync to graphStore if active. The count was already disclosed in
+          // the confirmation above.
           if (activeDocumentId === workspaceStore.activeDocumentId) {
             useGraphStore.getState().setTangibles(doc.tangibles);
           }
-
-          useToastStore.getState().showToast(
-            `Deleted ${tangiblesDeleted} tangible(s) referencing this state`,
-            'info'
-          );
         }
       }
 
@@ -478,10 +494,6 @@ export const useTimelineStore = create<TimelineStore & TimelineActions>(
         useWorkspaceStore.getState().saveDocument(activeDocumentId);
       }, 1000);
 
-      useToastStore
-        .getState()
-        .showToast(`State "${stateName}" deleted`, "info");
-
       return true;
     },
 
@@ -503,7 +515,6 @@ export const useTimelineStore = create<TimelineStore & TimelineActions>(
       const stateToDuplicate = timeline.states.get(stateId);
       if (!stateToDuplicate) {
         console.error(`State ${stateId} not found`);
-        useToastStore.getState().showToast("State not found", "error");
         return "";
       }
 
@@ -542,10 +553,6 @@ export const useTimelineStore = create<TimelineStore & TimelineActions>(
       // Mark document as dirty
       useWorkspaceStore.getState().markDocumentDirty(activeDocumentId);
 
-      useToastStore
-        .getState()
-        .showToast(`State "${label}" created`, "success");
-
       return newStateId;
     },
 
@@ -567,7 +574,6 @@ export const useTimelineStore = create<TimelineStore & TimelineActions>(
       const stateToDuplicate = timeline.states.get(stateId);
       if (!stateToDuplicate) {
         console.error(`State ${stateId} not found`);
-        useToastStore.getState().showToast("State not found", "error");
         return "";
       }
 
@@ -605,10 +611,6 @@ export const useTimelineStore = create<TimelineStore & TimelineActions>(
 
       // Mark document as dirty
       useWorkspaceStore.getState().markDocumentDirty(activeDocumentId);
-
-      useToastStore
-        .getState()
-        .showToast(`State "${label}" created`, "success");
 
       return newStateId;
     },

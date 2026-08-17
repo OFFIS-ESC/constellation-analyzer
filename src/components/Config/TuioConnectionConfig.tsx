@@ -1,9 +1,27 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTuioStore } from '../../stores/tuioStore';
 import { useGraphStore } from '../../stores/graphStore';
-import { useToastStore } from '../../stores/toastStore';
 import { TuioClientManager } from '../../lib/tuio/tuioClient';
+import FieldError from '../Common/FieldError';
 import type { TuioTangibleInfo } from '../../lib/tuio/types';
+
+/**
+ * Validates the WebSocket URL input. Returns the problem, or null when valid.
+ */
+const validateWebsocketUrl = (input: string): string | null => {
+  if (!input.trim()) return 'A WebSocket URL is required';
+
+  try {
+    const url = new URL(input);
+    if (url.protocol !== 'ws:' && url.protocol !== 'wss:') {
+      return 'The URL must start with ws:// or wss://';
+    }
+  } catch {
+    return 'This is not a valid WebSocket URL';
+  }
+
+  return null;
+};
 
 interface Props {
   isOpen: boolean;
@@ -13,9 +31,9 @@ interface Props {
 const TuioConnectionConfig = ({ isOpen, onClose }: Props) => {
   const { websocketUrl, setWebsocketUrl, protocolVersion, setProtocolVersion } = useTuioStore();
   const { tangibles } = useGraphStore();
-  const { showToast } = useToastStore();
 
   const [urlInput, setUrlInput] = useState(websocketUrl);
+  const [urlError, setUrlError] = useState<string | null>(null);
   const [versionInput, setVersionInput] = useState<'1.1' | '2.0'>(protocolVersion);
   const [testConnected, setTestConnected] = useState(false);
   const [testConnectionError, setTestConnectionError] = useState<string | null>(null);
@@ -29,6 +47,7 @@ const TuioConnectionConfig = ({ isOpen, onClose }: Props) => {
   useEffect(() => {
     if (isOpen) {
       setUrlInput(websocketUrl);
+      setUrlError(null);
       setVersionInput(protocolVersion);
       setTestConnected(false);
       setTestConnectionError(null);
@@ -48,21 +67,12 @@ const TuioConnectionConfig = ({ isOpen, onClose }: Props) => {
 
   const handleConnect = async () => {
     // Validate URL first
-    if (!urlInput.trim()) {
-      showToast('WebSocket URL is required', 'error');
+    const validationError = validateWebsocketUrl(urlInput);
+    if (validationError) {
+      setUrlError(validationError);
       return;
     }
-
-    try {
-      const url = new URL(urlInput);
-      if (url.protocol !== 'ws:' && url.protocol !== 'wss:') {
-        showToast('URL must start with ws:// or wss://', 'error');
-        return;
-      }
-    } catch {
-      showToast('Invalid WebSocket URL format', 'error');
-      return;
-    }
+    setUrlError(null);
 
     setIsConnecting(true);
     setTestConnectionError(null);
@@ -103,8 +113,9 @@ const TuioConnectionConfig = ({ isOpen, onClose }: Props) => {
           console.log('[TUIO Config] Connection state changed:', connected, error);
           setTestConnected(connected);
           if (error) {
+            // Rendered next to the status indicator below, which is where
+            // someone testing a connection is already looking.
             setTestConnectionError(error);
-            showToast(`Connection failed: ${error}`, 'error');
           }
         },
       },
@@ -131,7 +142,6 @@ const TuioConnectionConfig = ({ isOpen, onClose }: Props) => {
     setTestConnected(false);
     setTestConnectionError(null);
     setTestActiveTangibles(new Map());
-    showToast('Disconnected from TUIO server', 'info');
   };
 
   const handleSave = () => {
@@ -144,21 +154,12 @@ const TuioConnectionConfig = ({ isOpen, onClose }: Props) => {
     }
 
     // Validate WebSocket URL format
-    if (!urlInput.trim()) {
-      showToast('WebSocket URL is required', 'error');
+    const validationError = validateWebsocketUrl(urlInput);
+    if (validationError) {
+      setUrlError(validationError);
       return;
     }
-
-    try {
-      const url = new URL(urlInput);
-      if (url.protocol !== 'ws:' && url.protocol !== 'wss:') {
-        showToast('URL must start with ws:// or wss://', 'error');
-        return;
-      }
-    } catch {
-      showToast('Invalid WebSocket URL format', 'error');
-      return;
-    }
+    setUrlError(null);
 
     // Save URL and protocol version
     setWebsocketUrl(urlInput);
@@ -179,6 +180,7 @@ const TuioConnectionConfig = ({ isOpen, onClose }: Props) => {
 
   const handleReset = () => {
     setUrlInput('ws://localhost:3333');
+    setUrlError(null);
   };
 
   if (!isOpen) return null;
@@ -217,9 +219,18 @@ const TuioConnectionConfig = ({ isOpen, onClose }: Props) => {
                 id="websocket-url"
                 type="text"
                 value={urlInput}
-                onChange={(e) => setUrlInput(e.target.value)}
+                onChange={(e) => {
+                  setUrlInput(e.target.value);
+                  setUrlError(null);
+                }}
                 placeholder="ws://localhost:3333"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={`flex-1 px-3 py-2 border rounded-md focus:ring-2 focus:border-transparent ${
+                  urlError
+                    ? 'border-red-500 focus:ring-red-500'
+                    : 'border-gray-300 focus:ring-blue-500'
+                }`}
+                aria-invalid={urlError ? true : undefined}
+                aria-describedby={urlError ? 'websocket-url-error' : undefined}
               />
               <button
                 onClick={handleReset}
@@ -228,6 +239,7 @@ const TuioConnectionConfig = ({ isOpen, onClose }: Props) => {
                 Reset
               </button>
             </div>
+            <FieldError id="websocket-url-error" message={urlError} />
             <p className="text-xs text-gray-500 mt-1">
               Example: ws://localhost:3333 or ws://192.168.1.100:3333
             </p>

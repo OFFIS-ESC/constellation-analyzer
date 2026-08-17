@@ -1,4 +1,5 @@
 import { KeyboardEvent } from 'react';
+import FieldError from '../Common/FieldError';
 import type { EdgeDirectionality } from '../../types';
 
 /**
@@ -23,6 +24,8 @@ interface Props {
   onKeyDown?: (e: KeyboardEvent) => void;
   nameInputRef?: React.RefObject<HTMLInputElement>;
   autoFocusName?: boolean;
+  /** Validation message for the name field, shown beneath the input */
+  nameError?: string | null;
 }
 
 const EdgeTypeFormFields = ({
@@ -37,6 +40,7 @@ const EdgeTypeFormFields = ({
   onKeyDown,
   nameInputRef,
   autoFocusName = false,
+  nameError,
 }: Props) => {
   const renderStylePreview = (lineStyle: 'solid' | 'dashed' | 'dotted', lineColor: string) => {
     const strokeDasharray = {
@@ -78,8 +82,14 @@ const EdgeTypeFormFields = ({
               onChange={(e) => onNameChange(e.target.value)}
               onKeyDown={onKeyDown}
               placeholder="e.g., Supervises"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 ${
+                nameError
+                  ? 'border-red-500 focus:ring-red-500'
+                  : 'border-gray-300 focus:ring-blue-500'
+              }`}
               aria-required="true"
+              aria-invalid={nameError ? true : undefined}
+              aria-describedby={nameError ? 'edge-type-name-error' : undefined}
               autoFocus={autoFocusName}
             />
           </div>
@@ -118,6 +128,7 @@ const EdgeTypeFormFields = ({
             </select>
           </div>
         </div>
+        <FieldError id="edge-type-name-error" message={nameError} />
       </div>
 
       {/* Line Style Preview */}

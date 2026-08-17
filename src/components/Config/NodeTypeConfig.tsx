@@ -5,6 +5,8 @@ import { useToastStore } from '../../stores/toastStore';
 import QuickAddTypeForm from './QuickAddTypeForm';
 import TypeManagementList from './TypeManagementList';
 import EditTypeInline from './EditTypeInline';
+import ScopeBadge from '../Help/ScopeBadge';
+import ConceptButton from '../Help/ConceptButton';
 import type { NodeTypeConfig, NodeShape } from '../../types';
 
 /**
@@ -130,9 +132,13 @@ const NodeTypeConfigModal = ({ isOpen, onClose, initialEditingTypeId }: Props) =
         <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[85vh] overflow-hidden flex flex-col">
           {/* Header */}
           <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900">Configure Actor Types</h2>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h2 className="text-xl font-bold text-gray-900">Configure Actor Types</h2>
+              <ConceptButton concept="actors-and-types" placement="bottom" />
+              <ScopeBadge scope="document" />
+            </div>
             <p className="text-sm text-gray-600 mt-1">
-              Quickly add and manage the types of actors in your constellation
+              A type is a reusable template. Editing one restyles every actor using it.
             </p>
           </div>
 

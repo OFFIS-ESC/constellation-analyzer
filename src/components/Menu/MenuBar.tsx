@@ -12,6 +12,7 @@ import TangibleConfigModal from '../Config/TangibleConfig';
 import TuioConnectionConfig from '../Config/TuioConnectionConfig';
 import BibliographyConfigModal from '../Config/BibliographyConfig';
 import InputDialog from '../Common/InputDialog';
+import ConceptIndex from '../Help/ConceptIndex';
 import { useConfirm } from '../../hooks/useConfirm';
 import { useShortcutLabels } from '../../hooks/useShortcutLabels';
 import type { ExportOptions } from '../../utils/graphExport';
@@ -43,6 +44,7 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) =>
   const [showBibliographyConfig, setShowBibliographyConfig] = useState(false);
   const [showNewDocDialog, setShowNewDocDialog] = useState(false);
   const [showNewFromTemplateDialog, setShowNewFromTemplateDialog] = useState(false);
+  const [showConceptIndex, setShowConceptIndex] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { confirm, ConfirmDialogComponent } = useConfirm();
   const { getShortcutLabel } = useShortcutLabels();
@@ -50,7 +52,9 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) =>
   const {
     createDocument,
     createDocumentFromTemplate,
+    createExampleDocument,
     activeDocumentId,
+    documentOrder,
     exportDocument,
     importDocumentFromFile,
     switchToDocument,
@@ -143,6 +147,14 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) =>
     closeMenu();
   }, [closeMenu]);
 
+  const handleOpenExample = useCallback(() => {
+    const newDocId = createExampleDocument();
+    if (newDocId) {
+      switchToDocument(newDocId);
+    }
+    closeMenu();
+  }, [createExampleDocument, switchToDocument, closeMenu]);
+
   const handleImport = useCallback(async () => {
     const newDocId = await importDocumentFromFile();
     if (newDocId) {
@@ -168,10 +180,24 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) =>
     closeMenu();
   }, [exportWorkspace, closeMenu]);
 
-  const handleImportWorkspace = useCallback(() => {
-    importWorkspace();
+  const handleImportWorkspace = useCallback(async () => {
+    // Importing a workspace overwrites the stored workspace wholesale, so name
+    // what is about to be lost before opening the file picker.
+    const openCount = documentOrder.length;
+    const confirmed = await confirm({
+      title: 'Import Workspace',
+      message:
+        openCount > 0
+          ? `This replaces your current workspace — all ${openCount} open ${openCount === 1 ? 'document' : 'documents'} and your settings. Export your workspace first if you want to keep it.`
+          : 'This replaces your current workspace and settings.',
+      confirmLabel: 'Replace workspace',
+      severity: 'danger',
+    });
+    if (confirmed) {
+      importWorkspace();
+    }
     closeMenu();
-  }, [importWorkspace, closeMenu]);
+  }, [importWorkspace, closeMenu, confirm, documentOrder.length]);
 
   const handleConfigureActors = useCallback(() => {
     setShowNodeConfig(true);
@@ -261,8 +287,11 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) =>
               <ExpandMoreIcon sx={{ fontSize: 16 }} />
             </button>
 
+            {/* Wider than the other menus: these items carry a second line
+                explaining what each export actually contains, and at the
+                default menu width every one of them wrapped. */}
             {activeMenu === 'file' && (
-              <div className="absolute top-full left-0 mt-1 w-56 bg-white border border-gray-200 rounded-md shadow-lg py-1 z-50">
+              <div className="absolute top-full left-0 mt-1 w-96 bg-white border border-gray-200 rounded-md shadow-lg py-1 z-50">
                 <button
                   onClick={handleNewDocument}
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between"
@@ -280,6 +309,13 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) =>
                   New from Current Template
                 </button>
                 <button
+                  onClick={handleOpenExample}
+                  className="w-full text-left px-4 py-1.5 hover:bg-gray-100"
+                >
+                  <span className="block text-sm text-gray-700">Open Example Analysis</span>
+                  <span className="block text-xs text-gray-500">A worked constellation to poke at</span>
+                </button>
+                <button
                   onClick={handleOpenDocumentManager}
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between"
                 >
@@ -291,55 +327,65 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) =>
 
                 <hr className="my-1 border-gray-200" />
 
+                <div className="px-4 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                  This document
+                </div>
                 <button
                   onClick={handleImport}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  className="w-full text-left px-4 py-1.5 hover:bg-gray-100"
                 >
-                  Import Document
+                  <span className="block text-sm text-gray-700">Import Document…</span>
+                  <span className="block text-xs text-gray-500">Opens a .json file as a new document</span>
                 </button>
                 <button
                   onClick={handleExport}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between"
+                  className="w-full text-left px-4 py-1.5 hover:bg-gray-100"
                 >
-                  <span>Export Document (JSON)</span>
-                  {getShortcutLabel('save-document') && (
-                    <span className="text-xs text-gray-400">{getShortcutLabel('save-document')}</span>
-                  )}
+                  <span className="block text-sm text-gray-700">Export Document (JSON)</span>
+                  <span className="block text-xs text-gray-500">All states — for backup or sharing</span>
                 </button>
                 <button
                   onClick={handleExportPNG}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  className="w-full text-left px-4 py-1.5 hover:bg-gray-100 disabled:opacity-40"
                   disabled={!onExport || !activeDocumentId}
                 >
-                  Export as PNG Image
+                  <span className="block text-sm text-gray-700">Export as PNG Image</span>
+                  <span className="block text-xs text-gray-500">Picture of the current state — not re-importable</span>
                 </button>
                 <button
                   onClick={handleExportSVG}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  className="w-full text-left px-4 py-1.5 hover:bg-gray-100 disabled:opacity-40"
                   disabled={!onExport || !activeDocumentId}
                 >
-                  Export as SVG Vector
-                </button>
-                <button
-                  onClick={handleExportAll}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                >
-                  Export All as ZIP
+                  <span className="block text-sm text-gray-700">Export as SVG Vector</span>
+                  <span className="block text-xs text-gray-500">Scalable picture — not re-importable</span>
                 </button>
 
                 <hr className="my-1 border-gray-200" />
 
+                <div className="px-4 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                  All documents
+                </div>
+                <button
+                  onClick={handleExportAll}
+                  className="w-full text-left px-4 py-1.5 hover:bg-gray-100"
+                >
+                  <span className="block text-sm text-gray-700">Export All as ZIP</span>
+                  <span className="block text-xs text-gray-500">Every document as a separate file</span>
+                </button>
                 <button
                   onClick={handleExportWorkspace}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  className="w-full text-left px-4 py-1.5 hover:bg-gray-100"
                 >
-                  Export Workspace
+                  <span className="block text-sm text-gray-700">Export Workspace</span>
+                  <span className="block text-xs text-gray-500">Every document, plus tabs and settings</span>
                 </button>
                 <button
                   onClick={handleImportWorkspace}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  className="w-full text-left px-4 py-1.5 hover:bg-red-50"
                 >
-                  Import Workspace
+                  <span className="block text-sm text-red-700">Import Workspace…</span>
+                  <span className="block text-xs text-red-600">Replaces everything currently open</span>
                 </button>
               </div>
             )}
@@ -444,7 +490,7 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) =>
             </button>
 
             {activeMenu === 'view' && (
-              <div className="absolute top-full left-0 mt-1 w-56 bg-white border border-gray-200 rounded-md shadow-lg py-1 z-50">
+              <div className="absolute top-full left-0 mt-1 w-80 bg-white border border-gray-200 rounded-md shadow-lg py-1 z-50">
                 <button
                   onClick={() => {
                     onFitView?.();
@@ -464,10 +510,13 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) =>
                     setPresentationMode(true);
                     closeMenu();
                   }}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between"
+                  className="w-full text-left px-4 py-2 hover:bg-gray-100"
                 >
-                  <span>Presentation Mode</span>
-                  <span className="text-xs text-gray-400">F11</span>
+                  <span className="flex items-center justify-between">
+                    <span className="text-sm text-gray-700">Presentation Mode</span>
+                    <span className="text-xs text-gray-400">F11</span>
+                  </span>
+                  <span className="block text-xs text-gray-500">Fullscreen, no panels — press Esc to come back</span>
                 </button>
 
                 <div className="border-t border-gray-200 my-1" />
@@ -501,7 +550,22 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) =>
             </button>
 
             {activeMenu === 'help' && (
-              <div className="absolute top-full left-0 mt-1 w-56 bg-white border border-gray-200 rounded-md shadow-lg py-1 z-50">
+              <div className="absolute top-full left-0 mt-1 w-80 bg-white border border-gray-200 rounded-md shadow-lg py-1 z-50">
+                <button
+                  onClick={() => {
+                    setShowConceptIndex(true);
+                    closeMenu();
+                  }}
+                  className="w-full text-left px-4 py-1.5 hover:bg-gray-100"
+                >
+                  <span className="block text-sm text-gray-700">How this works</span>
+                  <span className="block text-xs text-gray-500">
+                    Actors, relations, states and the rest, explained
+                  </span>
+                </button>
+
+                <hr className="my-1 border-gray-200" />
+
                 <button
                   onClick={() => {
                     onOpenHelp?.();
@@ -548,6 +612,10 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) =>
       <BibliographyConfigModal
         isOpen={showBibliographyConfig}
         onClose={() => setShowBibliographyConfig(false)}
+      />
+      <ConceptIndex
+        isOpen={showConceptIndex}
+        onClose={() => setShowConceptIndex(false)}
       />
 
       {/* Input Dialogs */}

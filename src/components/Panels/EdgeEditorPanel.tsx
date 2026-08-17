@@ -15,6 +15,8 @@ import LabelConfigModal from '../Config/LabelConfig';
 import BibliographyConfigModal from '../Config/BibliographyConfig';
 import AutocompleteLabelSelector from '../Common/AutocompleteLabelSelector';
 import CitationSelector from '../Common/CitationSelector';
+import FieldHint from '../Help/FieldHint';
+import { useTypeUsage, describeTypeUsage } from '../../hooks/useTypeUsage';
 import type { Relation, EdgeDirectionality } from '../../types';
 
 interface EdgeEditorPanelProps {
@@ -140,6 +142,9 @@ const EdgeEditorPanel = ({ selectedEdge, onClose }: EdgeEditorPanelProps) => {
   const currentEdge = edges.find(e => e.id === selectedEdge.id) || selectedEdge;
   const selectedEdgeTypeConfig = edgeTypes.find((et) => et.id === relationType);
 
+  // Relation types are global to the document - see useTypeUsage.
+  const typeUsage = useTypeUsage('relation', relationType);
+
   const renderStylePreview = () => {
     if (!selectedEdgeTypeConfig) return null;
 
@@ -174,7 +179,7 @@ const EdgeEditorPanel = ({ selectedEdge, onClose }: EdgeEditorPanelProps) => {
             <label className="block text-xs font-medium text-gray-700">
               Relation Type
             </label>
-            <Tooltip title="Edit Relation Type">
+            <Tooltip title={`Edit this relation type — ${describeTypeUsage('relation', typeUsage).toLowerCase()}`}>
               <IconButton
                 size="small"
                 onClick={handleEditRelationType}
@@ -207,6 +212,9 @@ const EdgeEditorPanel = ({ selectedEdge, onClose }: EdgeEditorPanelProps) => {
             ))}
           </select>
           {renderStylePreview()}
+          <FieldHint className="mt-1">
+            Switching type only affects this relation
+          </FieldHint>
         </div>
 
         {/* Custom Label */}
@@ -296,30 +304,33 @@ const EdgeEditorPanel = ({ selectedEdge, onClose }: EdgeEditorPanelProps) => {
             aria-label="relationship directionality"
           >
             <ToggleButton value="directed" aria-label="directed relationship">
-              <Tooltip title="Directed (one-way)">
+              <Tooltip title="One-way: the first actor acts on the second">
                 <div className="flex items-center space-x-1">
                   <ArrowForwardIcon fontSize="small" />
-                  <span className="text-xs">Directed</span>
+                  <span className="text-xs">One-way</span>
                 </div>
               </Tooltip>
             </ToggleButton>
             <ToggleButton value="bidirectional" aria-label="bidirectional relationship">
-              <Tooltip title="Bidirectional (two-way)">
+              <Tooltip title="Two-way: both actors act on each other">
                 <div className="flex items-center space-x-1">
                   <SyncAltIcon fontSize="small" />
-                  <span className="text-xs">Both</span>
+                  <span className="text-xs">Two-way</span>
                 </div>
               </Tooltip>
             </ToggleButton>
             <ToggleButton value="undirected" aria-label="undirected relationship">
-              <Tooltip title="Undirected (no direction)">
+              <Tooltip title="Mutual: direction is not meaningful for this relation">
                 <div className="flex items-center space-x-1">
                   <RemoveIcon fontSize="small" />
-                  <span className="text-xs">None</span>
+                  <span className="text-xs">Mutual</span>
                 </div>
               </Tooltip>
             </ToggleButton>
           </ToggleButtonGroup>
+          <FieldHint className="mt-1.5">
+            Pick “Mutual” when direction genuinely doesn’t apply, not when it’s unknown
+          </FieldHint>
         </div>
 
         {/* Connection Info with Reverse Direction */}

@@ -125,19 +125,17 @@ const TangibleForm = ({
             <div className="font-medium">State</div>
             <div className="text-xs opacity-80">Timeline state</div>
           </button>
-          <button
-            type="button"
-            onClick={() => onModeChange("stateDial")}
-            className={`flex-1 px-3 py-2 text-sm rounded-md border transition-colors text-center ${
-              mode === "stateDial"
-                ? "bg-blue-500 text-white border-blue-600"
-                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-            }`}
-          >
-            <div className="font-medium">State Dial</div>
-            <div className="text-xs opacity-80">Deferred</div>
-          </button>
+          {/* "State Dial" is deliberately not offered here: the TUIO integration
+              ignores dial rotation (see useTuioIntegration.ts), so it behaves
+              identically to "State" while implying a feature that does not
+              exist. The mode remains in the type union and in every code path so
+              tangibles saved by older versions keep working. */}
         </div>
+        <p className="mt-1 text-xs text-gray-500">
+          {mode === "filter"
+            ? "Placing this token shows only the matching actors and relations"
+            : "Placing this token switches the graph to the chosen state"}
+        </p>
       </div>
 
       {/* Mode-specific fields */}
@@ -146,7 +144,7 @@ const TangibleForm = ({
           {/* Filter Combine Mode */}
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">
-              Combine Mode
+              When several filters are set below
             </label>
             <div className="flex gap-2">
               <button
@@ -158,8 +156,8 @@ const TangibleForm = ({
                     : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                 }`}
               >
-                <div className="font-medium">OR</div>
-                <div className="text-xs opacity-80">Match ANY</div>
+                <div className="font-medium">Show a wider slice</div>
+                <div className="text-xs opacity-80">Match any one filter</div>
               </button>
               <button
                 type="button"
@@ -170,8 +168,8 @@ const TangibleForm = ({
                     : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                 }`}
               >
-                <div className="font-medium">AND</div>
-                <div className="text-xs opacity-80">Match ALL</div>
+                <div className="font-medium">Show a narrower slice</div>
+                <div className="text-xs opacity-80">Match every filter</div>
               </button>
             </div>
           </div>

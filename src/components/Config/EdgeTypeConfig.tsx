@@ -5,6 +5,8 @@ import { useToastStore } from '../../stores/toastStore';
 import QuickAddEdgeTypeForm from './QuickAddEdgeTypeForm';
 import EdgeTypeManagementList from './EdgeTypeManagementList';
 import EditEdgeTypeInline from './EditEdgeTypeInline';
+import ScopeBadge from '../Help/ScopeBadge';
+import ConceptButton from '../Help/ConceptButton';
 import type { EdgeTypeConfig, EdgeDirectionality } from '../../types';
 
 /**
@@ -139,9 +141,13 @@ const EdgeTypeConfigModal = ({ isOpen, onClose, initialEditingTypeId }: Props) =
         <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[85vh] overflow-hidden flex flex-col">
           {/* Header */}
           <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900">Configure Relation Types</h2>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h2 className="text-xl font-bold text-gray-900">Configure Relation Types</h2>
+              <ConceptButton concept="relations-and-direction" placement="bottom" />
+              <ScopeBadge scope="document" />
+            </div>
             <p className="text-sm text-gray-600 mt-1">
-              Quickly add and manage the types of relations that can connect actors
+              A type is a reusable template. Editing one restyles every relation using it.
             </p>
           </div>
 

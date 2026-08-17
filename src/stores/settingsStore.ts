@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useToastStore } from './toastStore';
 
 /**
  * Settings Store - Global application settings with localStorage persistence
@@ -41,6 +42,12 @@ export const useSettingsStore = create<SettingsState>()(
 
         // Handle fullscreen mode
         if (enabled) {
+          // Every panel disappears on entry, including anything that could
+          // advertise the way out - so say it here, once, on the way in.
+          useToastStore
+            .getState()
+            .showToast('Presentation mode — press Esc to return to the editor', 'info', 6000);
+
           // Enter fullscreen
           console.log('[Settings] Entering presentation mode, requesting fullscreen');
           const docElement = document.documentElement;

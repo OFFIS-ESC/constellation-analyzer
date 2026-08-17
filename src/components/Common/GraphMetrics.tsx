@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { Tooltip } from '@mui/material';
-import WarningIcon from '@mui/icons-material/Warning';
 import InfoIcon from '@mui/icons-material/Info';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import { calculateGraphMetrics } from '../../utils/graphAnalysis';
@@ -45,14 +44,14 @@ const GraphMetrics = ({ nodes, edges, onActorClick }: GraphMetricsProps) => {
             <MetricRow label="Actors" value={metrics.actorCount.toString()} />
             <MetricRow label="Relations" value={metrics.relationCount.toString()} />
             <MetricRow
-              label="Density"
+              label="How connected"
               value={formatPercentage(metrics.density)}
-              tooltip="Ratio of actual connections to maximum possible connections"
+              tooltip="Of every connection that could exist between your actors, this share does. Low is normal — dense constellations are the exception, not the goal."
             />
             <MetricRow
-              label="Avg Connections"
+              label="Connections per actor"
               value={formatNumber(metrics.averageConnections)}
-              tooltip="Average number of relations per actor"
+              tooltip="On average, how many relations each actor has. Compare actors against this to spot the unusually central and unusually peripheral."
             />
           </div>
         </div>
@@ -63,6 +62,9 @@ const GraphMetrics = ({ nodes, edges, onActorClick }: GraphMetricsProps) => {
             <h3 className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
               Most Connected Actors
             </h3>
+            <p className="text-xs text-gray-500 mb-2">
+              Most connected is not the same as most important — read it as a question, not a conclusion.
+            </p>
             <div className="space-y-1">
               {metrics.mostConnectedActors.map((actor, index) => (
                 <div
@@ -97,26 +99,23 @@ const GraphMetrics = ({ nodes, edges, onActorClick }: GraphMetricsProps) => {
             Graph Structure
           </h3>
           <div className="space-y-2">
+            {/* No warning styling here: an actor with no relations is often a
+                deliberate finding - someone excluded from the network - not a
+                mistake to be corrected. */}
             <MetricRow
-              label="Isolated Actors"
+              label="Unconnected actors"
               value={metrics.isolatedActorCount.toString()}
-              icon={
-                metrics.isolatedActorCount > 0 ? (
-                  <WarningIcon className="text-orange-500" fontSize="small" />
-                ) : undefined
-              }
-              tooltip="Actors with no connections to other actors"
-              highlight={metrics.isolatedActorCount > 0 ? 'warning' : undefined}
+              tooltip="Actors you have not linked to anything yet. That can mean the mapping is unfinished — or that being unconnected is itself the finding."
             />
             <MetricRow
-              label="Connected Components"
+              label="Separate islands"
               value={metrics.connectedComponentCount.toString()}
               icon={
                 metrics.connectedComponentCount > 1 ? (
                   <InfoIcon className="text-blue-500" fontSize="small" />
                 ) : undefined
               }
-              tooltip="Number of separate, disconnected subgraphs"
+              tooltip="Groups of actors with no path between them. More than one island means your constellation is split into parts that do not reach each other."
               highlight={metrics.connectedComponentCount > 1 ? 'info' : undefined}
             />
           </div>

@@ -5,6 +5,8 @@ import { useToastStore } from '../../stores/toastStore';
 import QuickAddLabelForm from './QuickAddLabelForm';
 import LabelManagementList from './LabelManagementList';
 import EditLabelInline from './EditLabelInline';
+import ScopeBadge from '../Help/ScopeBadge';
+import ConceptButton from '../Help/ConceptButton';
 import type { LabelConfig as LabelConfigType, LabelScope } from '../../types';
 
 /**
@@ -149,9 +151,13 @@ const LabelConfigModal = ({ isOpen, onClose, initialEditingLabelId }: Props) => 
         <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[85vh] overflow-hidden flex flex-col">
           {/* Header */}
           <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900">Configure Labels</h2>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h2 className="text-xl font-bold text-gray-900">Configure Labels</h2>
+              <ConceptButton concept="labels-vs-types" placement="bottom" />
+              <ScopeBadge scope="document" />
+            </div>
             <p className="text-sm text-gray-600 mt-1">
-              Create and manage labels to categorize actors and relations
+              Labels are tags that cut across types. An actor has one type, but any number of labels.
             </p>
           </div>
 

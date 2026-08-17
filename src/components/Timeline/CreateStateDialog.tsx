@@ -90,7 +90,10 @@ const CreateStateDialog: React.FC<CreateStateDialogProps> = ({ open, onClose }) 
                 Create New State
               </h3>
               <p className="text-sm text-gray-600 mb-4">
-                Create a new timeline state to capture a different version of your graph
+                A state is a complete snapshot of your graph. Use one for a point in
+                time, or for an alternative scenario. The new state follows the one you
+                are on now. Your types, labels and bibliography stay shared across all
+                of them.
               </p>
 
               {/* Form Fields */}
@@ -140,9 +143,14 @@ const CreateStateDialog: React.FC<CreateStateDialogProps> = ({ open, onClose }) 
                     htmlFor="cloneFromCurrent"
                     className="ml-2 block text-sm text-gray-700"
                   >
-                    Clone current graph (uncheck for empty state)
+                    Start from a copy of the current graph
                   </label>
                 </div>
+                <p className="text-xs text-gray-500">
+                  {cloneFromCurrent
+                    ? 'Editing the new state will not change the one you are on now'
+                    : 'The new state starts empty — your current graph is untouched'}
+                </p>
               </div>
             </div>
           </div>

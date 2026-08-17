@@ -54,8 +54,11 @@ export function useGlobalShortcuts(options: UseGlobalShortcutsOptions = {}) {
         enabled: !!options.onOpenDocumentManager,
       },
       {
+        // Ctrl+S saves to this browser - it does not download a file. Work is
+        // already saved automatically a second after every change, so this only
+        // ever brings that forward; it is kept because people press it anyway.
         id: "save-document",
-        description: "Export Document",
+        description: "Save to this browser now (happens automatically anyway)",
         key: "s",
         ctrl: true,
         handler: () => {

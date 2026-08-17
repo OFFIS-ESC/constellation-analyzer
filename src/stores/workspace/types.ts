@@ -60,6 +60,8 @@ export interface WorkspaceActions {
   // Document management
   createDocument: (title?: string) => string;
   createDocumentFromTemplate: (sourceDocumentId: string, title?: string) => string;
+  /** Opens the worked example analysis as a new document. */
+  createExampleDocument: () => string;
   loadDocument: (documentId: string) => Promise<void>;
   unloadDocument: (documentId: string) => void;
   closeDocument: (documentId: string) => boolean;

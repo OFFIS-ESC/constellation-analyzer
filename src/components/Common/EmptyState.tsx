@@ -1,88 +1,115 @@
 import React from 'react';
 import AddIcon from '@mui/icons-material/Add';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
-import DescriptionIcon from '@mui/icons-material/Description';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 
 /**
- * EmptyState Component
+ * EmptyState - Tier 0 of the help model
  *
- * Displayed when no document is open in the workspace.
- * Provides helpful actions and guidance to get started.
+ * The first thing a newcomer sees, so it answers the question they actually
+ * have: what is this for? It used to answer a question nobody had asked, with
+ * three cards listing keyboard shortcuts.
+ *
+ * Four steps, then two ways in. The example is the strongest teacher here — a
+ * populated graph explains actors, relations, types and states faster than this
+ * screen can — so it gets equal billing with starting from nothing.
  */
 
 interface EmptyStateProps {
   onNewDocument: () => void;
   onOpenDocumentManager: () => void;
+  onOpenExample?: () => void;
 }
+
+const STEPS: Array<{ n: string; title: string; body: string }> = [
+  {
+    n: '1',
+    title: 'Add the actors',
+    body: 'Everyone and everything that matters — people, organizations, systems, the ideas they argue about.',
+  },
+  {
+    n: '2',
+    title: 'Draw the relations',
+    body: 'Who funds, opposes, depends on or works with whom. Say whether each link runs one way or both.',
+  },
+  {
+    n: '3',
+    title: 'Give them types and labels',
+    body: 'A type decides how an actor looks. Labels are tags that cut across types, and both let you filter.',
+  },
+  {
+    n: '4',
+    title: 'Add states, if it changes',
+    body: 'A state is a snapshot of the whole graph. Use them for points in time, or for competing scenarios.',
+  },
+];
 
 const EmptyState: React.FC<EmptyStateProps> = ({
   onNewDocument,
   onOpenDocumentManager,
+  onOpenExample,
 }) => {
   return (
-    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="max-w-2xl mx-auto px-8 py-12 text-center">
-        {/* Icon */}
-        <div className="mb-8">
-          <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-blue-100 text-blue-600">
-            <DescriptionIcon sx={{ fontSize: 48 }} />
-          </div>
+    <div className="w-full h-full overflow-y-auto bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="max-w-3xl mx-auto px-8 py-14">
+        {/* What this is */}
+        <div className="text-center">
+          <h2 className="text-3xl font-bold text-gray-800 mb-3">
+            Map who shapes what
+          </h2>
+          <p className="text-lg text-gray-600 max-w-xl mx-auto">
+            A constellation analysis lays out the actors in a situation and the
+            relations between them, so the pattern becomes something you can look at
+            and argue with.
+          </p>
         </div>
 
-        {/* Title */}
-        <h2 className="text-3xl font-bold text-gray-800 mb-4">
-          No Document Open
-        </h2>
+        {/* The method, in four steps */}
+        <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
+          {STEPS.map((step) => (
+            <div key={step.n} className="bg-white rounded-lg p-5 shadow-sm flex gap-4">
+              <div className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-100 text-blue-700 font-semibold text-sm flex items-center justify-center">
+                {step.n}
+              </div>
+              <div>
+                <div className="font-semibold text-gray-800 mb-1">{step.title}</div>
+                <div className="text-sm text-gray-600 leading-relaxed">{step.body}</div>
+              </div>
+            </div>
+          ))}
+        </div>
 
-        {/* Description */}
-        <p className="text-lg text-gray-600 mb-8 max-w-lg mx-auto">
-          Start your constellation analysis by creating a new document or opening an existing one.
-        </p>
-
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+        {/* Ways in */}
+        <div className="mt-12 flex flex-col sm:flex-row gap-4 justify-center">
+          {onOpenExample && (
+            <button
+              onClick={onOpenExample}
+              className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            >
+              <AutoAwesomeIcon />
+              Open an example analysis
+            </button>
+          )}
           <button
             onClick={onNewDocument}
-            className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg font-medium"
+            className="flex items-center justify-center gap-2 px-6 py-3 bg-white text-gray-700 border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
             <AddIcon />
-            New Document
+            Start from nothing
           </button>
           <button
             onClick={onOpenDocumentManager}
-            className="flex items-center justify-center gap-2 px-6 py-3 bg-white text-gray-700 border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+            className="flex items-center justify-center gap-2 px-6 py-3 bg-white text-gray-700 border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
             <FolderOpenIcon />
-            Open Document
+            Open a saved one
           </button>
         </div>
 
-        {/* Helpful Tips */}
-        <div className="mt-12 pt-8 border-t border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">
-            Quick Tips
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
-            <div className="bg-white rounded-lg p-4 shadow-sm">
-              <div className="text-blue-600 font-semibold mb-2">Keyboard Shortcuts</div>
-              <div className="text-sm text-gray-600">
-                Press <kbd className="px-2 py-1 bg-gray-100 rounded text-xs font-mono">Ctrl+N</kbd> to create a new document
-              </div>
-            </div>
-            <div className="bg-white rounded-lg p-4 shadow-sm">
-              <div className="text-blue-600 font-semibold mb-2">Document Manager</div>
-              <div className="text-sm text-gray-600">
-                Press <kbd className="px-2 py-1 bg-gray-100 rounded text-xs font-mono">Ctrl+O</kbd> to open the document manager
-              </div>
-            </div>
-            <div className="bg-white rounded-lg p-4 shadow-sm">
-              <div className="text-blue-600 font-semibold mb-2">Get Help</div>
-              <div className="text-sm text-gray-600">
-                Press <kbd className="px-2 py-1 bg-gray-100 rounded text-xs font-mono">?</kbd> to see all keyboard shortcuts
-              </div>
-            </div>
-          </div>
-        </div>
+        <p className="mt-6 text-center text-sm text-gray-500">
+          The example is a normal document — edit it, break it, delete it.
+          Everything else is explained under <span className="font-medium text-gray-700">Help → How this works</span>.
+        </p>
       </div>
     </div>
   );

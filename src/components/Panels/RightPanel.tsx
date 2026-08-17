@@ -8,6 +8,8 @@ import EdgeEditorPanel from './EdgeEditorPanel';
 import GroupEditorPanel from './GroupEditorPanel';
 import GraphAnalysisPanel from './GraphAnalysisPanel';
 import MultiSelectProperties from './MultiSelectProperties';
+import ConceptButton from '../Help/ConceptButton';
+import type { ConceptId } from '../../help/concepts';
 import type { Actor, Relation, Group } from '../../types';
 
 /**
@@ -38,11 +40,16 @@ interface Props {
 interface PanelHeaderProps {
   title: string;
   onCollapse: () => void;
+  /** Concept explaining what this view is about, shown as a "?" beside the title. */
+  concept?: ConceptId;
 }
 
-const PanelHeader = ({ title, onCollapse }: PanelHeaderProps) => (
+const PanelHeader = ({ title, onCollapse, concept }: PanelHeaderProps) => (
   <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 bg-gray-50">
-    <h2 className="text-sm font-semibold text-gray-700">{title}</h2>
+    <div className="flex items-center gap-1">
+      <h2 className="text-sm font-semibold text-gray-700">{title}</h2>
+      {concept && <ConceptButton concept={concept} placement="bottom" />}
+    </div>
     <Tooltip title="Collapse Panel">
       <IconButton size="small" onClick={onCollapse}>
         <ChevronRightIcon fontSize="small" />
@@ -112,7 +119,7 @@ const RightPanel = ({
         className="h-full bg-white border-l border-gray-200 flex flex-col"
         style={{ width: `${rightPanelWidth}px` }}
       >
-        <PanelHeader title="Group Properties" onCollapse={collapseRightPanel} />
+        <PanelHeader title="Group Properties" onCollapse={collapseRightPanel} concept="groups" />
         <GroupEditorPanel selectedGroup={selectedGroup} onClose={onClose} />
       </div>
     );
@@ -125,7 +132,7 @@ const RightPanel = ({
         className="h-full bg-white border-l border-gray-200 flex flex-col"
         style={{ width: `${rightPanelWidth}px` }}
       >
-        <PanelHeader title="Actor Properties" onCollapse={collapseRightPanel} />
+        <PanelHeader title="Actor Properties" onCollapse={collapseRightPanel} concept="actors-and-types" />
         <NodeEditorPanel selectedNode={selectedNode} onClose={onClose} />
       </div>
     );
@@ -144,7 +151,7 @@ const RightPanel = ({
           className="h-full bg-white border-l border-gray-200 flex flex-col"
           style={{ width: `${rightPanelWidth}px` }}
         >
-          <PanelHeader title="Aggregated Relations" onCollapse={collapseRightPanel} />
+          <PanelHeader title="Aggregated Relations" onCollapse={collapseRightPanel} concept="groups" />
           <div className="flex-1 overflow-y-auto p-4">
             <div className="bg-blue-50 border border-blue-200 rounded p-4 mb-4">
               <p className="text-sm text-blue-800">
@@ -164,7 +171,7 @@ const RightPanel = ({
         className="h-full bg-white border-l border-gray-200 flex flex-col"
         style={{ width: `${rightPanelWidth}px` }}
       >
-        <PanelHeader title="Relation Properties" onCollapse={collapseRightPanel} />
+        <PanelHeader title="Relation Properties" onCollapse={collapseRightPanel} concept="relations-and-direction" />
         <EdgeEditorPanel selectedEdge={selectedEdge} onClose={onClose} />
       </div>
     );
@@ -176,7 +183,7 @@ const RightPanel = ({
       className="h-full bg-white border-l border-gray-200 flex flex-col"
       style={{ width: `${rightPanelWidth}px` }}
     >
-      <PanelHeader title="Graph Analysis" onCollapse={collapseRightPanel} />
+      <PanelHeader title="Graph Analysis" onCollapse={collapseRightPanel} concept="reading-analysis" />
       <GraphAnalysisPanel nodes={nodes} edges={edges} />
     </div>
   );

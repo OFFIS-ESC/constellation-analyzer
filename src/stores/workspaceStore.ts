@@ -34,6 +34,7 @@ import type { CSLReference } from '../types/bibliography';
 import { needsStorageCleanup, cleanupAllStorage } from '../utils/cleanupStorage';
 import { migrateTangibleConfigs } from '../utils/tangibleMigration';
 import { migrateRelationHandlesArray } from '../utils/handleMigration';
+import { buildExampleDocument, EXAMPLE_TITLE } from '../help/exampleAnalysis';
 
 /**
  * Workspace Store
@@ -212,6 +213,75 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
     });
 
     useToastStore.getState().showToast(`Document "${title}" created`, 'success');
+
+    return documentId;
+  },
+
+  /**
+   * Open the worked example analysis.
+   *
+   * Registers a fully-formed document the same way an import does, rather than
+   * creating an empty one and filling it in — the example already contains a
+   * two-state timeline and a bibliography, and building it in place avoids
+   * replaying every mutation through the stores.
+   */
+  createExampleDocument: () => {
+    const documentId = generateDocumentId();
+    const now = new Date().toISOString();
+
+    const exampleDoc = buildExampleDocument();
+    exampleDoc.metadata.documentId = documentId;
+
+    const title = exampleDoc.metadata.title || EXAMPLE_TITLE;
+
+    const metadata: DocumentMetadata = {
+      id: documentId,
+      title,
+      isDirty: false,
+      lastModified: now,
+    };
+
+    saveDocumentToStorage(documentId, exampleDoc);
+    saveDocumentMetadata(documentId, metadata);
+
+    // Load the full timeline (both states), not just the current one.
+    useTimelineStore.getState().loadTimeline(documentId, exampleDoc.timeline as unknown as Timeline);
+
+    // Load the example's bibliography so its citation resolves immediately.
+    const bibliographyStore = useBibliographyStore.getState();
+    bibliographyStore.citeInstance = new Cite(exampleDoc.bibliography?.references ?? []);
+    bibliographyStore.appMetadata = exampleDoc.bibliography?.metadata ?? {};
+    bibliographyStore.settings =
+      exampleDoc.bibliography?.settings ?? { defaultStyle: 'apa', sortOrder: 'author' };
+
+    set((state) => {
+      const newDocuments = new Map(state.documents);
+      newDocuments.set(documentId, exampleDoc);
+
+      const newMetadata = new Map(state.documentMetadata);
+      newMetadata.set(documentId, metadata);
+
+      const newOrder = [...state.documentOrder, documentId];
+
+      saveWorkspaceState({
+        workspaceId: state.workspaceId,
+        workspaceName: state.workspaceName,
+        documentOrder: newOrder,
+        activeDocumentId: documentId,
+        settings: state.settings,
+      });
+
+      return {
+        documents: newDocuments,
+        documentMetadata: newMetadata,
+        documentOrder: newOrder,
+        activeDocumentId: documentId,
+      };
+    });
+
+    useToastStore
+      .getState()
+      .showToast('Example opened. Edit it freely — it is a normal document.', 'info');
 
     return documentId;
   },

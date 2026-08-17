@@ -383,6 +383,17 @@ describe('timelineStore', () => {
       expect(mockShowToast).toHaveBeenCalledWith('State not found', 'error');
     });
 
+    it('should switch silently - the timeline header already shows the current state', () => {
+      const { switchToState, getAllStates } = useTimelineStore.getState();
+
+      const targetStateId = getAllStates()[1].id;
+
+      mockShowToast.mockClear();
+      switchToState(targetStateId);
+
+      expect(mockShowToast).not.toHaveBeenCalled();
+    });
+
     it('should not push history if switching to current state', () => {
       const { switchToState } = useTimelineStore.getState();
 

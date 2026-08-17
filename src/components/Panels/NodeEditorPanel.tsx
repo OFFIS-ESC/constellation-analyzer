@@ -10,6 +10,8 @@ import LabelConfigModal from '../Config/LabelConfig';
 import BibliographyConfigModal from '../Config/BibliographyConfig';
 import AutocompleteLabelSelector from '../Common/AutocompleteLabelSelector';
 import CitationSelector from '../Common/CitationSelector';
+import FieldHint from '../Help/FieldHint';
+import { useTypeUsage, describeTypeUsage } from '../../hooks/useTypeUsage';
 import type { Actor } from '../../types';
 
 interface NodeEditorPanelProps {
@@ -138,6 +140,10 @@ const NodeEditorPanel = ({ selectedNode, onClose }: NodeEditorPanelProps) => {
   const connections = getNodeConnections();
   const selectedNodeTypeConfig = nodeTypes.find((nt) => nt.id === actorType);
 
+  // Actor types are global to the document, so editing one reaches every actor
+  // of that type in every state. Say how far before the user commits.
+  const typeUsage = useTypeUsage('actor', actorType);
+
   return (
     <>
       {/* Scrollable content */}
@@ -148,7 +154,7 @@ const NodeEditorPanel = ({ selectedNode, onClose }: NodeEditorPanelProps) => {
             <label className="block text-xs font-medium text-gray-700">
               Actor Type
             </label>
-            <Tooltip title="Edit Actor Type">
+            <Tooltip title={`Edit this actor type — ${describeTypeUsage('actor', typeUsage).toLowerCase()}`}>
               <IconButton
                 size="small"
                 onClick={handleEditActorType}
@@ -194,6 +200,9 @@ const NodeEditorPanel = ({ selectedNode, onClose }: NodeEditorPanelProps) => {
               {selectedNodeTypeConfig.label}
             </div>
           )}
+          <FieldHint className="mt-1">
+            Switching type only affects this actor
+          </FieldHint>
         </div>
 
         {/* Actor Label */}
@@ -343,15 +352,6 @@ const NodeEditorPanel = ({ selectedNode, onClose }: NodeEditorPanelProps) => {
           )}
         </div>
 
-        {/* Node Info */}
-        <div className="pt-3 border-t border-gray-200">
-          <p className="text-xs text-gray-500">
-            <span className="font-medium">Node ID:</span> {selectedNode.id}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">
-            <span className="font-medium">Position:</span> ({Math.round(selectedNode.position.x)}, {Math.round(selectedNode.position.y)})
-          </p>
-        </div>
       </div>
 
       {/* Footer with actions */}

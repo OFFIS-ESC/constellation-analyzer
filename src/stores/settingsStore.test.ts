@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useSettingsStore } from './settingsStore';
+import { useToastStore } from './toastStore';
 
 describe('settingsStore', () => {
   beforeEach(() => {
@@ -88,6 +89,26 @@ describe('settingsStore', () => {
 
       setAutoZoomEnabled(false);
       expect(useSettingsStore.getState().autoZoomEnabled).toBe(false);
+    });
+  });
+
+  describe('Presentation mode guidance', () => {
+    it('should tell the user how to leave when entering presentation mode', () => {
+      useToastStore.getState().clearAllToasts();
+
+      useSettingsStore.getState().setPresentationMode(true);
+
+      const messages = useToastStore.getState().toasts.map((t) => t.message);
+      expect(messages.some((m) => m.includes('Esc'))).toBe(true);
+    });
+
+    it('should not show the hint when leaving presentation mode', () => {
+      useSettingsStore.getState().setPresentationMode(true);
+      useToastStore.getState().clearAllToasts();
+
+      useSettingsStore.getState().setPresentationMode(false);
+
+      expect(useToastStore.getState().toasts).toHaveLength(0);
     });
   });
 

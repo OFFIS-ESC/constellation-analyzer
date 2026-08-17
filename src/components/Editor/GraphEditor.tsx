@@ -1078,6 +1078,9 @@ const GraphEditor = ({ presentationMode = false, onNodeSelect, onEdgeSelect, onG
       <>
         <EmptyState
           onNewDocument={handleNewDocument}
+          onOpenExample={() => {
+            useWorkspaceStore.getState().createExampleDocument();
+          }}
           onOpenDocumentManager={() => {
             // This will be handled by the parent component
             // We'll trigger it via a custom event
@@ -1188,7 +1191,7 @@ const GraphEditor = ({ presentationMode = false, onNodeSelect, onEdgeSelect, onG
           sections.push({
             actions: [
               {
-                label: isMinimized ? "Maximize Group" : "Minimize Group",
+                label: isMinimized ? "Expand group" : "Collapse group (relations merge into one line)",
                 icon: isMinimized ? <MaximizeIcon fontSize="small" /> : <MinimizeIcon fontSize="small" />,
                 onClick: () => {
                   // Sync current React Flow dimensions before toggling
@@ -1211,7 +1214,7 @@ const GraphEditor = ({ presentationMode = false, onNodeSelect, onEdgeSelect, onG
                 },
               },
               {
-                label: "Ungroup",
+                label: "Ungroup — keeps the actors",
                 icon: <UngroupIcon fontSize="small" />,
                 onClick: async () => {
                   const confirmed = await confirm({
@@ -1247,7 +1250,7 @@ const GraphEditor = ({ presentationMode = false, onNodeSelect, onEdgeSelect, onG
         sections.push({
           actions: [
             {
-              label: isGroup ? "Delete Group & Actors" : "Delete",
+              label: isGroup ? "Delete group and everything in it" : "Delete",
               icon: <DeleteIcon fontSize="small" />,
               onClick: async () => {
                 if (isGroup) {

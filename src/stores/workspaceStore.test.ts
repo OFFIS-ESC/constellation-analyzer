@@ -100,6 +100,69 @@ describe("workspaceStore", () => {
     clearWorkspaceStorage();
   });
 
+  describe("createExampleDocument", () => {
+    it("should register the example as a normal, active document", () => {
+      const documentId = useWorkspaceStore.getState().createExampleDocument();
+
+      const state = useWorkspaceStore.getState();
+      expect(documentId).toBeTruthy();
+      expect(state.activeDocumentId).toBe(documentId);
+      expect(state.documentOrder).toContain(documentId);
+      expect(state.documents.has(documentId)).toBe(true);
+    });
+
+    it("should arrive clean, not needing a save", () => {
+      const documentId = useWorkspaceStore.getState().createExampleDocument();
+
+      const metadata = useWorkspaceStore.getState().documentMetadata.get(documentId);
+      expect(metadata?.isDirty).toBe(false);
+      expect(metadata?.title).toContain("Example");
+    });
+
+    it("should persist so it survives a reload", () => {
+      const documentId = useWorkspaceStore.getState().createExampleDocument();
+
+      const stored = loadDocumentFromStorage(documentId);
+      expect(stored).not.toBeNull();
+      expect(Object.keys(stored!.timeline.states)).toHaveLength(2);
+    });
+
+    it("should arrive populated, with both of its states", () => {
+      const documentId = useWorkspaceStore.getState().createExampleDocument();
+
+      const doc = useWorkspaceStore.getState().documents.get(documentId)!;
+      expect(doc.nodeTypes.length).toBeGreaterThan(0);
+      expect(doc.edgeTypes.length).toBeGreaterThan(0);
+      expect(doc.labels?.length).toBeGreaterThan(0);
+      expect(doc.bibliography?.references.length).toBeGreaterThan(0);
+
+      const current = doc.timeline.states[doc.timeline.currentStateId];
+      expect(current.graph.nodes.length).toBeGreaterThan(0);
+      expect(current.graph.edges.length).toBeGreaterThan(0);
+    });
+
+    it("should stamp the document with its own id", () => {
+      const documentId = useWorkspaceStore.getState().createExampleDocument();
+
+      const doc = useWorkspaceStore.getState().documents.get(documentId)!;
+      expect(doc.metadata.documentId).toBe(documentId);
+    });
+
+    it("should allow two independent copies", () => {
+      const first = useWorkspaceStore.getState().createExampleDocument();
+      const second = useWorkspaceStore.getState().createExampleDocument();
+
+      expect(first).not.toBe(second);
+
+      const state = useWorkspaceStore.getState();
+      expect(state.documentOrder).toHaveLength(2);
+
+      const firstStates = Object.keys(state.documents.get(first)!.timeline.states);
+      const secondStates = Object.keys(state.documents.get(second)!.timeline.states);
+      firstStates.forEach((id) => expect(secondStates).not.toContain(id));
+    });
+  });
+
   describe("Initial State", () => {
     it("should initialize with empty workspace", () => {
       const state = useWorkspaceStore.getState();

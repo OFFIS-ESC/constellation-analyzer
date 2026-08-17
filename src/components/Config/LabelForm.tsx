@@ -69,7 +69,7 @@ const LabelForm = ({
 
       <div>
         <label className="block text-xs font-medium text-gray-700 mb-1">
-          Applies To *
+          Can be attached to *
         </label>
         <div className="space-y-2">
           <label className="flex items-center cursor-pointer">

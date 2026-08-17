@@ -4,6 +4,8 @@ import { useBibliographyWithHistory } from '../../hooks/useBibliographyWithHisto
 import QuickAddReferenceForm from './QuickAddReferenceForm';
 import ReferenceManagementList from './ReferenceManagementList';
 import EditReferenceInline from './EditReferenceInline';
+import ScopeBadge from '../Help/ScopeBadge';
+import ConceptButton from '../Help/ConceptButton';
 
 interface BibliographyConfigProps {
   isOpen: boolean;
@@ -73,9 +75,13 @@ const BibliographyConfig = ({ isOpen, onClose, initialEditingReferenceId = null 
       <div className="relative bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[85vh] flex flex-col">
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900">Bibliography Manager</h2>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h2 className="text-xl font-bold text-gray-900">Bibliography Manager</h2>
+            <ConceptButton concept="bibliography-and-citations" placement="bottom" />
+            <ScopeBadge scope="document" />
+          </div>
           <p className="text-sm text-gray-600 mt-1">
-            Add and manage references for your constellation analysis. Import from DOI, URL, BibTeX, or enter manually.
+            Paste a DOI, a URL, or a full reference and the details are filled in for you — or enter one by hand.
           </p>
         </div>
 

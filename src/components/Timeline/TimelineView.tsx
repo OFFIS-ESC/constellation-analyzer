@@ -398,12 +398,12 @@ const TimelineViewInner: React.FC = () => {
               title: "Duplicate",
               actions: [
                 {
-                  label: "Duplicate (Parallel)",
+                  label: "As an alternative to this state",
                   icon: <FileCopyIcon fontSize="small" />,
                   onClick: handleDuplicateParallelFromMenu,
                 },
                 {
-                  label: "Duplicate (Series)",
+                  label: "As the next step after this state",
                   icon: <CallSplitIcon fontSize="small" />,
                   onClick: handleDuplicateSeriesFromMenu,
                 },

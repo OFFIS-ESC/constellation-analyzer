@@ -6,6 +6,7 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import AddIcon from '@mui/icons-material/Add';
 import TimelineView from './TimelineView';
 import CreateStateDialog from './CreateStateDialog';
+import ConceptButton from '../Help/ConceptButton';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useTimelineStore } from '../../stores/timelineStore';
 
@@ -93,6 +94,12 @@ const BottomPanel: React.FC = () => {
       <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b">
         <div className="flex items-center gap-2">
           <h3 className="font-semibold text-sm">Timeline</h3>
+          <ConceptButton concept="timeline-states" />
+          {currentState && (
+            <span className="text-xs text-gray-500 hidden md:inline">
+              Each state is its own graph — types and labels are shared
+            </span>
+          )}
 
           {/* Current State Indicator */}
           {currentState && (

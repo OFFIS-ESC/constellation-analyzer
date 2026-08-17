@@ -20,6 +20,8 @@ import { getContrastColor } from '../../utils/colorUtils';
 import NodeTypeConfigModal from '../Config/NodeTypeConfig';
 import EdgeTypeConfigModal from '../Config/EdgeTypeConfig';
 import LabelBadge from '../Common/LabelBadge';
+import FieldHint from '../Help/FieldHint';
+import ConceptButton from '../Help/ConceptButton';
 import type { Actor } from '../../types';
 
 /**
@@ -218,6 +220,12 @@ const LeftPanel = forwardRef<LeftPanelRef, LeftPanelProps>(({ onDeselectAll, onA
 
   const selectedEdgeTypeConfig = edgeTypes.find(et => et.id === selectedRelationType);
 
+  // Filtering hides items rather than removing them, which is not obvious when a
+  // third of the canvas disappears. Count what is hidden so we can say so.
+  const isFiltering = Boolean(searchText) || hasActiveFilters();
+  const hiddenCount =
+    (nodes.length - matchingNodes.length) + (edges.length - matchingEdges.length);
+
   // Collapsed icon bar view
   if (leftPanelCollapsed) {
     return (
@@ -258,6 +266,7 @@ const LeftPanel = forwardRef<LeftPanelRef, LeftPanelProps>(({ onDeselectAll, onA
             >
               <span className="text-xs font-semibold text-gray-700">Add Actors</span>
             </button>
+            <ConceptButton concept="actors-and-types" />
             <Tooltip title="Configure Actor Types">
               <IconButton
                 size="small"
@@ -323,6 +332,7 @@ const LeftPanel = forwardRef<LeftPanelRef, LeftPanelProps>(({ onDeselectAll, onA
             >
               <span className="text-xs font-semibold text-gray-700">Relations</span>
             </button>
+            <ConceptButton concept="relations-and-direction" />
             <Tooltip title="Configure Relation Types">
               <IconButton
                 size="small"
@@ -341,7 +351,7 @@ const LeftPanel = forwardRef<LeftPanelRef, LeftPanelProps>(({ onDeselectAll, onA
           {leftPanelSections.relations && (
             <div className="px-3 py-3 space-y-2">
               <label className="block text-xs font-medium text-gray-600 mb-1">
-                Active Type
+                New relations will be
               </label>
               <select
                 value={selectedRelationType || ''}
@@ -358,48 +368,16 @@ const LeftPanel = forwardRef<LeftPanelRef, LeftPanelProps>(({ onDeselectAll, onA
                   </option>
                 ))}
               </select>
-              <p className="text-xs text-gray-500 pt-1">
-                Drag from actor handles to create relations
-              </p>
+              <FieldHint className="pt-1">
+                Drag from the dots on an actor’s edge to connect it to another
+              </FieldHint>
             </div>
           )}
         </div>
 
-        {/* Layout Section */}
-        <div className="border-b border-gray-200">
-          <button
-            onClick={() => toggleLeftPanelSection('layout')}
-            className="w-full px-3 py-2 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors"
-          >
-            <span className="text-xs font-semibold text-gray-700">Layout</span>
-            {leftPanelSections.layout ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
-          </button>
-          {leftPanelSections.layout && (
-            <div className="px-3 py-3">
-              <p className="text-xs text-gray-500 italic">
-                Auto-layout features coming soon
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* View Section */}
-        <div className="border-b border-gray-200">
-          <button
-            onClick={() => toggleLeftPanelSection('view')}
-            className="w-full px-3 py-2 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors"
-          >
-            <span className="text-xs font-semibold text-gray-700">View</span>
-            {leftPanelSections.view ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
-          </button>
-          {leftPanelSections.view && (
-            <div className="px-3 py-3">
-              <p className="text-xs text-gray-500 italic">
-                View options coming soon
-              </p>
-            </div>
-          )}
-        </div>
+        {/* NOTE: "Layout" and "View" sections were removed - both only ever
+            rendered a "coming soon" placeholder. The panelStore keys remain so
+            the sections can return when the features actually exist. */}
 
         {/* Search Section */}
         <div className="border-b border-gray-200">
@@ -430,7 +408,14 @@ const LeftPanel = forwardRef<LeftPanelRef, LeftPanelProps>(({ onDeselectAll, onA
                       </button>
                     )}
                     {/* Auto-zoom toggle icon */}
-                    <Tooltip title={autoZoomEnabled ? "Auto-zoom enabled" : "Auto-zoom disabled"} placement="top">
+                    <Tooltip
+                      title={
+                        autoZoomEnabled
+                          ? 'Zoom to fit search matches automatically — on'
+                          : 'Zoom to fit search matches automatically — off'
+                      }
+                      placement="top"
+                    >
                       <IconButton
                         size="small"
                         onClick={() => setAutoZoomEnabled(!autoZoomEnabled)}
@@ -634,14 +619,19 @@ const LeftPanel = forwardRef<LeftPanelRef, LeftPanelProps>(({ onDeselectAll, onA
                   <div>
                     <span className="font-medium">Actors:</span>{' '}
                     {matchingNodes.length}
-                    {searchText || hasActiveFilters() ? ` of ${nodes.length}` : ''}
+                    {isFiltering ? ` of ${nodes.length}` : ''}
                   </div>
                   <div>
                     <span className="font-medium">Relations:</span>{' '}
                     {matchingEdges.length}
-                    {searchText || hasActiveFilters() ? ` of ${edges.length}` : ''}
+                    {isFiltering ? ` of ${edges.length}` : ''}
                   </div>
                 </div>
+                {isFiltering && hiddenCount > 0 && (
+                  <FieldHint className="mt-2">
+                    {hiddenCount} hidden by your filters — hidden, not deleted
+                  </FieldHint>
+                )}
               </div>
             </div>
           )}

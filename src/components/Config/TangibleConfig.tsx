@@ -7,6 +7,8 @@ import { useTuioConnection } from '../../hooks/useTuioConnection';
 import QuickAddTangibleForm from './QuickAddTangibleForm';
 import TangibleManagementList from './TangibleManagementList';
 import EditTangibleInline from './EditTangibleInline';
+import ScopeBadge from '../Help/ScopeBadge';
+import ConceptButton from '../Help/ConceptButton';
 import type { TangibleConfig as TangibleConfigType, TangibleMode } from '../../types';
 
 interface Props {
@@ -128,9 +130,14 @@ const TangibleConfigModal = ({ isOpen, onClose, initialEditingTangibleId }: Prop
         <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[85vh] overflow-hidden flex flex-col">
           {/* Header */}
           <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900">Configure Tangibles</h2>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h2 className="text-xl font-bold text-gray-900">Configure Tangibles</h2>
+              <ConceptButton concept="tangibles-presentation" placement="bottom" />
+              <ScopeBadge scope="document" />
+            </div>
             <p className="text-sm text-gray-600 mt-1">
-              Set up physical objects for presentation mode interactions
+              Physical tokens placed on a TUIO table can filter the graph or jump between states.
+              Tangibles do nothing in the editor — they act only in presentation mode, with hardware connected.
             </p>
           </div>
 

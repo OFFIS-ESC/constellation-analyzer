@@ -112,11 +112,13 @@ const Tab = ({
       onContextMenu={handleContextMenu}
       style={color ? { borderLeftWidth: '3px', borderLeftColor: color } : undefined}
     >
-      {/* Dirty indicator */}
+      {/* Save-in-progress indicator. Changes are written to this browser about a
+          second after you stop editing, so this dot is transient - it is not a
+          prompt to save anything by hand. */}
       {isDirty && (
         <div
           className="w-2 h-2 rounded-full bg-orange-500"
-          title="Unsaved changes"
+          title="Saving to this browser…"
         />
       )}
 

@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.1.0](https://github.com/OFFIS-ESC/constellation-analyzer/compare/v1.0.0...v1.1.0) (2026-08-17)
+
+
+### Features
+
+* add inline documentation for newcomers ([f459281](https://github.com/OFFIS-ESC/constellation-analyzer/commit/f45928114ba6f7110c0593315e64ec4b71acff34))
+* replace toasts with feedback where the user is looking ([5ace8a6](https://github.com/OFFIS-ESC/constellation-analyzer/commit/5ace8a6081a76c69b980dc7ba048106137ad421d))
+
+
+### Bug Fixes
+
+* keep group membership when a document round-trips ([75f445a](https://github.com/OFFIS-ESC/constellation-analyzer/commit/75f445aa58ca59d39fc08be789a29d9f24f88f5a))
+
 ## 1.0.0 (2026-05-08)
 
 

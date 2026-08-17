@@ -42,6 +42,12 @@ export interface SerializedGroup {
   data: GroupData;
   width?: number;
   height?: number;
+  /**
+   * Groups created in the editor carry their box size in `style`, and the live
+   * save path deep-copies the runtime node, so this is what is actually on disk
+   * for most documents. Declared here so authored documents can set both.
+   */
+  style?: { width?: number; height?: number };
 }
 
 // Complete document structure for storage

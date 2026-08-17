@@ -157,9 +157,16 @@ describe("workspaceStore", () => {
       const state = useWorkspaceStore.getState();
       expect(state.documentOrder).toHaveLength(2);
 
-      const firstStates = Object.keys(state.documents.get(first)!.timeline.states);
-      const secondStates = Object.keys(state.documents.get(second)!.timeline.states);
-      firstStates.forEach((id) => expect(secondStates).not.toContain(id));
+      // State ids are shared between the two, which is fine - timelines are
+      // keyed per document. What matters is that the graph data is not shared,
+      // so editing one example does not alter the other.
+      const graphOf = (docId: string) => {
+        const doc = state.documents.get(docId)!;
+        return doc.timeline.states[doc.timeline.currentStateId].graph;
+      };
+
+      graphOf(first).nodes[0].data.label = "mutated";
+      expect(graphOf(second).nodes[0].data.label).not.toBe("mutated");
     });
   });
 

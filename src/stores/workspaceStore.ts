@@ -34,6 +34,7 @@ import type { CSLReference } from '../types/bibliography';
 import { needsStorageCleanup, cleanupAllStorage } from '../utils/cleanupStorage';
 import { migrateTangibleConfigs } from '../utils/tangibleMigration';
 import { migrateRelationHandlesArray } from '../utils/handleMigration';
+import { migrateDocumentParentRefs } from '../utils/parentRefMigration';
 import { buildExampleDocument, EXAMPLE_TITLE } from '../help/exampleAnalysis';
 
 /**
@@ -722,6 +723,9 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
             });
           }
 
+          // Normalize legacy group parent references
+          migrateDocumentParentRefs(importedDoc);
+
           const metadata: DocumentMetadata = {
             id: documentId,
             title: importedDoc.metadata.title || 'Imported Analysis',
@@ -1043,6 +1047,9 @@ export const useWorkspaceStore = create<Workspace & WorkspaceActions>((set, get)
                 }
               });
             }
+
+            // Normalize legacy group parent references
+            migrateDocumentParentRefs(doc);
 
             saveDocumentToStorage(docId, doc);
 

@@ -2,6 +2,7 @@ import type { ConstellationDocument } from '../persistence/types';
 import type { WorkspaceState, DocumentMetadata } from './types';
 import { validateDocument } from './documentUtils';
 import { safeStringify, safeParse } from '../../utils/safeStringify';
+import { migrateDocumentParentRefs } from '../../utils/parentRefMigration';
 
 /**
  * Workspace Persistence
@@ -85,7 +86,9 @@ export function loadDocumentFromStorage(documentId: string): ConstellationDocume
       return null;
     }
 
-    return doc as ConstellationDocument;
+    // Normalize legacy group parent references. Applied here so every reader -
+    // initial load, document switch, timeline switch - sees the same shape.
+    return migrateDocumentParentRefs(doc as ConstellationDocument);
   } catch (error) {
     console.error(`Failed to load document ${documentId}:`, error);
     return null;

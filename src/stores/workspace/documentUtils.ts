@@ -215,7 +215,9 @@ export function serializeActors(actors: Actor[]): SerializedActor[] {
       type: actor.type || 'custom', // Default to 'custom' if undefined
       position: actor.position,
       data: actor.data,
-      ...(actorWithParent.parentId && { parentNode: actorWithParent.parentId }),
+      // Keep the React Flow spelling. Renaming this to `parentNode` is what
+      // used to take groups apart on reload, because nothing renamed it back.
+      ...(actorWithParent.parentId && { parentId: actorWithParent.parentId }),
       ...(actorWithParent.extent && { extent: actorWithParent.extent }),
     };
   });

@@ -132,7 +132,7 @@ describe('buildExampleDocument', () => {
     });
   });
 
-  it('carries no groups, since group membership does not survive a reload', () => {
+  it('carries no groups, keeping a newcomer’s first screen uncluttered', () => {
     const doc = buildExampleDocument();
     Object.values(doc.timeline.states).forEach((state) => {
       expect(state.graph.groups ?? []).toHaveLength(0);

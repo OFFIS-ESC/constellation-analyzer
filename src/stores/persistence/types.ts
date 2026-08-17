@@ -14,7 +14,12 @@ export interface SerializedActor {
   type: string;  // React Flow node type (e.g., "custom")
   position: { x: number; y: number };
   data: ActorData;
-  parentNode?: string;  // Group ID if actor belongs to a group
+  /**
+   * Group ID if the actor belongs to a group. Named to match React Flow, which
+   * is what the editor reads - see parentRefMigration for the legacy
+   * `parentNode` spelling this replaced.
+   */
+  parentId?: string;
   extent?: 'parent';
 }
 

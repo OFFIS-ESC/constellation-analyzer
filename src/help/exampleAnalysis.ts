@@ -14,10 +14,10 @@ import { SCHEMA_VERSION, APP_NAME } from '../stores/persistence/constants';
  * The scenario is fictional, and its sources are fictional with it — an example
  * should never ship a real-looking citation nobody can check.
  *
- * Deliberately no group. Group membership is serialized as `parentNode` but read
- * at runtime as `parentId` and never mapped back (see documentUtils.ts), so a
- * group placed here would silently come apart on reload. Groups are explained in
- * their own concept dialog instead.
+ * No group, for now. The reason it was originally left out - group membership
+ * not surviving a reload - has since been fixed, so one could be added; it is
+ * held back only to keep the first thing a newcomer sees uncluttered. Groups are
+ * explained in their own concept dialog either way.
  */
 
 const TITLE = 'Example · Neighbourhood Heat Transition';

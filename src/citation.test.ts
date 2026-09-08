@@ -54,16 +54,42 @@ describe('CITATION.cff', () => {
 });
 
 describe('the proposed citation', () => {
+  // Release-please rewrites `version` and `date-released` on every release, so
+  // the exact wording is pinned against a fixture instead of the real file.
+  // Never hardcode either value in a test that reads CITATION.cff.
   it('reads as an APA-style software reference', () => {
-    expect(formatCitation(citation)).toBe(
-      `Bruhn, J.-H., Helfrich, F., Kerker, N., & Rosinger, S. (${citation.releaseDate?.slice(0, 4)}). ` +
-        'Constellation Analyzer (Version 1.0.0) [Computer software]. Zenodo. ' +
-        'https://doi.org/10.5281/zenodo.20085913'
+    const fixture = parseCitation(`
+cff-version: 1.2.0
+title: Example Software
+version: 2.3.4
+date-released: 2030-01-31
+doi: 10.5281/zenodo.1234567
+authors:
+  - given-names: Ada
+    family-names: Lovelace
+  - given-names: Grace
+    family-names: Hopper
+`);
+    expect(formatCitation(fixture)).toBe(
+      'Lovelace, A., & Hopper, G. (2030). Example Software (Version 2.3.4) ' +
+        '[Computer software]. Zenodo. https://doi.org/10.5281/zenodo.1234567'
     );
   });
 
-  it('takes its year from date-released, not from today', () => {
+  it('cites the real authors and the concept DOI', () => {
+    expect(proposedCitation).toContain(
+      'Bruhn, J.-H., Helfrich, F., Kerker, N., & Rosinger, S.'
+    );
+    expect(proposedCitation).toMatch(
+      /https:\/\/doi\.org\/10\.5281\/zenodo\.20085913$/
+    );
+  });
+
+  it('cites whatever version and year CITATION.cff currently holds', () => {
+    expect(citation.version).toMatch(/^\d+\.\d+\.\d+$/);
     expect(citation.releaseDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(proposedCitation).toContain(`(Version ${citation.version})`);
+    // The year is the release year, never today's.
     expect(proposedCitation).toContain(`(${citation.releaseDate?.slice(0, 4)})`);
   });
 

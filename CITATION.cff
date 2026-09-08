@@ -1,0 +1,56 @@
+cff-version: 1.2.0
+title: Constellation Analyzer
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+abstract: >-
+  A visual editor for constellation analyses: actors, the relations between
+  them, and how that picture changes over time.
+
+
+  CRediT author statement: Jan-Henrik Bruhn: Conceptualization, Methodology,
+  Software. Florian Helfrich: Conceptualization, Methodology, Investigation,
+  Visualization. Nina Kerker: Conceptualization, Methodology, Investigation.
+  Sven Rosinger: Conceptualization, Methodology.
+authors:
+  - given-names: Jan-Henrik
+    family-names: Bruhn
+    email: jan-henrik.bruhn@offis.de
+    affiliation: OFFIS - Institute for Information Technology
+    city: Oldenburg
+    country: DE
+    orcid: 'https://orcid.org/0009-0008-1663-4020'
+  - given-names: Florian
+    family-names: Helfrich
+    email: florian.helfrich@uni-oldenburg.de
+    affiliation: >-
+      Institute for Social Sciences, Carl von Ossietzky University of Oldenburg
+    city: Oldenburg
+    country: DE
+    orcid: 'https://orcid.org/0000-0003-4738-5609'
+  - given-names: Nina
+    family-names: Kerker
+    email: nina.kerker@sofi.uni-goettingen.de
+    affiliation: >-
+      Sociological Research Institute Göttingen (SOFI), University of Göttingen
+    city: Göttingen
+    country: DE
+    orcid: 'https://orcid.org/0000-0003-1584-3089'
+  - given-names: Sven
+    family-names: Rosinger
+    email: sven.rosinger@offis.de
+    affiliation: OFFIS - Institute for Information Technology
+    city: Oldenburg
+    country: DE
+    orcid: 'https://orcid.org/0009-0004-4948-3135'
+# Zenodo concept DOI: it always resolves to the latest release, so it stays
+# correct forever. Do NOT replace it with a per-version DOI — Zenodo mints
+# those only after a release is published, so they can never be current here.
+doi: 10.5281/zenodo.20085913
+repository-code: 'https://github.com/OFFIS-ESC/constellation-analyzer'
+license: MIT
+# Both bumped by release-please on release; see release-please-config.json.
+# The date matcher only understands YYYY-MM-DD, so keep that shape.
+version: 1.0.0 # x-release-please-version
+date-released: 2026-05-08 # x-release-please-date

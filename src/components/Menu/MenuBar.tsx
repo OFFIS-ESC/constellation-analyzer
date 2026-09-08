@@ -13,6 +13,7 @@ import TuioConnectionConfig from '../Config/TuioConnectionConfig';
 import BibliographyConfigModal from '../Config/BibliographyConfig';
 import InputDialog from '../Common/InputDialog';
 import ConceptIndex from '../Help/ConceptIndex';
+import AboutDialog from '../Help/AboutDialog';
 import { useConfirm } from '../../hooks/useConfirm';
 import { useShortcutLabels } from '../../hooks/useShortcutLabels';
 import type { ExportOptions } from '../../utils/graphExport';
@@ -45,6 +46,7 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) =>
   const [showNewDocDialog, setShowNewDocDialog] = useState(false);
   const [showNewFromTemplateDialog, setShowNewFromTemplateDialog] = useState(false);
   const [showConceptIndex, setShowConceptIndex] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { confirm, ConfirmDialogComponent } = useConfirm();
   const { getShortcutLabel } = useShortcutLabels();
@@ -578,6 +580,21 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) =>
                     <span className="text-xs text-gray-400">{getShortcutLabel('show-help')}</span>
                   )}
                 </button>
+
+                <hr className="my-1 border-gray-200" />
+
+                <button
+                  onClick={() => {
+                    setShowAbout(true);
+                    closeMenu();
+                  }}
+                  className="w-full text-left px-4 py-1.5 hover:bg-gray-100"
+                >
+                  <span className="block text-sm text-gray-700">About</span>
+                  <span className="block text-xs text-gray-500">
+                    Authors, funding and license
+                  </span>
+                </button>
               </div>
             )}
           </div>
@@ -616,6 +633,10 @@ const MenuBar: React.FC<MenuBarProps> = ({ onOpenHelp, onFitView, onExport }) =>
       <ConceptIndex
         isOpen={showConceptIndex}
         onClose={() => setShowConceptIndex(false)}
+      />
+      <AboutDialog
+        isOpen={showAbout}
+        onClose={() => setShowAbout(false)}
       />
 
       {/* Input Dialogs */}

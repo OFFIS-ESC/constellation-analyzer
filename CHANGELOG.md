@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/OFFIS-ESC/constellation-analyzer/compare/v1.1.0...v1.1.1) (2026-09-08)
+
+
+### Bug Fixes
+
+* stop pinning the released version in the citation test ([5e28eb6](https://github.com/OFFIS-ESC/constellation-analyzer/commit/5e28eb6e8fe0d6f87739146d57cf83019022bb17))
+
 ## [1.1.0](https://github.com/OFFIS-ESC/constellation-analyzer/compare/v1.0.0...v1.1.0) (2026-09-08)
 
 

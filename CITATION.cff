@@ -52,5 +52,5 @@ repository-code: 'https://github.com/OFFIS-ESC/constellation-analyzer'
 license: MIT
 # Both bumped by release-please on release; see release-please-config.json.
 # The date matcher only understands YYYY-MM-DD, so keep that shape.
-version: 1.1.0 # x-release-please-version
+version: 1.1.1 # x-release-please-version
 date-released: 2026-09-08 # x-release-please-date

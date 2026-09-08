@@ -1,5 +1,7 @@
 # Constellation Analyzer
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20085913.svg)](https://doi.org/10.5281/zenodo.20085913)
+
 A React-based visual editor for Constellation Analysis — mapping actors (nodes) and their relationships (edges) in an interactive graph.
 
 > **Vibe-Warning**: This is a testing ground for agent-based LLM coding. The codebase contains no hand-written code. Take it with a grain of salt.
@@ -84,6 +86,29 @@ npm test                 # All tests
 
 Always update tests when modifying store logic. See `CLAUDE.md` for testing patterns.
 
+## Citation
+
+Cite the software as a whole:
+
+> Bruhn, J.-H., Helfrich, F., Kerker, N., & Rosinger, S. *Constellation Analyzer* [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.20085913
+
+That DOI is the concept DOI. It always resolves to the newest release.
+
+To cite the exact version you used, use the **Cite this repository** button in the
+sidebar. GitHub renders APA and BibTeX from `CITATION.cff`, which release-please
+keeps current. The app shows the same citation under **Help → About**.
+
 ## License
 
 MIT
+
+## Funding
+This publication was created as part of the research program “Transforming the Energy System Lower Saxony” (TEN.efzn) at the Energy Research Center of Lower Saxony (efzn).
+
+Funded by zukunft.niedersachsen, the joint science funding program of the Lower Saxony Ministry of Science and Culture and the Volkswagen Foundation.
+
+<p>
+  <img src="public/efzn.png" alt="Energy Research Center of Lower Saxony (efzn)" height="70">
+  &nbsp;&nbsp;
+  <img src="public/zn.png" alt="zukunft.niedersachsen" height="70">
+</p>

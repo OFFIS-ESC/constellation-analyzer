@@ -119,6 +119,9 @@ export const concepts: Record<ConceptId, Concept> = {
       'New relations take whatever is selected under _New relations will be_ in the Tools panel. Change it there before you draw, or change any relation afterwards.',
       'You can run several relations between the same two actors. They fan out so each one stays clickable.',
       'Use the reverse button in Relation Properties to flip a direction without redrawing anything.',
+      'Use _Description / Interview quotes_ in Relation Properties to back a relation up with your interpretation and quotes. Any relation with text gets a small button on its label that shows or hides the text in a box underneath. Hiding keeps the text.',
+      'Descriptions use Markdown: **bold**, *italic*, a line starting with ## for a heading, and one starting with > for a quote. Actor descriptions work the same way. Use the preview to check what you pasted.',
+      'The button in the canvas controls at the bottom left hides all the boxes at once, or shows all of them when none is open. While presenting, these buttons only change what you see and are not saved.',
     ],
     whichToChoose: {
       intro: 'Direction is a claim about the world, not a drawing style. Pick it by what you are asserting.',

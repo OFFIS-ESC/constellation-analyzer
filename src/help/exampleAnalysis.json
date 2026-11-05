@@ -188,8 +188,8 @@
               "id": "ex-grid",
               "type": "custom",
               "position": {
-                "x": 780,
-                "y": 430
+                "x": 640,
+                "y": 560
               },
               "data": {
                 "label": "Regional Grid Operator",
@@ -243,7 +243,7 @@
               "data": {
                 "label": "Maria Lange",
                 "type": "person",
-                "description": "Coordinator — trusted by both sides",
+                "description": "Coordinator — **trusted by both sides**",
                 "showDescriptionInNode": true
               }
             },
@@ -293,7 +293,8 @@
                 "directionality": "directed",
                 "labels": [
                   "contested"
-                ]
+                ],
+                "description": "## Who pays for the grid?\nResidents see the fee as paying twice: once through taxes, once on the bill.\n\n> “We were told the network was already paid for. Then the letter came.”\n> — Interview 4, line 112\n\n> “Nobody explained *why* it has to be this year.”\n> — Interview 7, line 58"
               }
             },
             {
@@ -323,7 +324,8 @@
               "type": "custom",
               "data": {
                 "type": "depends-on",
-                "directionality": "directed"
+                "directionality": "directed",
+                "description": "## Connection approval\nEvery house in the pilot waited on the operator’s **approval**. Two connections were delayed by a whole heating season.\n\n> “We can install a pump in a week. The approval takes months.”\n> — Interview 2, line 31"
               }
             },
             {
@@ -333,7 +335,9 @@
               "type": "custom",
               "data": {
                 "type": "depends-on",
-                "directionality": "directed"
+                "directionality": "directed",
+                "description": "## Capacity comes first\nThe utility cannot promise a connection until the operator has confirmed **grid capacity**.\n\n> “Every plan we publish carries the same footnote: subject to approval.”\n> — Interview 9, line 23",
+                "showDescription": true
               }
             },
             {
@@ -343,7 +347,8 @@
               "type": "custom",
               "data": {
                 "type": "influences",
-                "directionality": "directed"
+                "directionality": "directed",
+                "description": "Autonomy came up in most interviews, unprompted.\n\n> “We want to decide this ourselves.”\n> — Interview 1, line 9"
               }
             }
           ],
@@ -422,8 +427,8 @@
               "id": "ex-grid",
               "type": "custom",
               "position": {
-                "x": 780,
-                "y": 430
+                "x": 640,
+                "y": 560
               },
               "data": {
                 "label": "Regional Grid Operator",
@@ -477,7 +482,7 @@
               "data": {
                 "label": "Maria Lange",
                 "type": "person",
-                "description": "Coordinator — trusted by both sides",
+                "description": "Coordinator — **trusted by both sides**",
                 "showDescriptionInNode": true
               }
             },
@@ -553,7 +558,9 @@
               "type": "custom",
               "data": {
                 "type": "depends-on",
-                "directionality": "directed"
+                "directionality": "directed",
+                "description": "## Bottleneck removed\nThe grid upgrade ended the *case-by-case* approvals, so the dependency is now a formality.\n\n> “We stopped waiting on letters.”\n> — Interview 12, line 40",
+                "showDescription": true
               }
             },
             {
@@ -573,7 +580,8 @@
               "type": "custom",
               "data": {
                 "type": "collaborates",
-                "directionality": "bidirectional"
+                "directionality": "bidirectional",
+                "description": "## From dispute to cooperation\nOnce the utility opened its cost calculation, the fee stopped being the main issue. The turning point was a **public meeting** that Maria Lange organised.\n\n> “They finally showed us the numbers.”\n> — Interview 11, line 76"
               }
             },
             {

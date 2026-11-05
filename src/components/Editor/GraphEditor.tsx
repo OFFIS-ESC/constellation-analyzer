@@ -36,6 +36,7 @@ import ToggleAllDescriptionsButton from "../Edges/ToggleAllDescriptionsButton";
 import ContextMenu from "./ContextMenu";
 import EmptyState from "../Common/EmptyState";
 import { createNode } from "../../utils/nodeUtils";
+import { hasRelationDescription } from "../../utils/relationDescription";
 import { groupParallelEdges, calculateEdgeOffsetMultiplier, generateEdgeId } from "../../utils/edgeUtils";
 import DeleteIcon from "@mui/icons-material/Delete";
 import GroupWorkIcon from "@mui/icons-material/GroupWork";
@@ -107,6 +108,14 @@ const GraphEditor = ({ presentationMode = false, onNodeSelect, onEdgeSelect, onG
     deleteGroup,
     toggleGroupMinimized,
   } = useGraphWithHistory();
+
+  // A description box reaches far beyond its relation, so culling relations
+  // whose actors are off screen would make boxes pop in and out while panning,
+  // and leave them out of image exports, which capture what is rendered.
+  const hasRelationDescriptions = useMemo(
+    () => (storeEdges as Relation[]).some((edge) => hasRelationDescription(edge.data)),
+    [storeEdges],
+  );
 
   const { pushToHistory } = useDocumentHistory();
 
@@ -1129,7 +1138,7 @@ const GraphEditor = ({ presentationMode = false, onNodeSelect, onEdgeSelect, onG
         connectionRadius={0}
         fitView
         attributionPosition="bottom-left"
-        onlyRenderVisibleElements={true}
+        onlyRenderVisibleElements={!hasRelationDescriptions}
         elevateEdgesOnSelect={true}
         selectNodesOnDrag={false}
       >

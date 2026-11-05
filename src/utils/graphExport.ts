@@ -38,18 +38,64 @@ function downloadImage(dataUrl: string, fileName: string, extension: string) {
   a.click();
 }
 
+export interface Bounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Smallest rectangle containing all the given ones
+ */
+export function unionBounds(base: Bounds, others: Bounds[]): Bounds {
+  const all = [base, ...others];
+  const left = Math.min(...all.map((b) => b.x));
+  const top = Math.min(...all.map((b) => b.y));
+  const right = Math.max(...all.map((b) => b.x + b.width));
+  const bottom = Math.max(...all.map((b) => b.y + b.height));
+  return { x: left, y: top, width: right - left, height: bottom - top };
+}
+
+/**
+ * Bounds of content that hangs off the graph without being a node, such as
+ * relation description boxes, converted from screen to graph coordinates.
+ */
+function getOverlayBounds(viewportElement: HTMLElement): Bounds[] {
+  const viewport = viewportElement.getBoundingClientRect();
+  const { a: zoom } = new DOMMatrixReadOnly(getComputedStyle(viewportElement).transform);
+
+  return Array.from(viewportElement.querySelectorAll('[data-graph-overlay]')).map((element) => {
+    const rect = element.getBoundingClientRect();
+    return {
+      x: (rect.left - viewport.left) / zoom,
+      y: (rect.top - viewport.top) / zoom,
+      width: rect.width / zoom,
+      height: rect.height / zoom,
+    };
+  });
+}
+
+/**
+ * Leaves controls that only make sense on screen out of exported images.
+ */
+export function isExportable(node: HTMLElement): boolean {
+  return node.dataset?.exportHidden === undefined;
+}
+
 /**
  * Calculate the viewport bounds for capturing the entire graph
  *
- * This creates a tight crop around all nodes with minimal padding.
+ * This creates a tight crop around all nodes and overlays with minimal padding.
  *
+ * @param viewportElement - The .react-flow__viewport DOM element
  * @param nodes - Array of nodes in the graph
  * @param padding - Padding around the content
  * @returns Dimensions and transform for the export
  */
-function calculateImageBounds(nodes: Node[], padding: number) {
-  // Get the bounding box that contains all nodes
-  const nodesBounds = getNodesBounds(nodes);
+function calculateImageBounds(viewportElement: HTMLElement, nodes: Node[], padding: number) {
+  // Get the bounding box that contains all nodes and overlays
+  const nodesBounds = unionBounds(getNodesBounds(nodes), getOverlayBounds(viewportElement));
 
   console.log('Node bounds:', nodesBounds);
   console.log('Number of nodes:', nodes.length);
@@ -101,7 +147,7 @@ export async function exportGraphAsPNG(
     throw new Error('Cannot export empty graph');
   }
 
-  const { width, height, transform } = calculateImageBounds(nodes, padding);
+  const { width, height, transform } = calculateImageBounds(viewportElement, nodes, padding);
 
   try {
     const dataUrl = await toPng(viewportElement, {
@@ -110,6 +156,7 @@ export async function exportGraphAsPNG(
       height: height,
       pixelRatio: quality,
       cacheBust: true,
+      filter: isExportable,
       style: {
         width: `${width}px`,
         height: `${height}px`,
@@ -146,13 +193,14 @@ export async function exportGraphAsSVG(
     throw new Error('Cannot export empty graph');
   }
 
-  const { width, height, transform } = calculateImageBounds(nodes, padding);
+  const { width, height, transform } = calculateImageBounds(viewportElement, nodes, padding);
 
   try {
     const dataUrl = await toSvg(viewportElement, {
       backgroundColor,
       width,
       height,
+      filter: isExportable,
       style: {
         width: `${width}px`,
         height: `${height}px`,

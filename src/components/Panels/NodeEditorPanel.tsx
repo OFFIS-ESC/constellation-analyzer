@@ -3,6 +3,8 @@ import { IconButton, Tooltip } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import { useGraphWithHistory } from '../../hooks/useGraphWithHistory';
+import { useFlushOnLeave } from '../../hooks/useFlushOnLeave';
+import { useGraphStore } from '../../stores/graphStore';
 import { useConfirm } from '../../hooks/useConfirm';
 import ConnectionDisplay from '../Common/ConnectionDisplay';
 import NodeTypeConfigModal from '../Config/NodeTypeConfig';
@@ -102,6 +104,14 @@ const NodeEditorPanel = ({ selectedNode, onClose }: NodeEditorPanelProps) => {
 
     return () => clearTimeout(timeoutId);
   }, [hasNodeChanges, updateNodeProperties]);
+
+  // Save pending edits when the user selects something else, unless the actor
+  // itself is gone (deleted, or a different document was opened).
+  useFlushOnLeave(selectedNode.id, () => {
+    if (useGraphStore.getState().nodes.some((n) => n.id === selectedNode.id)) {
+      updateNodeProperties();
+    }
+  });
 
   // Handle node deletion
   const handleDeleteNode = async () => {

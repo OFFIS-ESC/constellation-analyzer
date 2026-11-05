@@ -8,6 +8,8 @@ import RemoveIcon from '@mui/icons-material/Remove';
 import EditIcon from '@mui/icons-material/Edit';
 import { useGraphWithHistory } from '../../hooks/useGraphWithHistory';
 import { useDocumentHistory } from '../../hooks/useDocumentHistory';
+import { useFlushOnLeave } from '../../hooks/useFlushOnLeave';
+import { useGraphStore } from '../../stores/graphStore';
 import { useConfirm } from '../../hooks/useConfirm';
 import ConnectionDisplay from '../Common/ConnectionDisplay';
 import EdgeTypeConfigModal from '../Config/EdgeTypeConfig';
@@ -17,7 +19,7 @@ import AutocompleteLabelSelector from '../Common/AutocompleteLabelSelector';
 import CitationSelector from '../Common/CitationSelector';
 import FieldHint from '../Help/FieldHint';
 import { useTypeUsage, describeTypeUsage } from '../../hooks/useTypeUsage';
-import type { Relation, EdgeDirectionality } from '../../types';
+import type { Relation, RelationData, EdgeDirectionality } from '../../types';
 
 interface EdgeEditorPanelProps {
   selectedEdge: Relation;
@@ -49,33 +51,47 @@ const EdgeEditorPanel = ({ selectedEdge, onClose }: EdgeEditorPanelProps) => {
   // Bibliography modal state
   const [showBibliographyModal, setShowBibliographyModal] = useState(false);
 
-  // Update state when selected edge changes
+  // The `selectedEdge` prop is captured at selection time and does not update
+  // when the store changes (e.g. via undo/redo), so we read the canonical data
+  // from the live `edges` array exposed by useGraphWithHistory.
+  const sourceData =
+    edges.find((e) => e.id === selectedEdge.id)?.data ?? selectedEdge.data;
+
+  // Sync local form state from the live store data, unless the user has
+  // unsaved edits in flight (in which case we'd clobber what they typed).
   useEffect(() => {
-    if (selectedEdge.data) {
-      setRelationType(selectedEdge.data.type || '');
-      const typeLabel = edgeTypes.find((et) => et.id === selectedEdge.data?.type)?.label;
-      const hasCustomLabel = selectedEdge.data.label && selectedEdge.data.label !== typeLabel;
-      setRelationLabel((hasCustomLabel && selectedEdge.data.label) || '');
-      setRelationLabels(selectedEdge.data.labels || []);
-      setRelationCitations(selectedEdge.data.citations || []);
-      const edgeTypeConfig = edgeTypes.find((et) => et.id === selectedEdge.data?.type);
-      setRelationDirectionality(selectedEdge.data.directionality || edgeTypeConfig?.defaultDirectionality || 'directed');
-      setHasEdgeChanges(false);
-    }
-  }, [selectedEdge, edgeTypes]);
+    if (hasEdgeChanges || !sourceData) return;
+    const edgeTypeConfig = edgeTypes.find((et) => et.id === sourceData.type);
+    setRelationType(sourceData.type || '');
+    const hasCustomLabel = sourceData.label && sourceData.label !== edgeTypeConfig?.label;
+    setRelationLabel((hasCustomLabel && sourceData.label) || '');
+    setRelationLabels(sourceData.labels || []);
+    setRelationCitations(sourceData.citations || []);
+    setRelationDirectionality(sourceData.directionality || edgeTypeConfig?.defaultDirectionality || 'directed');
+  }, [sourceData, edgeTypes, hasEdgeChanges]);
+
+  // Reset the dirty flag when the user picks a different relation.
+  useEffect(() => {
+    setHasEdgeChanges(false);
+  }, [selectedEdge.id]);
+
+  // The full form state as an update, shared by the debounced save and the
+  // controls that apply instantly, so those also carry pending text edits.
+  const buildEdgeUpdate = useCallback((overrides: Partial<RelationData> = {}): Partial<RelationData> => ({
+    type: relationType,
+    label: relationLabel.trim() || undefined,
+    directionality: relationDirectionality,
+    labels: relationLabels.length > 0 ? relationLabels : undefined,
+    citations: relationCitations.length > 0 ? relationCitations : undefined,
+    ...overrides,
+  }), [relationType, relationLabel, relationDirectionality, relationLabels, relationCitations]);
 
   // Live update edge properties (debounced)
   const updateEdgeProperties = useCallback(() => {
     if (!hasEdgeChanges) return;
-    updateEdge(selectedEdge.id, {
-      type: relationType,
-      label: relationLabel.trim() || undefined,
-      directionality: relationDirectionality,
-      labels: relationLabels.length > 0 ? relationLabels : undefined,
-      citations: relationCitations.length > 0 ? relationCitations : undefined,
-    });
+    updateEdge(selectedEdge.id, buildEdgeUpdate());
     setHasEdgeChanges(false);
-  }, [selectedEdge.id, relationType, relationLabel, relationDirectionality, relationLabels, relationCitations, hasEdgeChanges, updateEdge]);
+  }, [selectedEdge.id, buildEdgeUpdate, hasEdgeChanges, updateEdge]);
 
   // Debounce live updates
   useEffect(() => {
@@ -87,6 +103,14 @@ const EdgeEditorPanel = ({ selectedEdge, onClose }: EdgeEditorPanelProps) => {
 
     return () => clearTimeout(timeoutId);
   }, [hasEdgeChanges, updateEdgeProperties]);
+
+  // Save pending edits when the user selects something else, unless the
+  // relation itself is gone (deleted, or a different document was opened).
+  useFlushOnLeave(selectedEdge.id, () => {
+    if (useGraphStore.getState().edges.some((e) => e.id === selectedEdge.id)) {
+      updateEdgeProperties();
+    }
+  });
 
   // Handle edge deletion
   const handleDeleteEdge = async () => {
@@ -195,13 +219,8 @@ const EdgeEditorPanel = ({ selectedEdge, onClose }: EdgeEditorPanelProps) => {
               const newType = e.target.value;
               setRelationType(newType);
               // Apply relation type change instantly (no debounce)
-              updateEdge(selectedEdge.id, {
-                type: newType,
-                label: relationLabel.trim() || undefined,
-                directionality: relationDirectionality,
-                labels: relationLabels.length > 0 ? relationLabels : undefined,
-                citations: relationCitations.length > 0 ? relationCitations : undefined,
-              });
+              updateEdge(selectedEdge.id, buildEdgeUpdate({ type: newType }));
+              setHasEdgeChanges(false);
             }}
             className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
@@ -290,13 +309,8 @@ const EdgeEditorPanel = ({ selectedEdge, onClose }: EdgeEditorPanelProps) => {
               if (newValue !== null) {
                 setRelationDirectionality(newValue);
                 // Apply directionality change instantly (no debounce)
-                updateEdge(selectedEdge.id, {
-                  type: relationType,
-                  label: relationLabel.trim() || undefined,
-                  directionality: newValue,
-                  labels: relationLabels.length > 0 ? relationLabels : undefined,
-                  citations: relationCitations.length > 0 ? relationCitations : undefined,
-                });
+                updateEdge(selectedEdge.id, buildEdgeUpdate({ directionality: newValue }));
+                setHasEdgeChanges(false);
               }
             }}
             size="small"

@@ -12,6 +12,7 @@ import LabelConfigModal from '../Config/LabelConfig';
 import BibliographyConfigModal from '../Config/BibliographyConfig';
 import AutocompleteLabelSelector from '../Common/AutocompleteLabelSelector';
 import CitationSelector from '../Common/CitationSelector';
+import MarkdownField from '../Common/MarkdownField';
 import FieldHint from '../Help/FieldHint';
 import { useTypeUsage, describeTypeUsage } from '../../hooks/useTypeUsage';
 import type { Actor } from '../../types';
@@ -20,6 +21,10 @@ interface NodeEditorPanelProps {
   selectedNode: Actor;
   onClose: () => void;
 }
+
+// Every save is an undo step, so longer text waits for a real pause in typing.
+const FIELD_SAVE_DELAY = 500;
+const TEXT_SAVE_DELAY = 2000;
 
 const NodeEditorPanel = ({ selectedNode, onClose }: NodeEditorPanelProps) => {
   const { nodes, edges, nodeTypes, edgeTypes, updateNode, deleteNode } = useGraphWithHistory();
@@ -36,6 +41,7 @@ const NodeEditorPanel = ({ selectedNode, onClose }: NodeEditorPanelProps) => {
 
   // Track if user has made changes
   const [hasNodeChanges, setHasNodeChanges] = useState(false);
+  const saveDelayRef = useRef(FIELD_SAVE_DELAY);
 
   // Actor type modal state
   const [showActorTypeModal, setShowActorTypeModal] = useState(false);
@@ -96,11 +102,12 @@ const NodeEditorPanel = ({ selectedNode, onClose }: NodeEditorPanelProps) => {
 
   // Debounce live updates
   useEffect(() => {
+    if (!hasNodeChanges) saveDelayRef.current = FIELD_SAVE_DELAY;
     const timeoutId = setTimeout(() => {
       if (hasNodeChanges) {
         updateNodeProperties();
       }
-    }, 500); // 500ms debounce
+    }, saveDelayRef.current);
 
     return () => clearTimeout(timeoutId);
   }, [hasNodeChanges, updateNodeProperties]);
@@ -235,18 +242,16 @@ const NodeEditorPanel = ({ selectedNode, onClose }: NodeEditorPanelProps) => {
 
         {/* Description */}
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">
-            Description (optional)
-          </label>
-          <textarea
+          <MarkdownField
+            label="Description (optional)"
             value={actorDescription}
-            onChange={(e) => {
-              setActorDescription(e.target.value);
+            onChange={(value) => {
+              setActorDescription(value);
+              saveDelayRef.current = TEXT_SAVE_DELAY;
               setHasNodeChanges(true);
             }}
-            placeholder="Add a description"
-            rows={3}
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            onCommit={updateNodeProperties}
+            placeholder="Add a description. Markdown works: **bold**, *italic*, ## heading, > quote"
           />
           <label className="mt-2 flex items-center gap-2 text-xs text-gray-700 cursor-pointer select-none">
             <input

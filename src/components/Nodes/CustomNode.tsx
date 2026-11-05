@@ -10,6 +10,7 @@ import { getIconComponent } from "../../utils/iconUtils";
 import type { Actor } from "../../types";
 import NodeShapeRenderer from "./Shapes/NodeShapeRenderer";
 import LabelBadge from "../Common/LabelBadge";
+import MarkdownContent from "../Common/MarkdownContent";
 import {
   useActiveFilters,
   nodeMatchesFilters,
@@ -268,10 +269,10 @@ const CustomNode = ({ data, selected }: NodeProps<Actor>) => {
           {/* Description (only when enabled per-actor) */}
           {data.showDescriptionInNode && data.description && (
             <div
-              className="text-xs text-center opacity-90 leading-snug whitespace-pre-wrap break-words mt-1"
+              className="text-xs text-center opacity-90 leading-snug mt-1"
               style={{ color: textColor, maxWidth: '200px' }}
             >
-              {data.description}
+              <MarkdownContent source={data.description} />
             </div>
           )}
 

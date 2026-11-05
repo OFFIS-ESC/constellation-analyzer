@@ -24,6 +24,7 @@ export interface RelationData extends Record<string, unknown> {
   // Markdown source, optional and absent in older documents.
   description?: string;
   // When true, the description is rendered in a box at the relation.
+  // Hiding it keeps the text.
   showDescription?: boolean;
   directionality?: EdgeDirectionality;
   strength?: number;
@@ -143,6 +144,7 @@ export interface GraphActions {
   addEdge: (edge: Relation) => void;
   updateEdge: (id: string, data: Partial<RelationData>) => void;
   deleteEdge: (id: string) => void;
+  setRelationDescriptionsVisible: (ids: string[], visible: boolean) => void;
   addNodeType: (nodeType: NodeTypeConfig) => void;
   updateNodeType: (id: string, updates: Partial<Omit<NodeTypeConfig, 'id'>>) => void;
   deleteNodeType: (id: string) => void;

@@ -12,7 +12,8 @@ interface RelationDescriptionBoxProps {
  */
 const RelationDescriptionBox = ({ description, color }: RelationDescriptionBoxProps) => (
   <div
-    className="nopan absolute left-1/2 -translate-x-1/2 top-full mt-1 bg-white rounded border border-gray-300 shadow-sm px-2 py-1.5 text-xs font-normal leading-snug text-gray-800 cursor-text select-text"
+    data-graph-overlay
+    className="nopan absolute left-1/2 -translate-x-1/2 top-full mt-1 bg-white rounded border border-gray-300 shadow-sm px-2 py-1.5 text-xs font-normal leading-snug text-gray-800 cursor-text"
     style={{ width: '280px', borderTop: `3px solid ${color}`, userSelect: 'text' }}
   >
     <MarkdownContent source={description} />

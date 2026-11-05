@@ -32,6 +32,7 @@ import { useActiveFilters, nodeMatchesFilters } from "../../hooks/useActiveFilte
 import CustomNode from "../Nodes/CustomNode";
 import GroupNode from "../Nodes/GroupNode";
 import CustomEdge from "../Edges/CustomEdge";
+import ToggleAllDescriptionsButton from "../Edges/ToggleAllDescriptionsButton";
 import ContextMenu from "./ContextMenu";
 import EmptyState from "../Common/EmptyState";
 import { createNode } from "../../utils/nodeUtils";
@@ -1143,7 +1144,9 @@ const GraphEditor = ({ presentationMode = false, onNodeSelect, onEdgeSelect, onG
         )}
 
         {/* Zoom and pan controls - Simplified in presentation mode */}
-        <Controls showInteractive={isEditable} />
+        <Controls showInteractive={isEditable}>
+          <ToggleAllDescriptionsButton />
+        </Controls>
 
         {/* MiniMap for navigation - Read-only in presentation mode */}
         <MiniMap

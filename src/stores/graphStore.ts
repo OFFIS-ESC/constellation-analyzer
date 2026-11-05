@@ -152,6 +152,18 @@ export const useGraphStore = create<GraphStore & GraphActions>((set) => ({
       edges: state.edges.filter((edge) => edge.id !== id),
     })),
 
+  setRelationDescriptionsVisible: (ids: string[], visible: boolean) =>
+    set((state) => {
+      const idSet = new Set(ids);
+      return {
+        edges: state.edges.map((edge) =>
+          idSet.has(edge.id) && edge.data
+            ? { ...edge, data: { ...edge.data, showDescription: visible || undefined } }
+            : edge
+        ),
+      };
+    }),
+
   // Node type operations
   addNodeType: (nodeType: NodeTypeConfig) =>
     set((state) => ({

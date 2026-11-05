@@ -6,13 +6,15 @@ import {
   useInternalNode,
 } from '@xyflow/react';
 import { useGraphStore } from '../../stores/graphStore';
+import { useRelationDescriptionViewStore } from '../../stores/relationDescriptionViewStore';
 import { shallow } from 'zustand/shallow';
 import type { Relation } from '../../types';
 import LabelBadge from '../Common/LabelBadge';
 import RelationDescriptionBox from './RelationDescriptionBox';
+import RelationDescriptionToggle from './RelationDescriptionToggle';
 import { getFloatingEdgeParams } from '../../utils/edgeUtils';
 import { useActiveFilters, edgeMatchesFilters } from '../../hooks/useActiveFilters';
-import { getRelationDescriptionDisplay } from '../../utils/relationDescription';
+import { hasRelationDescription, isRelationDescriptionVisible } from '../../utils/relationDescription';
 
 /**
  * CustomEdge - Represents a relation between actors in the constellation graph
@@ -23,7 +25,7 @@ import { getRelationDescriptionDisplay } from '../../utils/relationDescription';
  * - Optional label display
  * - Edge type badge
  * - Directional arrow markers (directed, bidirectional, undirected)
- * - Optional Markdown description box below the label
+ * - Optional Markdown description box below the label, with a button to show or hide it
  * - Floating edges for minimized groups
  *
  * Usage: Automatically rendered by React Flow for edges with type='custom'
@@ -134,7 +136,9 @@ const CustomEdge = ({
 
   const { edgePath, labelX, labelY } = edgeParams;
 
-  const descriptionDisplay = getRelationDescriptionDisplay(data);
+  const visibilityOverride = useRelationDescriptionViewStore((state) => state.visibilityOverrides[id]);
+  const hasDescription = hasRelationDescription(data);
+  const isDescriptionVisible = isRelationDescriptionVisible(data, visibilityOverride);
 
   // Check if this is an aggregated edge
   const isAggregated = !!(data as { aggregatedCount?: number })?.aggregatedCount;
@@ -251,7 +255,7 @@ const CustomEdge = ({
       />
 
       {/* Edge label - show custom or type default, plus labels, plus aggregation count */}
-      {(displayLabel || (data?.labels && data.labels.length > 0) || (data as { aggregatedCount?: number })?.aggregatedCount || descriptionDisplay !== 'hidden') && (
+      {(displayLabel || (data?.labels && data.labels.length > 0) || (data as { aggregatedCount?: number })?.aggregatedCount || hasDescription) && (
         <EdgeLabelRenderer>
           <div
             style={{
@@ -263,9 +267,12 @@ const CustomEdge = ({
             }}
             className="bg-white px-2 py-1 rounded border border-gray-300 text-xs font-medium shadow-sm"
           >
-            {displayLabel && (
-              <div style={{ color: edgeColor }} className="mb-1">
-                {displayLabel}
+            {(displayLabel || hasDescription) && (
+              <div className="mb-1 flex items-center justify-center gap-1">
+                {displayLabel && <span style={{ color: edgeColor }}>{displayLabel}</span>}
+                {hasDescription && (
+                  <RelationDescriptionToggle relationId={id} visible={isDescriptionVisible} color={edgeColor} />
+                )}
               </div>
             )}
             {data?.labels && data.labels.length > 0 && (
@@ -293,7 +300,7 @@ const CustomEdge = ({
                 {(data as { aggregatedCount?: number }).aggregatedCount} relations
               </div>
             )}
-            {descriptionDisplay !== 'hidden' && (
+            {isDescriptionVisible && (
               <RelationDescriptionBox description={data?.description || ''} color={edgeColor} />
             )}
           </div>

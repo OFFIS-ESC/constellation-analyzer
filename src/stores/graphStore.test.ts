@@ -339,6 +339,40 @@ describe('graphStore', () => {
       });
     });
 
+    describe('setRelationDescriptionsVisible', () => {
+      const edgeWithData = (id: string) => ({
+        id,
+        source: 'a',
+        target: 'b',
+        data: { type: 'knows', description: 'Text' },
+      });
+
+      beforeEach(() => {
+        useGraphStore.setState({ edges: [edgeWithData('e1'), edgeWithData('e2'), edgeWithData('e3')] });
+      });
+
+      it('shows only the given relations', () => {
+        useGraphStore.getState().setRelationDescriptionsVisible(['e1', 'e2'], true);
+
+        const { edges } = useGraphStore.getState();
+        expect(edges.map((e) => e.data?.showDescription)).toEqual([true, true, undefined]);
+      });
+
+      it('removes the field again when hiding', () => {
+        useGraphStore.getState().setRelationDescriptionsVisible(['e1'], true);
+        useGraphStore.getState().setRelationDescriptionsVisible(['e1'], false);
+
+        expect(useGraphStore.getState().edges[0].data?.showDescription).toBeUndefined();
+      });
+
+      it('keeps the text when hiding', () => {
+        useGraphStore.getState().setRelationDescriptionsVisible(['e1'], true);
+        useGraphStore.getState().setRelationDescriptionsVisible(['e1'], false);
+
+        expect(useGraphStore.getState().edges[0].data?.description).toBe('Text');
+      });
+    });
+
     describe('updateEdge', () => {
       beforeEach(() => {
         const { addEdge } = useGraphStore.getState();

@@ -42,7 +42,6 @@ const EdgeEditorPanel = ({ selectedEdge, onClose }: EdgeEditorPanelProps) => {
   const [relationLabels, setRelationLabels] = useState<string[]>([]);
   const [relationCitations, setRelationCitations] = useState<string[]>([]);
   const [relationDescription, setRelationDescription] = useState('');
-  const [relationShowDescription, setRelationShowDescription] = useState(false);
   const [relationDirectionality, setRelationDirectionality] = useState<EdgeDirectionality>('directed');
 
   // Track if user has made changes
@@ -76,7 +75,6 @@ const EdgeEditorPanel = ({ selectedEdge, onClose }: EdgeEditorPanelProps) => {
     setRelationLabels(sourceData.labels || []);
     setRelationCitations(sourceData.citations || []);
     setRelationDescription(sourceData.description || '');
-    setRelationShowDescription(sourceData.showDescription ?? false);
     setRelationDirectionality(sourceData.directionality || edgeTypeConfig?.defaultDirectionality || 'directed');
   }, [sourceData, edgeTypes, hasEdgeChanges]);
 
@@ -94,9 +92,8 @@ const EdgeEditorPanel = ({ selectedEdge, onClose }: EdgeEditorPanelProps) => {
     labels: relationLabels.length > 0 ? relationLabels : undefined,
     citations: relationCitations.length > 0 ? relationCitations : undefined,
     description: relationDescription.trim() ? relationDescription : undefined,
-    showDescription: relationShowDescription || undefined,
     ...overrides,
-  }), [relationType, relationLabel, relationDirectionality, relationLabels, relationCitations, relationDescription, relationShowDescription]);
+  }), [relationType, relationLabel, relationDirectionality, relationLabels, relationCitations, relationDescription]);
 
   // Live update edge properties (debounced)
   const updateEdgeProperties = useCallback(() => {
@@ -326,14 +323,12 @@ const EdgeEditorPanel = ({ selectedEdge, onClose }: EdgeEditorPanelProps) => {
           <label className={`mt-2 flex items-center gap-2 text-xs select-none ${relationDescription.trim() ? 'text-gray-700 cursor-pointer' : 'text-gray-400'}`}>
             <input
               type="checkbox"
-              checked={relationShowDescription}
+              checked={!!sourceData?.showDescription}
               disabled={!relationDescription.trim()}
               onChange={(e) => {
-                const checked = e.target.checked;
-                setRelationShowDescription(checked);
                 // Commit the toggle instantly (no debounce) and flush any
                 // pending text edits along with it so they aren't lost.
-                updateEdge(selectedEdge.id, buildEdgeUpdate({ showDescription: checked || undefined }));
+                updateEdge(selectedEdge.id, buildEdgeUpdate({ showDescription: e.target.checked || undefined }));
                 setHasEdgeChanges(false);
               }}
               className="h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"

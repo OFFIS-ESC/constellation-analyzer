@@ -18,7 +18,7 @@ import type { Actor, Relation, Group, NodeTypeConfig, EdgeTypeConfig, LabelConfi
  *
  * History-tracked operations (saved to document-level history):
  * - Node operations: addNode, updateNode, deleteNode
- * - Edge operations: addEdge, updateEdge, deleteEdge
+ * - Edge operations: addEdge, updateEdge, deleteEdge, setRelationDescriptionsVisible
  * - Group operations: addGroup, updateGroup, deleteGroup, addActorToGroup, removeActorFromGroup
  * - Type operations: addNodeType, updateNodeType, deleteNodeType, addEdgeType, updateEdgeType, deleteEdgeType
  * - Label operations: addLabel, updateLabel, deleteLabel
@@ -467,6 +467,18 @@ export function useGraphWithHistory() {
     [graphStore, pushToHistory]
   );
 
+  const setRelationDescriptionsVisible = useCallback(
+    (ids: string[], visible: boolean) => {
+      if (isRestoringRef.current) {
+        graphStore.setRelationDescriptionsVisible(ids, visible);
+        return;
+      }
+      pushToHistory(`${visible ? 'Show' : 'Hide'} Relation Description${ids.length > 1 ? 's' : ''}`);
+      graphStore.setRelationDescriptionsVisible(ids, visible);
+    },
+    [graphStore, pushToHistory]
+  );
+
   const toggleGroupMinimized = useCallback(
     (groupId: string) => {
       if (isRestoringRef.current) {
@@ -541,6 +553,7 @@ export function useGraphWithHistory() {
     addActorToGroup,
     removeActorFromGroup,
     toggleGroupMinimized,
+    setRelationDescriptionsVisible,
     createGroupWithActors,
     addNodeType,
     updateNodeType,

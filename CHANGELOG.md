@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.2.0](https://github.com/OFFIS-ESC/constellation-analyzer/compare/v1.1.1...v1.2.0) (2026-11-05)
+
+
+### Features
+
+* add Markdown descriptions to relations ([3e2d93d](https://github.com/OFFIS-ESC/constellation-analyzer/commit/3e2d93dcc775fa75e55dc64257436fd45654229b))
+* render actor descriptions as Markdown ([6a75a9b](https://github.com/OFFIS-ESC/constellation-analyzer/commit/6a75a9b5620086e2f2aa11500fa2b02643e01a76))
+* toggle relation descriptions from the canvas ([9855663](https://github.com/OFFIS-ESC/constellation-analyzer/commit/98556635e8abd432899758663536e95fec25ce42))
+
+
+### Bug Fixes
+
+* include relation descriptions in graph exports ([e553c98](https://github.com/OFFIS-ESC/constellation-analyzer/commit/e553c980f035b483b5003afdef4cfefe1f32259e))
+* keep pending edits when the selection changes ([6dcdba9](https://github.com/OFFIS-ESC/constellation-analyzer/commit/6dcdba96fe18dd5a57ad1d43503881175fa263f4))
+
 ## [1.1.1](https://github.com/OFFIS-ESC/constellation-analyzer/compare/v1.1.0...v1.1.1) (2026-09-08)
 
 

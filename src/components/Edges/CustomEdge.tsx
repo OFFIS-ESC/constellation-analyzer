@@ -9,8 +9,10 @@ import { useGraphStore } from '../../stores/graphStore';
 import { shallow } from 'zustand/shallow';
 import type { Relation } from '../../types';
 import LabelBadge from '../Common/LabelBadge';
+import RelationDescriptionBox from './RelationDescriptionBox';
 import { getFloatingEdgeParams } from '../../utils/edgeUtils';
 import { useActiveFilters, edgeMatchesFilters } from '../../hooks/useActiveFilters';
+import { getRelationDescriptionDisplay } from '../../utils/relationDescription';
 
 /**
  * CustomEdge - Represents a relation between actors in the constellation graph
@@ -21,6 +23,7 @@ import { useActiveFilters, edgeMatchesFilters } from '../../hooks/useActiveFilte
  * - Optional label display
  * - Edge type badge
  * - Directional arrow markers (directed, bidirectional, undirected)
+ * - Optional Markdown description box below the label
  * - Floating edges for minimized groups
  *
  * Usage: Automatically rendered by React Flow for edges with type='custom'
@@ -131,6 +134,8 @@ const CustomEdge = ({
 
   const { edgePath, labelX, labelY } = edgeParams;
 
+  const descriptionDisplay = getRelationDescriptionDisplay(data);
+
   // Check if this is an aggregated edge
   const isAggregated = !!(data as { aggregatedCount?: number })?.aggregatedCount;
 
@@ -167,9 +172,10 @@ const CustomEdge = ({
       data?.labels || [],
       data?.label || '',
       edgeTypeConfig?.label || '',
-      filters
+      filters,
+      data?.description || ''
     );
-  }, [data?.type, data?.labels, data?.label, edgeTypeConfig?.label, filters]);
+  }, [data?.type, data?.labels, data?.label, data?.description, edgeTypeConfig?.label, filters]);
 
   // Determine if filters are active
   const hasActiveFilters =
@@ -245,7 +251,7 @@ const CustomEdge = ({
       />
 
       {/* Edge label - show custom or type default, plus labels, plus aggregation count */}
-      {(displayLabel || (data?.labels && data.labels.length > 0) || (data as { aggregatedCount?: number })?.aggregatedCount) && (
+      {(displayLabel || (data?.labels && data.labels.length > 0) || (data as { aggregatedCount?: number })?.aggregatedCount || descriptionDisplay !== 'hidden') && (
         <EdgeLabelRenderer>
           <div
             style={{
@@ -286,6 +292,9 @@ const CustomEdge = ({
               >
                 {(data as { aggregatedCount?: number }).aggregatedCount} relations
               </div>
+            )}
+            {descriptionDisplay !== 'hidden' && (
+              <RelationDescriptionBox description={data?.description || ''} color={edgeColor} />
             )}
           </div>
         </EdgeLabelRenderer>

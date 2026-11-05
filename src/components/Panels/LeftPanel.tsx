@@ -179,10 +179,12 @@ const LeftPanel = forwardRef<LeftPanelRef, LeftPanelProps>(({ onDeselectAll, onA
         const label = edge.data?.label?.toLowerCase() || '';
         const edgeTypeConfig = edgeTypes.find((et) => et.id === edgeType);
         const typeName = edgeTypeConfig?.label?.toLowerCase() || '';
+        const description = edge.data?.description?.toLowerCase() || '';
 
         const matches =
           label.includes(searchLower) ||
-          typeName.includes(searchLower);
+          typeName.includes(searchLower) ||
+          description.includes(searchLower);
 
         if (!matches) {
           return false;

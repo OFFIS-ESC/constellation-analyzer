@@ -137,7 +137,8 @@ export function edgeMatchesFilters(
   edgeLabels: string[],
   edgeName: string,
   edgeTypeName: string,
-  filters: ReturnType<typeof useActiveFilters>
+  filters: ReturnType<typeof useActiveFilters>,
+  edgeDescription: string = ''
 ): boolean {
   const {
     searchText,
@@ -166,7 +167,8 @@ export function edgeMatchesFilters(
   const searchLower = searchText.toLowerCase().trim();
   const textMatches = !hasSearchText ||
     edgeName.toLowerCase().includes(searchLower) ||
-    edgeTypeName.toLowerCase().includes(searchLower);
+    edgeTypeName.toLowerCase().includes(searchLower) ||
+    edgeDescription.toLowerCase().includes(searchLower);
 
   // Apply combine mode logic
   if (combineMode === 'OR') {

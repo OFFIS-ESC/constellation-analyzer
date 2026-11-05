@@ -21,6 +21,10 @@ export type EdgeDirectionality = 'directed' | 'bidirectional' | 'undirected';
 export interface RelationData extends Record<string, unknown> {
   label?: string;
   type: string;
+  // Markdown source, optional and absent in older documents.
+  description?: string;
+  // When true, the description is rendered in a box at the relation.
+  showDescription?: boolean;
   directionality?: EdgeDirectionality;
   strength?: number;
   labels?: string[];  // Array of LabelConfig IDs

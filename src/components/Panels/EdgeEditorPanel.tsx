@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { IconButton, Tooltip, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
@@ -17,6 +17,7 @@ import LabelConfigModal from '../Config/LabelConfig';
 import BibliographyConfigModal from '../Config/BibliographyConfig';
 import AutocompleteLabelSelector from '../Common/AutocompleteLabelSelector';
 import CitationSelector from '../Common/CitationSelector';
+import MarkdownField from '../Common/MarkdownField';
 import FieldHint from '../Help/FieldHint';
 import { useTypeUsage, describeTypeUsage } from '../../hooks/useTypeUsage';
 import type { Relation, RelationData, EdgeDirectionality } from '../../types';
@@ -25,6 +26,10 @@ interface EdgeEditorPanelProps {
   selectedEdge: Relation;
   onClose: () => void;
 }
+
+// Every save is an undo step, so longer text waits for a real pause in typing.
+const FIELD_SAVE_DELAY = 500;
+const TEXT_SAVE_DELAY = 2000;
 
 const EdgeEditorPanel = ({ selectedEdge, onClose }: EdgeEditorPanelProps) => {
   const { nodes, edges, nodeTypes, edgeTypes, updateEdge, deleteEdge, setEdges } = useGraphWithHistory();
@@ -36,10 +41,13 @@ const EdgeEditorPanel = ({ selectedEdge, onClose }: EdgeEditorPanelProps) => {
   const [relationLabel, setRelationLabel] = useState('');
   const [relationLabels, setRelationLabels] = useState<string[]>([]);
   const [relationCitations, setRelationCitations] = useState<string[]>([]);
+  const [relationDescription, setRelationDescription] = useState('');
+  const [relationShowDescription, setRelationShowDescription] = useState(false);
   const [relationDirectionality, setRelationDirectionality] = useState<EdgeDirectionality>('directed');
 
   // Track if user has made changes
   const [hasEdgeChanges, setHasEdgeChanges] = useState(false);
+  const saveDelayRef = useRef(FIELD_SAVE_DELAY);
 
   // Relation type modal state
   const [showRelationTypeModal, setShowRelationTypeModal] = useState(false);
@@ -67,6 +75,8 @@ const EdgeEditorPanel = ({ selectedEdge, onClose }: EdgeEditorPanelProps) => {
     setRelationLabel((hasCustomLabel && sourceData.label) || '');
     setRelationLabels(sourceData.labels || []);
     setRelationCitations(sourceData.citations || []);
+    setRelationDescription(sourceData.description || '');
+    setRelationShowDescription(sourceData.showDescription ?? false);
     setRelationDirectionality(sourceData.directionality || edgeTypeConfig?.defaultDirectionality || 'directed');
   }, [sourceData, edgeTypes, hasEdgeChanges]);
 
@@ -83,8 +93,10 @@ const EdgeEditorPanel = ({ selectedEdge, onClose }: EdgeEditorPanelProps) => {
     directionality: relationDirectionality,
     labels: relationLabels.length > 0 ? relationLabels : undefined,
     citations: relationCitations.length > 0 ? relationCitations : undefined,
+    description: relationDescription.trim() ? relationDescription : undefined,
+    showDescription: relationShowDescription || undefined,
     ...overrides,
-  }), [relationType, relationLabel, relationDirectionality, relationLabels, relationCitations]);
+  }), [relationType, relationLabel, relationDirectionality, relationLabels, relationCitations, relationDescription, relationShowDescription]);
 
   // Live update edge properties (debounced)
   const updateEdgeProperties = useCallback(() => {
@@ -95,11 +107,12 @@ const EdgeEditorPanel = ({ selectedEdge, onClose }: EdgeEditorPanelProps) => {
 
   // Debounce live updates
   useEffect(() => {
+    if (!hasEdgeChanges) saveDelayRef.current = FIELD_SAVE_DELAY;
     const timeoutId = setTimeout(() => {
       if (hasEdgeChanges) {
         updateEdgeProperties();
       }
-    }, 500); // 500ms debounce
+    }, saveDelayRef.current);
 
     return () => clearTimeout(timeoutId);
   }, [hasEdgeChanges, updateEdgeProperties]);
@@ -295,6 +308,38 @@ const EdgeEditorPanel = ({ selectedEdge, onClose }: EdgeEditorPanelProps) => {
             }}
             onOpenBibliography={() => setShowBibliographyModal(true)}
           />
+        </div>
+
+        {/* Description */}
+        <div>
+          <MarkdownField
+            label="Description / Interview quotes (optional)"
+            value={relationDescription}
+            onChange={(value) => {
+              setRelationDescription(value);
+              saveDelayRef.current = TEXT_SAVE_DELAY;
+              setHasEdgeChanges(true);
+            }}
+            onCommit={updateEdgeProperties}
+            placeholder={'## Heading\nYour interpretation, with **bold** and *italic*.\n\n> A quote from an interview\n> — Interview 3, line 42'}
+          />
+          <label className={`mt-2 flex items-center gap-2 text-xs select-none ${relationDescription.trim() ? 'text-gray-700 cursor-pointer' : 'text-gray-400'}`}>
+            <input
+              type="checkbox"
+              checked={relationShowDescription}
+              disabled={!relationDescription.trim()}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setRelationShowDescription(checked);
+                // Commit the toggle instantly (no debounce) and flush any
+                // pending text edits along with it so they aren't lost.
+                updateEdge(selectedEdge.id, buildEdgeUpdate({ showDescription: checked || undefined }));
+                setHasEdgeChanges(false);
+              }}
+              className="h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span>Show description</span>
+          </label>
         </div>
 
         {/* Directionality */}

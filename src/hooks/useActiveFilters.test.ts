@@ -415,6 +415,28 @@ describe('useActiveFilters', () => {
   });
 
   describe('edgeMatchesFilters', () => {
+    describe('Description search', () => {
+      const filters = {
+        searchText: 'Vertrauen',
+        selectedLabels: [],
+        selectedActorTypes: [],
+        selectedRelationTypes: [],
+        combineMode: 'AND' as const,
+      };
+
+      it('should match text in the description', () => {
+        expect(edgeMatchesFilters('knows', [], '', 'Knows', filters, '> Das **Vertrauen** wuchs')).toBe(true);
+      });
+
+      it('should not match when the description lacks the text', () => {
+        expect(edgeMatchesFilters('knows', [], '', 'Knows', filters, 'Etwas anderes')).toBe(false);
+      });
+
+      it('should treat a missing description as no match', () => {
+        expect(edgeMatchesFilters('knows', [], '', 'Knows', filters)).toBe(false);
+      });
+    });
+
     describe('No filters active', () => {
       it('should match all edges when no filters are active', () => {
         const filters = {
